@@ -1,0 +1,1067 @@
+# World Generation Pipeline Notes
+
+## Status
+
+2026-09-10: direct protocol-v2 client computation now passes two full-height
+raw-bit comparisons against independent authoritative NoiseChunk traversals,
+including negative coordinates. The final checkpoint is 240 tests / 51 suites.
+Installed-client shutdown verification uses existing window-close behavior;
+no vanilla pipeline/Mixin descriptor or production code was changed.
+
+2026-09-09 follow-up: fixture player counts other than one suspend orchestrator
+admission and cancel pending work; returning to one balances that suspension.
+This is independent of nested synchronous-wait suspension. The count-only,
+package-private trace test observer exercises interruption inside actual leaf
+record/replay traversal; it changes no Minecraft target or trace payload field.
+The final A-D checkpoint is 237 tests / 50 suites. See `TEST_RESULTS_LATEST.md`
+for runtime evidence, not a general/private-world activation claim.
+
+Runtime-discovered constraint (2026-09-05): `ServerChunkCache.getChunk` and
+`getChunkFuture` can call the private chunk-source executor's `managedBlock` on
+the server thread. Its `pollTask` advances distance/light/chunk tasks, not
+END_SERVER_TICK or the server network-handler queue. Tick-drained remote work
+cannot finish there. `ServerChunkCacheFixtureWaitMixin` brackets only incomplete
+future waits with nested admission suspension, pending cancellation and finally
+resumption. Already-complete waits/default mode retain vanilla behavior. Exact
+targets are in `MIXIN_TARGETS.md`; tests cover nested and reentrant admission.
+
+2026-09-05 public-fixture adapter: the existing NOISE entry can now delegate to
+`SeededLeafFixtureManager` only for the opt-in fixed public seed. Generated 26.2
+`ServerLevel.getSeed` and `MinecraftServer.getWorldGenSettings` confirm the start
+gate checks the actual world options, not a client claim. `ServerPlayer` requested
+view distance/chunk position and `PlayerList` count/view distance are sampled on
+the server tick thread into an immutable owner-demand snapshot. Recording uses
+server-owned RandomState and an independent sampler; replay uses the dummy-seed
+client worker. The original fill supplier runs once on the vanilla background
+executor, with cleanup before its downstream completion. See
+`SEEDED_LEAF_FIXTURE_PROTOCOL.md`; older "unregistered" notes below describe the
+pre-fixture baseline. General/private-seed activation remains forbidden.
+
+This document separates:
+
+- **conceptual architecture**
+- **facts verified from the generated Minecraft 26.2 source**
+
+Anything marked `TODO: VERIFY` must be checked locally after `genSources`.
+
+Do not convert assumptions into code without verification.
+
+---
+
+## 1. Conceptual chunk-generation stages
+
+Modern Minecraft chunk generation is staged rather than one monolithic function.
+
+The project is primarily interested in the area conceptually corresponding to:
+
+```text
+structures
+    |
+biomes
+    |
+base terrain / noise
+    |
+surface
+    |
+carving
+    |
+features / decoration
+    |
+lighting
+    |
+full usable chunk
+```
+
+The exact 26.2 `ChunkStatus` sequence and stage task wiring must be copied from generated source into the verified section below.
+
+---
+
+## 2. Why the noise/base-terrain area is the first target
+
+A good remote-compute target has these properties:
+
+- expensive enough to matter
+- deterministic from bounded inputs
+- little dependence on live gameplay state
+- parallelizable
+- result can be serialized compactly
+- safe for server to verify/apply
+- does not grant direct control of valuable resource placement
+
+Noise/base-terrain computation is a strong candidate.
+
+---
+
+## 3. Important dependencies to investigate
+
+The earlier design assumption “seed + chunk coordinates is enough” is unsafe.
+
+Inspect at least:
+
+### `RandomState`
+
+Questions:
+
+- How is it constructed in 26.2?
+- Which settings/registries/seed-derived states does it encapsulate?
+- Can a client construct an equivalent state?
+- Is any part mutable or cached?
+
+### `NoiseChunk`
+
+Questions:
+
+- How is it created?
+- Which density functions are cached/interpolated?
+- Which object owns its lifecycle?
+- Does it require an actual `ChunkAccess`?
+- Which methods mutate chunk output versus calculate intermediate values?
+
+### Aquifer
+
+Questions:
+
+- Which inputs affect water/lava decisions?
+- Can aquifer decisions be represented as an intermediate result?
+- Is aquifer logic tightly coupled to final block-state materialization?
+
+### Structure terrain adaptation
+
+Structures may modify terrain density or base-terrain behavior.
+
+Questions:
+
+- Which structure data is read?
+- At what stage is structure information guaranteed to exist?
+- Can the server serialize only the required structure influence?
+- Can structure adjustment remain server-side while the client computes a “raw” terrain field?
+
+### Blending
+
+Blending may be relevant near chunks generated by older terrain-generation versions.
+
+Initial PoC should prefer a fresh world and may fall back to vanilla whenever blending is required.
+
+---
+
+## 4. Candidate offload boundaries
+
+### Option A — full base-terrain stage
+
+Client computes the same effective result as the current vanilla base-terrain/noise stage.
+
+Advantages:
+
+- easiest conceptual replacement
+- large amount of CPU work moved
+
+Disadvantages:
+
+- more Minecraft state must be replicated on client
+- result may be larger
+- structure/blending/aquifer coupling
+- harder correctness proof
+
+Use as a PoC only if source boundaries make it convenient.
+
+---
+
+### Option B — raw density / noise field
+
+Client computes a lower-level deterministic field.
+
+Server performs:
+
+```text
+structure adjustment
+aquifer/material selection
+final block-state application
+heightmap updates
+```
+
+Advantages:
+
+- cleaner server authority
+- less client control over final blocks
+- potentially easy spot verification
+
+Disadvantages:
+
+- may require deeper hooks into vanilla implementation
+- intermediate representation may be large
+- vanilla APIs may not expose a clean boundary
+
+This may become the preferred long-term architecture.
+
+---
+
+### Option C — selected density-function subtree
+
+Client evaluates only identified expensive functions.
+
+Advantages:
+
+- narrow trust boundary
+- easier validation of individual samples
+- potentially reusable for speculative computation
+
+Disadvantages:
+
+- invasive integration
+- high coupling to Minecraft internals
+- version-sensitive
+
+Only consider after profiling proves one subtree dominates.
+
+---
+
+## 5. Features remain server-side initially
+
+Examples of feature/decorative work include trees, flowers, ores, and lakes.
+
+Reasons not to offload initially:
+
+- resource cheating
+- neighboring-chunk interactions
+- ordering dependencies
+- stateful placement logic
+- more difficult validation
+
+The fact that a stage is expensive does not automatically make it a good distributed-compute target.
+
+---
+
+## 6. Lighting
+
+Lighting may become expensive once terrain generation is accelerated.
+
+However it has strong adjacency and final-block-state dependencies.
+
+Keep server-side initially.
+
+A later research branch can measure whether lighting becomes the dominant bottleneck.
+
+---
+
+## 7. Verified 26.2 source notes
+
+Verification baseline: Minecraft 26.2 generated common source from Fabric Loom
+1.17.20, inspected 2026-09-01. The matching bytecode descriptors were checked
+with `javap` against the Loom-produced common game JAR.
+
+Fill this section after running:
+
+```powershell
+.\gradlew.bat genSources
+```
+
+### `ChunkStatus`
+
+Status: `VERIFIED`
+
+```text
+Classes:
+  net.minecraft.world.level.chunk.status.ChunkStatus
+  net.minecraft.world.level.chunk.status.ChunkPyramid
+  net.minecraft.world.level.chunk.status.ChunkStatusTasks
+  net.minecraft.world.level.chunk.status.ChunkStep
+
+Source artifact:
+  .gradle/loom-cache/minecraftMaven/net/minecraft/
+  minecraft-common-043a8b3edf/26.2/
+  minecraft-common-043a8b3edf-26.2-sources.jar
+
+Exact statuses:
+  EMPTY, STRUCTURE_STARTS, STRUCTURE_REFERENCES, BIOMES, NOISE,
+  SURFACE, CARVERS, FEATURES, INITIALIZE_LIGHT, LIGHT, SPAWN, FULL
+
+Relevant stage:
+  ChunkStatus.NOISE
+
+Task:
+  ChunkStatusTasks::generateNoise
+
+Next status:
+  ChunkStatus.SURFACE
+```
+
+The generation pyramid declares structure-start requirements at radius 8,
+biome requirements at radius 1, and a block-state write radius of 0 for the
+noise step. `ChunkStep.apply` waits for the task future and advances the
+persisted status only after completion.
+
+### Concrete Overworld chunk generator
+
+Status: `VERIFIED`
+
+```text
+Exact class:
+  net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator
+
+Superclass:
+  net.minecraft.world.level.chunk.ChunkGenerator
+
+Base-terrain method:
+  public CompletableFuture<ChunkAccess> fillFromNoise(
+      Blender, RandomState, StructureManager, ChunkAccess)
+
+Descriptor:
+  (Lnet/minecraft/world/level/levelgen/blending/Blender;
+   Lnet/minecraft/world/level/levelgen/RandomState;
+   Lnet/minecraft/world/level/StructureManager;
+   Lnet/minecraft/world/level/chunk/ChunkAccess;)
+  Ljava/util/concurrent/CompletableFuture;
+
+Executor:
+  Util.backgroundExecutor().forName("wgen_fill_noise")
+```
+
+The future's worker acquires the affected chunk sections, performs `doFill`,
+and releases the sections in `finally`.
+
+### `NoiseChunk`
+
+Status: `VERIFIED`
+
+`NoiseChunk.forChunk` receives the live `ChunkAccess`, `RandomState`, a
+structure-derived beardifier, `NoiseGeneratorSettings`, an aquifer fluid
+picker, and `Blender`. It is cached by
+`ChunkAccess.getOrCreateNoiseChunk` and reused by biome, noise, surface, and
+carver work.
+
+It contains mutable interpolation state, wrapper/cell caches, a preliminary
+surface cache, and a stateful aquifer. Treat it as owned by one chunk
+calculation, not as a generally thread-safe object. `NoiseChunk` calculates
+values; `NoiseBasedChunkGenerator.doFill` writes block states, updates the two
+worldgen heightmaps, and records fluid post-processing positions.
+
+### `RandomState`
+
+Status: `VERIFIED`
+
+`RandomState.create` accepts either a holder provider plus a noise-settings
+resource key, or concrete `NoiseGeneratorSettings` plus registered noise
+parameters; both forms also require the seed. It owns the wired noise router,
+climate sampler, surface system, aquifer/ore positional random factories, and
+concurrent maps that lazily cache normal-noise instances and named positional
+random factories.
+
+Vanilla shares this object with asynchronous generation, but that alone does
+not make every object reachable from it safe to reuse in a separate client
+worker design. The remote path must construct an equivalent client-owned
+context from versioned registry/settings data.
+
+### Structure adjustment
+
+Status: `VERIFIED` for the exact-empty eligibility case; non-empty
+serialization remains out of scope
+
+`NoiseBasedChunkGenerator.createNoiseChunk` creates a
+`Beardifier.forStructuresInChunk(structureManager, chunk.getPos())` and passes
+it into `NoiseChunk`. `ChunkPyramid` requires structure starts out to radius 8
+for the `NOISE` step. `Beardifier.forStructuresInChunk` returns the public
+singleton `Beardifier.EMPTY` when no terrain-adjusting structure contribution
+exists. The PoC requires object identity with that singleton and falls back for
+all non-empty influence; its minimal serializable form is intentionally not
+defined.
+
+### Blender
+
+Status: `VERIFIED` for the fresh-world fallback condition
+
+`Blender.of(WorldGenRegion)` returns the singleton empty blender unless an old
+generation chunk is present within its configured blending ranges. A fresh
+world normally takes this empty path. The implemented assisted path requires
+`Blender.isEmpty()` and falls back locally when it is false.
+
+### Aquifer
+
+Status: `VERIFIED`
+
+`Aquifer` is called from `NoiseChunk`'s block-state material rule with the
+current density function context and density. Its output is a nullable
+`BlockState`, and its stateful `shouldScheduleFluidUpdate` flag controls whether
+the filled position is added for post-processing. Aquifer computation is
+tightly coupled to final base block-state materialization.
+
+### Ore veins inside the noise stage
+
+Status: `VERIFIED` and security-relevant
+
+When `NoiseGeneratorSettings.oreVeinsEnabled()` is true, `NoiseChunk` adds an
+`OreVeinifier` rule after the aquifer rule. That rule can emit copper ore, raw
+copper blocks, deepslate iron ore, raw iron blocks, granite, and tuff during
+`NOISE`; this is separate from the later `FEATURES` stage.
+
+Therefore Option A (remote full base-terrain stage) would let the client choose
+gameplay-sensitive ore-vein output unless the server recomputes, strips, or
+validates it. The current security boundary favors Option B: remotely compute a
+mathematical density/intermediate representation while the server retains
+aquifer/material/ore-vein selection and chunk mutation.
+
+---
+
+## 8. Output equivalence definition
+
+Before remote execution, define exactly what “equal to vanilla” means.
+
+Possible levels:
+
+### Level 1 — block-state equivalence at target stage
+
+Every block state in the chunk matches immediately after the selected stage.
+
+### Level 2 — plus generation heightmaps
+
+Relevant worldgen heightmaps match.
+
+### Level 3 — downstream final chunk equivalence
+
+After continuing normal server-side stages, the final generated chunk matches vanilla.
+
+Level 3 is the strongest useful acceptance criterion.
+
+For the PoC, aim for Level 3 on a fresh Overworld test world.
+
+---
+
+## 9. Hashing strategy for tests
+
+Do not hash arbitrary serialized object memory.
+
+Phase 0 implements canonical format version 1 with SHA-256. It contains, in
+order:
+
+```text
+format name and version
+chunk X/Z, minimum Y, and height
+section count and each absolute section Y
+all block states in section-index, local Y, local Z, local X order
+WORLD_SURFACE_WG raw heightmap data
+OCEAN_FLOOR_WG raw heightmap data
+post-processing packed offsets grouped by section and sorted unsigned
+```
+
+Each block state is encoded as its block registry identifier followed by
+properties sorted by property name, for example:
+
+```text
+minecraft:oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+```
+
+All strings and arrays are length-prefixed before hashing. Missing heightmaps
+are represented explicitly without calling `ChunkAccess.getHeight`, because
+that method would prime a missing heightmap and mutate the object being
+observed. Post-processing lists are sorted because insertion order is not part
+of the intended canonical state.
+
+Biomes are deliberately excluded: `BIOMES` is the preceding stage and
+`NOISE` does not mutate biome containers. Format version 1 compares the output
+owned by the selected stage: block states, its two worldgen heightmaps, and
+post-processing markers.
+
+The digest is opt-in through the JVM property
+`worldgen_assist.noise_digest=true` or environment variable
+`WORLDGEN_ASSIST_NOISE_DIGEST=true`. When enabled, the returned stage future
+waits for hashing so downstream mutation cannot race the snapshot. The normal
+metrics path retains the original vanilla future and does not calculate a
+digest.
+
+Use the same format version and canonicalization for vanilla and assisted
+results. Changing any field or traversal order requires incrementing the
+format version.
+
+---
+
+## 10. Phase 1 backend-selection boundary
+
+Status: `VERIFIED` against generated source, bytecode, and a dedicated-server
+run; Phase 1 Gate 2 complete for the exact-executor delegation baseline.
+
+`NoiseBasedChunkGenerator.fillFromNoise` creates the complete vanilla terrain
+calculation as a `Supplier<ChunkAccess>` and passes it to the static overload:
+
+```text
+CompletableFuture.supplyAsync(Supplier, Executor)
+
+Descriptor:
+  (Ljava/util/function/Supplier;Ljava/util/concurrent/Executor;)
+  Ljava/util/concurrent/CompletableFuture;
+```
+
+Generated Minecraft 26.2 source lines 352–377 show that line 359 supplies the
+executor as:
+
+```java
+Util.backgroundExecutor().forName("wgen_fill_noise")
+```
+
+The Phase 1 Mixin leaves both arguments unchanged in vanilla mode. In
+`delegate` mode it crosses project configuration/backend selection and returns
+that exact captured executor object. In `local` mode it changes only the
+executor argument. The supplier still acquires and releases the affected
+sections, invokes the private `doFill`, mutates the same chunk, and completes
+the same kind of future. Consequently the local prototype executes the full
+authoritative noise stage, including aquifer/material/ore-vein selection, on
+server-owned local workers.
+
+With `WORLDGEN_ASSIST_NOISE_BENCHMARK=true`, the Mixin also wraps that supplier
+to record its queue-wait and execution intervals using the same JVM monotonic
+clock. It also records current worker-thread CPU time with `ThreadMXBean` when
+the JVM exposes it; unsupported runs emit `cpu_ms=-1` and the summarizer
+excludes those values. The flag is off by default. When it is off, the original
+supplier object is passed through unchanged. Task execution timing ends before
+the benchmark log write; the enclosing stage timing completes afterward and
+continues to include retrogen and future-continuation work.
+
+Configuration:
+
+```text
+WORLDGEN_ASSIST_NOISE_BACKEND=vanilla|delegate|local
+worldgen_assist.noise_backend=vanilla|delegate|local
+
+WORLDGEN_ASSIST_LOCAL_WORKERS=1..64
+worldgen_assist.local_workers=1..64
+
+WORLDGEN_ASSIST_LOCAL_QUEUE_PER_WORKER=0..16
+worldgen_assist.local_queue_per_worker=0..16
+```
+
+System properties take precedence over environment variables. Default mode is
+`vanilla`. `delegate` uses the exact vanilla executor with no project worker or
+lifecycle resource. The default local worker count and queued-tasks-per-worker
+ratio are both one. A non-blocking semaphore admits at most
+`workers * (1 + queued-tasks-per-worker)` commands to the local pool; queue
+capacity is `workers * queued-tasks-per-worker`. Admission failure or executor
+rejection before execution delegates the unchanged command to the original
+vanilla executor.
+
+Benchmark task records distinguish the requested backend from the actual
+execution route. Delegate mode records `execution=vanilla_delegate`; local
+acceptance records `execution=local_pool`; rejected work records
+`execution=vanilla_fallback`; vanilla mode records `execution=vanilla`. This is
+necessary because a bounded local-mode result can otherwise be a mixture of
+both executors. Fallback warning logs are rate-limited, but execution-route and
+tick/shutdown counters retain exact totals.
+
+This boundary intentionally does not solve remote context extraction. The
+supplier captures live worldgen objects and cannot cross a network or be
+treated as an immutable `TerrainComputeJob`.
+
+Deterministic runtime verification used seed `8675309` and explicit target
+chunks `(0,0)`, `(8,12)`, `(-7,5)`, and `(128,-96)`. Dependencies caused 331
+chunks to reach `NOISE`. Two independent vanilla worlds matched each other for
+all 331 canonical format-1 digests, and the local-backend world matched that
+baseline for all 331 as well. The revised asynchronous ForkJoin backend was
+then checked in another fresh world and also matched the vanilla baseline for
+331/331 coordinates. Both local checks had zero stage failures and zero
+vanilla-executor fallbacks.
+
+A later fresh `delegate` world used the same seed/targets and matched the
+independent vanilla baseline for all 331 coordinates and digests, with zero
+failures or mode-only coordinates. This confirms that crossing the backend
+selection seam preserves the verified NOISE result while retaining the exact
+vanilla scheduling object.
+
+Generated `Util` source confirms that the vanilla background executor is an
+asynchronous-mode `ForkJoinPool` sized to
+`availableProcessors() - 1` (subject to its configured clamps). The benchmark
+host exposed 20 logical processors, so both vanilla and the comparison local
+pool used 19 workers. The initial local backend used a fixed
+`ThreadPoolExecutor` with one bounded FIFO queue. The revised backend uses a
+dedicated asynchronous-mode `ForkJoinPool` with bounded admission. It remains
+different from vanilla's shared pool because both pools can compete for the
+same CPUs while upstream vanilla work is still active.
+
+The initial FIFO implementation was measured in three fresh-world burst
+comparisons, each containing 648 measured tasks after 25 spawn warm-up tasks.
+Across those three run summaries:
+
+```text
+mean of run means                 VANILLA   LOCAL_BACKEND
+stage elapsed (ms/task)             23.23           63.50
+supplier queue wait (ms/task)        3.08           40.88
+supplier compute (ms/task)          20.00           22.38
+workload span (ms/648 tasks)      5063.69         4970.20
+throughput (tasks/s)                128.11          130.39
+```
+
+The revised asynchronous ForkJoin implementation was then measured with the
+same three-pair fixture and fresh worlds. This historical series still used a
+fixed 1024-task waiting window:
+
+```text
+mean of run means                 VANILLA   LOCAL_BACKEND
+stage elapsed (ms/task)             22.03           44.26
+supplier queue wait (ms/task)        3.05           23.08
+supplier compute (ms/task)          18.80           20.91
+workload span (ms/648 tasks)      4796.40         5162.86
+throughput (tasks/s)                135.32          125.65
+```
+
+Relative to the separate historical FIFO series, asynchronous fork/join
+scheduling reduced local mean queue wait from 40.88 ms to 23.08 ms and local
+mean stage elapsed from 63.50 ms to 44.26 ms. That directional comparison is
+not a paired speedup claim because the two series used different fresh-world
+runs. In the current paired series the local stage mean was still about twice
+vanilla's, and local throughput was about 7.2% lower. Both modes execute the
+same server-owned supplier on the same machine, and the benchmark logger is
+enabled in both. The dedicated pool therefore remains an experimental seam,
+not a performance-equivalent vanilla fallback.
+
+### Tick-health observation at this boundary
+
+`WorldgenStageMetrics.NOISE` also tracks current and lifetime-peak active stage
+operations. With `WORLDGEN_ASSIST_TICK_BENCHMARK=true`, an independent logger
+correlates those counters with Fabric's server tick events. Local Fabric API
+0.156.0+26.2 source places START immediately before
+`MinecraftServer.tickChildren(BooleanSupplier)` and END at the tail of
+`tickServer`; the recorded duration is this event interval, not the complete
+method invocation. This uses Fabric callbacks and adds no project Mixin.
+
+NOISE completion/failure deltas span previous END to current END, preserving
+asynchronous completions between tick event intervals. Active NOISE values are
+point samples at START and END. The local backend supplies both point-in-time
+ForkJoin/admission state and resettable interval peaks for exact active and
+admitted commands, so work that begins and ends inside one long tick is still
+visible. The JDK 25 runtime smoke observed a local interval peak of 19 active
+and 61 admitted commands even though the end-point samples were zero.
+
+A subsequent three-pair, 648-task fixture observed local interval peaks of 19
+active and 137 admitted commands. Mean local stage latency was 50.83 ms versus
+23.69 ms for vanilla, with 25.60 ms of the 27.14 ms delta attributable to
+additional queue wait. Local pooled NOISE-active tick mean/p95 were also higher
+(325.69/4178.07 ms versus 226.70/3895.05 ms), and its over-budget share was
+10.0% versus 5.56%. These conditional tick samples do not represent all server
+ticks, but they show no tick-health improvement. The current executor boundary
+remains deterministic and operationally bounded but fails Gate 2's
+negligible-overhead requirement.
+
+The admission policy was then changed from the fixed 1024-slot window to the
+worker-proportional formula above. A 19-worker screen at ratios 0, 1, 2, and 4
+exposed a direct latency/fallback tradeoff: the zero-wait run fell back 159/648
+tasks, while ratio 4 reduced fallback to 3/648 but raised mean stage/queue time
+to 55.12/30.21 ms. A final route-aware ratio-1 run bounded the interval peak to
+19 active and 38 admitted commands, completed with zero failures, and routed
+586 tasks through the local pool plus 62 through vanilla fallback. Aggregate
+stage mean was 40.66 ms versus 22.93 ms for its vanilla comparison; active-tick
+mean/p95 and over-budget share also remained worse. Worker-proportional
+admission materially tightens the operational bound but does not make this
+same-machine dedicated-pool boundary pass Gate 2.
+
+The different `delegate` baseline then ran three order-balanced fresh-world
+pairs with 648 measured tasks per mode/run. All 1,944 delegate tasks used
+`vanilla_delegate`, the same `minecraft_shared_fork_join_async` scheduler as
+vanilla, and all 3,888 tasks completed without failure. Mean queue wait was
+3.237 ms for vanilla and 3.053 ms for delegate; workload span was 5341.23 and
+5267.06 ms; throughput was 122.05 and 123.03 tasks/s. Both modes had 50
+NOISE-active ticks and three over-budget ticks. Per-run delegate-minus-vanilla
+stage deltas changed sign (`+4.538`, `+2.390`, `-3.242` ms/task), so seam
+overhead was not distinguishable from run noise. Gate 2 passes for backend
+selection, while the dedicated local-pool policy remains rejected.
+
+---
+
+## 11. Questions answered for the first remote Mixin
+
+- [x] exact 26.2 stage
+- [x] exact method/descriptor
+- [x] stage input lifetime
+- [x] stage output mutation
+- [x] asynchronous completion semantics
+- [x] server thread safety
+- [x] structure dependence
+- [x] blending dependence
+- [x] aquifer dependence
+- [x] heightmap updates
+- [x] downstream assumptions
+- [x] safe timeout/fallback point
+
+The PoC resolves these only for its narrow eligibility boundary. Live server
+objects never cross the network; the client owns a separate `RandomState` and
+`NoiseChunk`; the server installs a validated immutable field before invoking
+the original asynchronous fill. The original future preserves section
+ownership and downstream lifecycle. Any ineligible or failed attempt calls the
+captured original `ChunkStatusTasks.generateNoise` operation.
+
+---
+
+## 12. Phase 2 immutable identity and context
+
+Phase 2 defines bounded common metadata for a server-owned pending job:
+
+```text
+protocol version: current value 2
+job ID: non-zero UUID issued by the server
+dimension: canonical Identifier, at most 256 UTF-8 bytes
+chunk: coordinates accepted by Minecraft 26.2 ChunkPos.isValid
+context fingerprint: immutable 32-byte SHA-256 value
+```
+
+Generated source is the reason coordinate validation calls `ChunkPos.isValid`
+instead of inventing a world-border number: that method delegates to
+`ChunkPyramid.MAX_CHUNK_COORDINATE_VALUE`, which includes the generation
+dependency safety margin derived by Minecraft 26.2.
+
+`TerrainDensityJob` combines this identity with the raw seed, structure flag,
+keyed noise-settings ID, and bounded height/cell geometry. It still contains no
+live density router, structure/blending manager, or chunk state. The owning
+player is not a client field. `PendingTerrainJobRegistry` binds the server-issued
+UUID to that owner and full identity, with bounded admission, monotonic timeout,
+lifecycle cancellation, and single-winner response claims.
+
+Generated Minecraft 26.2 source establishes the implemented base-context hash
+inputs. `ChunkMap` constructs `RandomState` from the selected
+`NoiseGeneratorSettings`, the noise-parameter registry, and the level seed.
+`RegistryDataLoader` loads noise settings, density functions, and noise
+parameters through their direct codecs. `ServerLevel.getSeed()` returns the
+server world-options seed. Format `1` therefore hashes the Minecraft/data/game-
+protocol versions, Worldgen Assist protocol, dimension, seed, structure flag,
+min Y/height, selected direct-coded noise settings, every direct-coded density-
+function and noise-parameter entry, and the debug flags that change this stage.
+Registry IDs and JSON object keys are sorted before typed binary hashing; array
+order remains significant.
+
+The factory is used by the opt-in startup logger, server coordinator, and client
+worker. The client builds a vanilla worldgen lookup because the play registry
+sync does not contain noise settings. Its digest commits to the base-noise
+context but does not prove a particular chunk has `Beardifier.EMPTY`, empty
+`Blender`, or no retrogen; the remote path performs those checks separately for
+every job. Unsupported custom registry/datapack context fails closed.
+
+## 13. Phase 2 interpolated-density payload
+
+Generated source confirms that `NoiseChunk` wraps
+`DensityFunctions.add(wrappedRouter.finalDensity(), BeardifierMarker)` in the
+`CacheAllInCell` used by the server-side aquifer material rule. The client PoC
+therefore computes the same `NoiseChunk` interpolation loop with
+`Beardifier.EMPTY` and `Blender.empty()`, returning a canonical array indexed as
+`(yOffset * 16 + xOffset) * 16 + zOffset`.
+
+Before sending a job, the server requires all of the following:
+
+- the vanilla Overworld dimension and a `NoiseBasedChunkGenerator`;
+- no old-noise-generation or below-zero retrogen state;
+- `Blender.isEmpty()`;
+- exact singleton `Beardifier.EMPTY` for the target chunk;
+- a keyed noise-settings holder whose clamped min Y/height/cell geometry matches
+  the level and the protocol bounds;
+- exactly one handshaken worker, preserving the initial one-player fairness
+  scope.
+
+On an accepted response the server validates identity, sample count, finite
+values, absolute density bound, and exact `NoiseChunk` geometry. It then skips
+only the original `fullNoiseDensity` cell fill and copies the returned density
+values into that cache. Aquifer computation, ore veins, block selection and
+writes, both generation heightmaps, fluid post-processing, retrogen continuation
+(ineligible in this PoC), and all downstream stages stay server-side.
+
+The protocol caps height at 384 and therefore density values at 98,304 per job.
+Protocol version 2 turns the exact big-endian density bytes into either RAW or
+zlib DEFLATE, using compression only when it is smaller. The result remains
+registered through Fabric's bounded large-payload splitter with a packet limit
+of 787,456 bytes. Remote mode remains disabled by
+default and any unavailable worker, bad result, explicit client failure,
+timeout, disconnect, send failure, or shutdown completes the waiting future via
+the untouched local path.
+
+The cached `NoiseChunk` is explicitly ensured before submission. Generated
+source verification and runtime testing found that a persisted partial chunk may
+reach NOISE with the field absent, so an exact `@Invoker` exposes private
+`NoiseBasedChunkGenerator.createNoiseChunk(ChunkAccess, StructureManager,
+Blender, RandomState)` and passes it to `ChunkAccess.getOrCreateNoiseChunk`.
+This preserves vanilla construction and downstream object identity.
+
+Timeout expiry normally runs at `END_SERVER_TICK`. A second daemon watchdog is
+required for synchronous server operations such as `forceload`: while the main
+thread waits for chunk completion it cannot dispatch the remote result handler,
+so a tick-only timeout cannot advance. The watchdog marks the pending job
+expired and completes its future without calling Fabric networking off-thread.
+Local fill then releases the synchronous wait; the queued result is rejected as
+late.
+
+## 14. Phase 2 runtime verification
+
+The 2026-09-02 Minecraft 26.2 dedicated server/client fixture used seed
+`8675309`, one accepted client worker, and new Overworld coordinates. The client
+computed 98,304 densities per standard-height chunk on
+`CAWG-RemoteWorldgen-1`. Server logs confirmed `job.sent`,
+`job.result_received`, `job.complete`, and the original NOISE-stage completion.
+
+Seven chunks that reached remote `job.complete` were regenerated in an
+independent local-only world with the same seed/configuration. Their canonical
+format-1 digests, covering all 98,304 block states, generation heightmaps, and
+post-processing positions, matched exactly (`7/7`, zero mismatches).
+
+A separate 500 ms fixture forced the synchronous-wait condition. The watchdog
+logged `source=watchdog`, vanilla fallback completed, the late remote response
+was rejected as `EXPIRED`, `forceload` returned, the client remained connected,
+and a later job completed remotely. This verifies the safe fallback point even
+when server ticks are temporarily unable to run.
+
+## 15. Phase 3 transport and cache placement
+
+Phase 3 does not change the Minecraft 26.2 worldgen target or the authoritative
+application sequence established above:
+
+```text
+client-owned NoiseChunk samples fullNoiseDensity
+        |
+        v
+exact IEEE-754 bytes -> RAW or DEFLATE envelope
+        |
+        v
+server claims identity -> bounded CAWG-RemoteDecode
+        |
+        v
+validate exact shape/values -> optional LRU store
+        |
+        v
+RemoteDensityTarget.install
+        |
+        v
+original NoiseBasedChunkGenerator.doFill
+```
+
+The server cache sits before installation and stores only a defensive copy of
+the mathematical density field. Its key includes cache generation, dimension,
+chunk coordinates, context fingerprint, keyed noise settings, and exact
+height/cell geometry. It never stores or shares `NoiseChunk`, `RandomState`,
+`ChunkAccess`, `Blender`, `Beardifier`, aquifer state, or block output. Hits use
+a fresh server-issued identity and the same target geometry checks and original
+vanilla fill as network results.
+
+Start, datapack reload, and shutdown clear the cache and advance its generation.
+The generation is captured in every key, so a pre-reload remote decode that
+finishes later cannot repopulate the new context. Decompression similarly
+cannot mutate the target: invalid/truncated/trailing/over-expanding data fails
+before installation and resumes the untouched local operation.
+
+The 2026-09-03 runtime fixture transported 21 full-height fields through
+DEFLATE; seven remotely completed chunks overlapping the independent local
+baseline matched the complete NOISE-stage digest exactly (`7/7`). This verifies
+that Phase 3 remains outside the generated-source/Mixin boundary documented in
+sections 4, 5, and 13.
+
+## 16. Phase 4 prediction placement
+
+Phase 4 does not move the authoritative NOISE boundary. It prepares only the
+same immutable full-density array before a future chunk demand:
+
+```text
+sole worker player's server-side motion
+        |
+        v
+valid in-border candidate beyond effective view distance
+        |
+        v
+owner-bound remote density calculation (no server chunk requested)
+        |
+        v
+Phase 3 context-keyed LRU / exact in-flight future
+        |
+        v
+real ChunkStatusTasks.generateNoise demand
+        |
+        v
+fresh live eligibility checks -> existing density install -> vanilla doFill
+```
+
+Generated Minecraft 26.2 source verifies that `ServerPlayer` exposes
+`chunkPosition()` and `requestedViewDistance()`, `PlayerList` exposes the server
+view distance and UUID lookup, `WorldBorder` accepts a `ChunkPos`, and
+`ServerChunkCache.hasChunk(x,z)` checks already-loaded `FULL` presence. The
+effective distance matches `ChunkMap.getPlayerViewDistance`:
+`clamp(requestedViewDistance, 2, serverViewDistance)`. `ChunkPos.isValid`
+provides the protocol coordinate bound.
+
+The tick scheduler does not invoke `getChunk`, `scheduleChunkGeneration`, or any
+other stage-advancing API. It skips a `FULL` candidate and scans at most eight
+chunks farther in the same normalized direction. Prediction assumes empty
+blender/beardifier only for the mathematical calculation; real demand repeats
+the direct checks for retrogen, old noise, live blender, and exact
+`Beardifier.EMPTY` before using a cached or joined result. Therefore all chunk
+mutation, aquifers, ores, heightmaps, post-processing, persistence, and later
+stages remain in the pipeline described above.
+
+The 2026-09-03 runtime fixture consumed three completed predictions through the
+real NOISE boundary. All three canonical outputs matched independent local-only
+generation (`3/3`), with no new Mixin target.
+
+## 17. Phase 5 sampled validation placement
+
+Phase 5 validates the density intermediate before it can reach the existing
+installation redirect:
+
+```text
+fixed decoded client density
+        |
+        v
+server SecureRandom selects unique interpolation cells
+        |
+        v
+separate authoritative NoiseChunk recreates selected cells
+        |
+        v
+bit-exact comparison of every value in each cell
+       / \
+   match   mismatch
+     |        |
+cache/apply   evict + quarantine owner + untouched local fallback
+```
+
+Generated Minecraft 26.2 source confirms the public `NoiseChunk` constructor
+and interpolation methods used here. The project-owned validation subclass
+only exposes the protected density read. It uses authoritative server
+`RandomState`, the exact selected `NoiseGeneratorSettings` and clamped
+`NoiseSettings`, `Beardifier.EMPTY`, and `Blender.empty()`. It is a separate
+object, so validation cannot disturb the cached live chunk later consumed by
+`NoiseBasedChunkGenerator.doFill`.
+
+Selection occurs after the result is fixed and covers whole cells because the
+vanilla cache fill and remote payload share that natural boundary. Standard
+Overworld geometry contains 768 cells; each selected cell contributes 128
+densities. Direct results validate before cache/application. Speculative
+results validate before entering the Phase 3 cache, so joined and completed
+cache paths consume an already validated immutable copy. A mismatch never
+installs `RemoteDensityField`; the original supplier captured at
+`ChunkStatusTasks.generateNoise` remains the only mutation path.
+
+## 18. Seed-confidentiality source audit
+
+The generated Minecraft 26.2 `RandomState` source proves that the current
+client reconstruction cannot drop its seed input: the constructor derives the
+root positional random factory, uses it for keyed `NormalNoise` instances and
+`BlendedNoise`, and wires the resulting objects through `NoiseRouter` before
+`NoiseChunk` wraps `finalDensity`. `NormalNoise` creates two `PerlinNoise`
+instances, whose active octaves retain `ImprovedNoise` offsets and 256-byte
+permutation tables.
+
+Therefore the existing boundary has two honest states: explicitly trusted raw-
+seed execution, or local fallback. Sending the initialized samplers merely
+moves seed-equivalent arbitrary-coordinate capability across the boundary and
+is not confidential. The implemented `DENY` configuration keeps the pipeline
+on untouched local generation and rejects worker registration; it adds no Mixin
+target.
+
+The server-local recorder/replayer boundary is now implemented and remains
+outside networking. Minimal verified hooks surround `NormalNoise.getValue` and
+`BlendedNoise.compute`. A thread-confined session records leaf ID, input bits,
+and output bits; replay checks the exact sequence before replacing those calls.
+No active session leaves vanilla values unchanged.
+
+The initial `SeedDependencyAnalyzer` inventory is implemented without a Mixin
+or sampler-state extraction. For the wired vanilla Overworld `finalDensity`
+graph it records 25 unique keyed noise IDs, one `BlendedNoise` node, and 1,116
+expanded noise-holder references; the exact 26.2 inventory is locked by a
+Fabric JUnit regression test.
+
+The replay fixture constructs a second `RandomState` from an unrelated public
+dummy seed. With the authoritative transcript active, its `NoiseChunk` matches
+every interpolated density bit for a 16-block slice and for one complete
+384-block negative-coordinate chunk. The fixtures use 2,548 and 17,972 bounded
+leaf entries respectively. Changed input bits, a one-entry recording limit, and an unconsumed
+trailing entry all fail closed.
+
+Both deterministic fixtures now serialize and decode the transcript before
+dummy-seed replay. The codec uses a canonical first-use leaf-ID dictionary and
+rejects unknown versions/kinds, duplicate or unused dictionary entries,
+non-canonical first use, excessive counts/bytes, invalid indices, and every
+trailing byte or truncation of the test fixture. `SeededLeafJob` wraps that transcript with a
+server-issued UUID, server-random opaque context ID, fixed versioned 26.2 graph
+ID, and exact Overworld geometry; its separate codec is also bounded and
+truncation-tested. A server-only random 256-bit key authenticates the canonical
+semantic job, including every transcript input/output bit, with HMAC-SHA-256.
+The tag comparison is constant-time and the authorization envelope has its own
+bounded, versioned, truncation-tested codec.
+
+This proves a serializable calculation boundary, not a deployable confidential
+protocol. None of these codecs is registered or sent to a client. The separate
+server authority nevertheless exercises the intended control plane: it issues
+the opaque context and HMAC under a lifecycle-owned key, retains the full job,
+binds it to one owner, and consumes a fixed-size exact claim once. Reload rotates
+context/key and cancels pending jobs; disconnect cancellation and other failures
+do not refund the per-owner entry budget.
+At most 100,000 transcript entries can remain live across all pending draft
+jobs. Terminal transitions release the transcript and retain only the fixed-
+size claim tombstone needed to classify replay/cancel/expiry.
+Before any authorization is emitted, the authority also charges a 100,000-entry
+world-local global ledger. Its 72-byte counter record is replaced atomically in
+the world `data/worldgen_assist` directory. Corruption, pending-write ambiguity,
+maximum mismatch, or I/O/atomic-move failure makes issuance unavailable rather
+than resetting the budget. A fixed adjacent initialization marker makes a
+missing ledger after partial world-data loss fail closed.
+
+The matching unregistered result path now carries that 81-byte claim plus a
+bounded final-density array. Its strict envelope uses exact big-endian double
+bits and either RAW or zlib DEFLATE, with at most 98,304 values and 786,545
+total standalone codec bytes. The server gate performs the operations in this
+order:
+
+1. match owner, opaque context, and HMAC tag and consume the one-shot claim;
+2. recover the server-retained job and compare its sample count with the
+   declared result count before decompression;
+3. expand exactly `count * 8` bytes with no dictionary, overflow, truncation,
+   or trailing compressed input;
+4. reject non-finite or absolute density values above 1,000,000; and
+5. emit only job geometry plus values, without retaining the transcript.
+
+The output is named `ACCEPTED_FOR_AUTHORITATIVE_VALIDATION`: the gate itself has
+not sampled vanilla. A new overload then feeds that projection into the same
+separate authoritative `NoiseChunk` sampler described in section 17. It checks
+`minY`, height, `getCellWidth()`, and `getCellHeight()` against the server-owned
+clamped `NoiseSettings`, selects whole cells only after the result is fixed, and
+compares every selected value bit-exactly using server-owned `RandomState`.
+A 16-block fixture checks all 32 cells/4,096 values and rejects a one-ULP
+mutation. The future transport must schedule bounded decompression and sampling
+away from the networking and main server threads before application.
+
+That scheduling primitive is now implemented but remains unregistered.
+`SeededLeafResultValidationExecutor` consumes the claim synchronously, then
+performs bounded decode and server-owned cell validation on one daemon worker.
+Reload advances an epoch before cancellation; disconnect disables the owner
+before cancellation; successful application data is suppressed if either
+boundary is crossed. Timeout/cancel completes the response future promptly but
+keeps capacity occupied until the underlying invocation exits.
+
+The server can now create a draft request with
+`SeededLeafJobSpecRecorder.record(...)`: it runs the exact public `NoiseChunk`
+interpolation traversal under recording, requires a registry-backed
+`NoiseGeneratorSettings.OVERWORLD` holder, checks generator/clamped-noise
+geometry, and returns the transcript plus sample count/timing. Generated 26.2
+source confirms `NoiseGeneratorSettings.noiseSettings()` and
+`NoiseSettings.clampToHeightAccessor(...)`; a clamped range may be smaller, but
+must retain the configured horizontal/vertical noise sizes and remain within
+the configured Y interval. The unregistered client
+computer builds an unrelated fixed-public-dummy-seed `RandomState`, replays the
+transcript through the shared sampler, and returns only claim/density/timing.
+Its exact-capacity worker accounts a cancelled attempt until execution exits.
+After server validation only, `RemoteDensityField.fromValidated(outcome, authority)` converts
+the successful outcome into the same geometry/value carrier consumed by
+`NoiseChunkRemoteDensityMixin`; it rechecks current authority generation/context
+and no protocol-v2 fingerprint is synthesized.
+
+The per-owner budget limits one owner to 100,000 transcript entries per running
+server lifetime and survives datapack reload. The world-global budget also
+survives process restart. These bound accidental cumulative exposure but are not
+a leakage proof: related accounts are not aggregated and no safe transcript
+count has been established cryptanalytically. Those questions and the absent
+live transport/scheduler/application orchestration remain gates before protocol
+version 3.
+
+The transport-free orchestration and generation continuation are now
+implemented, without a caller in the live pipeline. Recording/issuance runs on
+one owned worker, decode/validation on its bounded worker, and the original
+vanilla continuation on an explicitly supplied generation executor. A ready
+offer is rechecked for connection/generation/deadline and one-shot use at
+installation, and the installed field is cleared before downstream completion.
+The same vanilla operation is called once whether the attempt supplies a field
+or falls back. No `NoiseChunk` or `ChunkStatusTasks` target was changed.
+
+Source recheck on 2026-09-05 confirmed that generated `NoiseSettings` is a record
+whose direct constructor does not apply its codec guards; `create` checks the Y
+range/alignment but not every remote geometry invariant. Consequently the
+recorder now calls the canonical `SeededLeafJob.validateGeometry` before opening
+a trace session or constructing a `NoiseChunk`. This rejects misaligned or
+non-divisible geometry before any leaf traversal, while retaining exact valid
+clamped slices. See `SEEDED_LEAF_ORCHESTRATION.md` for integration contracts.

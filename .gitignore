@@ -1,0 +1,13 @@
+.gradle/
+build/
+bin/
+*.class
+out/
+run/
+.idea/
+*.iml
+*.ipr
+*.iws
+logs/
+crash-reports/
+test-artifacts/

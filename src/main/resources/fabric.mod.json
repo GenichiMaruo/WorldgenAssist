@@ -1,0 +1,32 @@
+{
+	"schemaVersion": 1,
+	"id": "worldgen_assist",
+	"version": "${version}",
+	"name": "Worldgen Assist",
+	"description": "Experimental client-assisted Minecraft world generation.",
+	"authors": [
+		"GenichiMaruo"
+	],
+	"contact": {
+		"sources": "https://github.com/GenichiMaruo/WorldgenAssist"
+	},
+	"license": "All-Rights-Reserved",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"io.github.genichimaruo.worldgenassist.WorldgenAssist"
+		],
+		"client": [
+			"io.github.genichimaruo.worldgenassist.client.WorldgenAssistClient"
+		]
+	},
+	"mixins": [
+		"worldgen_assist.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
