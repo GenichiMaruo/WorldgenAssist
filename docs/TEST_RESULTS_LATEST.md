@@ -1,4 +1,14 @@
-# Test results — 2026-09-10
+# Test results — 2026-09-11
+
+## Versioned alpha checkpoint — 2026-09-11
+
+`0.1.0-alpha.1+mc26.2` passes fresh Phase A–D (240 tests / 51 suites,
+zero failures/errors/skips) and both-installed-JAR multi-PC assisted/vanilla
+checks. All four applied chunks and 1,010 shared NOISE digests match.
+See [the release verification report](releases/v0.1.0-alpha.1+mc26.2-verification.md)
+for exact new artifact hashes, evidence paths, runtime warnings and limitations.
+The following sections retain the preceding implementation checkpoint and its
+old unversioned-alpha JAR hash; do not use that hash for the new release.
 
 ## Conclusion
 

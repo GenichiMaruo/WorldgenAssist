@@ -19,7 +19,8 @@ Get-ChildItem -LiteralPath (Join-Path $workspace 'src') -File -Recurse | Sort-Ob
     "$( (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash )  $($_.FullName.Substring($workspace.Length+1))"
 } | Set-Content -LiteralPath (Join-Path $root 'source-sha256.txt')
 $api=Join-Path $env:USERPROFILE '.gradle/caches/modules-2/files-2.1/net.fabricmc.fabric-api/fabric-api/0.156.0+26.2/d96e0d9ef8ea3604fac4ca7495d7c6148f3ac816/fabric-api-0.156.0+26.2.jar'
-$mod=Join-Path $workspace 'build/libs/worldgen-assist-0.1.0.jar'
+$artifact=& (Join-Path $PSScriptRoot 'Get-WorldgenArtifact.ps1') -Workspace $workspace
+$mod=$artifact.Path
 function Remote-Code([string]$Code) {
     $Code='$ErrorActionPreference="Stop"; $ProgressPreference="SilentlyContinue"; '+$Code
     $encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($Code))
@@ -45,12 +46,13 @@ $tunnel=$null; $server=$null; $client=$null; $case=$null; $success=$false
 try {
     Write-Output "evidence=$root"
     Remote-Code ('New-Item -ItemType Directory -Force -Path "'+$remoteRoot+'/mods" | Out-Null')
+    Remote-Code ('$old=@(Get-ChildItem -LiteralPath "'+$remoteRoot+'/mods" -Filter "worldgen-assist-*.jar" -File | Where-Object { $_.Name -ne "'+$artifact.FileName+'" }); if ($old.Count -gt 0) { throw "Archive the previous fixture mod outside mods before testing a new version; no automatic deletion performed" }')
     & scp -q $mod $api ($remoteHost+':'+$remoteRoot+'/mods/')
     if ($LASTEXITCODE -ne 0) { throw 'Mod transfer failed' }
     & scp -q (Join-Path $workspace 'run/eula.txt') (Join-Path $PSScriptRoot 'Remote-FixtureServer.ps1') ($remoteHost+':'+$remoteRoot+'/')
     if ($LASTEXITCODE -ne 0) { throw 'Runner transfer failed' }
     $hash=(Get-FileHash -LiteralPath $mod -Algorithm SHA256).Hash
-    Remote-Code ('$expected="'+$hash+'"; if ((Get-FileHash -LiteralPath "'+$remoteRoot+'/mods/worldgen-assist-0.1.0.jar" -Algorithm SHA256).Hash -ne $expected) { throw "JAR hash mismatch" }; "REMOTE_JAR_SHA256="+$expected') |
+    Remote-Code ('$expected="'+$hash+'"; if ((Get-FileHash -LiteralPath "'+$remoteRoot+'/mods/'+$artifact.FileName+'" -Algorithm SHA256).Hash -ne $expected) { throw "JAR hash mismatch" }; "REMOTE_JAR_SHA256="+$expected') |
         Tee-Object -FilePath (Join-Path $root 'jar-verification.txt')
     $tunnel=Start-Owned 'ssh.exe' @('-N','-o','BatchMode=yes','-o','ExitOnForwardFailure=yes','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=2','-L','127.0.0.1:25585:127.0.0.1:25585',$remoteHost)
     $tunnelOut=$tunnel.StandardOutput.ReadToEndAsync(); $tunnelErr=$tunnel.StandardError.ReadToEndAsync()

@@ -47,7 +47,8 @@ $gameJar=Join-Path $cache 'fabric-loom/26.2/minecraft-client.jar'
 if ((Get-FileHash -LiteralPath $gameJar -Algorithm SHA1).Hash -ne $mojang.downloads.client.sha1) { throw 'Original client JAR checksum mismatch' }
 $classpath.Add($gameJar)
 $provenance.Add([ordered]@{name='original Minecraft 26.2 client';path=$gameJar;sha256=(Get-FileHash -LiteralPath $gameJar).Hash})
-$mod=Join-Path $workspace 'build/libs/worldgen-assist-0.1.0.jar'
+$artifact=& (Join-Path $PSScriptRoot 'Get-WorldgenArtifact.ps1') -Workspace $workspace
+$mod=$artifact.Path
 $api=Join-Path $cache 'modules-2/files-2.1/net.fabricmc.fabric-api/fabric-api/0.156.0+26.2/d96e0d9ef8ea3604fac4ca7495d7c6148f3ac816/fabric-api-0.156.0+26.2.jar'
 Copy-Item -LiteralPath $mod,$api -Destination (Join-Path $clientDir 'mods')
 Get-ChildItem -LiteralPath (Join-Path $clientDir 'mods') -File | ForEach-Object {

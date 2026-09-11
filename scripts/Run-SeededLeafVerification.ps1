@@ -92,7 +92,8 @@ try {
     if (-not $FocusedOnly) {
         Invoke-Phase 'C-full' @('test', '--rerun-tasks') $true
         Invoke-Phase 'D-build' @('build', '--rerun-tasks') $true
-        Get-ChildItem -LiteralPath 'build/libs' -Filter '*.jar' -File | ForEach-Object {
+        $artifact=& (Join-Path $PSScriptRoot 'Get-WorldgenArtifact.ps1') -Workspace $workspace
+        Get-Item -LiteralPath $artifact.Path,$artifact.SourcesPath | ForEach-Object {
             [pscustomobject]@{ file = $_.Name; bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }
         } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $runRoot 'artifacts-sha256.json')
     }
