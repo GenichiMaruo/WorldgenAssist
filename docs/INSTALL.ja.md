@@ -10,7 +10,7 @@
 2. Minecraft Java Edition **26.2**、Java **25**（検証版: 25.0.4）、
    Fabric Loader **0.19.3**、Fabric API **0.156.0+26.2** を用意します。
 3. [GitHub Releases](https://github.com/GenichiMaruo/WorldgenAssist/releases)から
-   `worldgen-assist-0.1.0-alpha.1+mc26.2.jar` をダウンロードします。
+   `worldgen-assist-0.1.0-alpha.2+mc26.2.jar` をダウンロードします。
    `-sources.jar` は開発者向けソースで、導入用ではありません。
 4. クライアントとサーバーの `mods` フォルダーに、Fabric API と同じバージョンの
    Worldgen Assist の JAR を入れます。古い Worldgen Assist の JAR は別の場所へ
@@ -26,13 +26,19 @@ trusted raw-seed モードでは、ワールドのシードをクライアント
 ありません。両経路を同時に有効にしないでください。条件を限定した検証は
 [フィクスチャの仕様と手順（英語）](SEEDED_LEAF_FIXTURE_PROTOCOL.md)に従います。
 
+alpha.2 では、参加する各クライアントが自分の地形計算を同時に支援できます。
+サーバーと参加する全クライアントを alpha.2 に揃え、alpha.1 と混在させないでください。
+既定では全体で8ジョブ、1人あたり1ジョブが上限です。担当プレイヤーが処理中・切断時は
+通常生成に戻ります。条件を限定した2人の試験は通過していますが、より大きな集団、
+他ディメンション、悪意ある参加者への対応を保証するものではありません。
+
 ## ダウンロードの確認
 
 次のコマンドの SHA-256 と、リリース添付の `SHA256SUMS.txt` 内の同名ファイルの
 値を照合してください。
 
 ```powershell
-Get-FileHash -Algorithm SHA256 -LiteralPath '.\worldgen-assist-0.1.0-alpha.1+mc26.2.jar'
+Get-FileHash -Algorithm SHA256 -LiteralPath '.\worldgen-assist-0.1.0-alpha.2+mc26.2.jar'
 ```
 
 チェックサムはファイルの相違を検出するもので、独立した発行者署名ではありません。

@@ -34,7 +34,7 @@ public record RemoteWorldgenConfig(
 	public static final String VALIDATION_SAMPLE_CELLS_SYSTEM_PROPERTY = "worldgen_assist.remote.validation_sample_cells";
 	public static final String VALIDATION_SAMPLE_CELLS_ENVIRONMENT_VARIABLE = "WORLDGEN_ASSIST_REMOTE_VALIDATION_SAMPLE_CELLS";
 
-	public static final int DEFAULT_MAX_IN_FLIGHT_JOBS = 1;
+	public static final int DEFAULT_MAX_IN_FLIGHT_JOBS = 8;
 	public static final int MAX_IN_FLIGHT_JOBS = 64;
 	public static final long DEFAULT_TIMEOUT_MILLIS = 2_000L;
 	public static final long MIN_TIMEOUT_MILLIS = 50L;

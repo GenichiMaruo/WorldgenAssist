@@ -15,17 +15,24 @@ state remain server-authoritative.
 
 ## Alpha status
 
+Alpha version: **0.1.0-alpha.2+mc26.2**. This release adds concurrent
+assistance by each player's own client. Direct work is
+assigned only within that worker's view; overlapping views choose one owner.
+The global default is eight jobs, with at most one per owner. See
+[multiplayer development and verification](docs/MULTIPLAYER_SUPPORT.md).
+It passes 246 tests in 52 suites, two-owner concurrent runtime checks and an
+owner-disconnect test.
+
 This alpha is for controlled trials, not everyday use on public servers.
 Remote assistance is disabled by default, and no speedup is promised. The
-implemented remote path is deliberately limited to a single controlled client,
+implemented remote paths are limited to explicitly trusted participants,
 a freshly generated vanilla-compatible Overworld, and eligible new terrain.
 It is not for hostile public servers, arbitrary datapacks, other dimensions, or
 sharing one player's compute work with other players.
 
-Alpha version: **0.1.0-alpha.1+mc26.2** (Git tag
-`v0.1.0-alpha.1+mc26.2`);
-check the [Releases page](https://github.com/GenichiMaruo/WorldgenAssist/releases)
-for available downloads.
+Download [alpha.2 for Minecraft 26.2](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.2%2Bmc26.2)
+(Git tag `v0.1.0-alpha.2+mc26.2`). Use the same version on the server and every
+participating client. The older alpha.1 release remains available separately.
 
 ## What is implemented
 
@@ -39,9 +46,13 @@ for available downloads.
   bounded context-aware cache, and player-owned prediction. Cache and
   prediction are not part of the public fixture described below.
 
-The versioned build passes **240 tests in 51 suites** on Java 25.0.4.
-The versioned JAR also passes multi-PC runtime comparison: four applied chunks
-and 1,010 shared terrain digests match normal generation. That evidence establishes functional behavior within the stated
+The release build passes **246 tests in 52 suites** on Java 25.0.4.
+Two installed client profiles and a server on a second PC pass simultaneous
+assistance in both routes: 588 public-fixture and 382 trusted-raw shared NOISE
+digests match independent normal generation. An owner-disconnect probe using
+the existing development-only result withholding on one client also passes,
+with 406 shared digests matching. Timeouts and offline-profile/Realms errors
+remain in the test logs. This evidence establishes functional behavior within the stated
 scope; it does not prove a speedup, private-seed confidentiality, or
 public-server safety. See the English [test results](docs/TEST_RESULTS_LATEST.md).
 
@@ -61,7 +72,7 @@ normal servers.
 
 ## Install safely
 
-When a compatible release is available, use the same **mod JAR** on both the
+Use the same **mod JAR** on both the
 Fabric client and the Fabric server. Do not put the `-sources.jar` in either
 `mods` folder. Keep remote assistance off unless you understand the documented
 research constraints, and test only on a disposable world.

@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
@@ -40,15 +41,21 @@ public final class RemoteJobCoordinator {
 	private final Map<UUID, Attempt> attempts = new HashMap<>();
 	private final Map<UUID, Integer> consecutiveTimeouts = new HashMap<>();
 	private final Set<UUID> decodingResults = new HashSet<>();
-	private final Set<UUID> quarantinedOwners = new HashSet<>();
+	private final Set<UUID> quarantinedOwners = ConcurrentHashMap.newKeySet();
+
+	// Cache consumers must observe watchdog quarantine without acquiring the
+	// coordinator monitor while holding the manager's result-state lock.
+	public boolean isQuarantined(UUID ownerId) {
+		return quarantinedOwners.contains(ownerId);
+	}
 
 	public RemoteJobCoordinator(RemoteWorldgenConfig config, RemoteJobSender sender) {
 		this(
 			config.remoteExecutionEnabled(),
-			new WorkerRegistry(config.maxInFlightJobs()),
+			new WorkerRegistry(1),
 			new PendingTerrainJobRegistry(
 				config.maxInFlightJobs(),
-				config.maxInFlightJobs(),
+				1,
 				config.jobTimeout(),
 				TERMINAL_RETENTION
 			),
@@ -95,6 +102,8 @@ public final class RemoteJobCoordinator {
 		return workers.soleWorkerOwner();
 	}
 
+	public Set<UUID> workerOwners() { return workers.workerOwners(); }
+
 	public Optional<Submission> trySubmit(
 		Identifier dimension,
 		int chunkX,
@@ -127,7 +136,8 @@ public final class RemoteJobCoordinator {
 		TerrainDensityJob job;
 		Attempt attempt;
 		synchronized (this) {
-			Optional<WorkerRegistry.Lease> acquired = workers.tryAcquireSoleWorker(requiredOwnerId);
+			Optional<WorkerRegistry.Lease> acquired = requiredOwnerId == null
+				? workers.tryAcquireSoleWorker() : workers.tryAcquireWorker(requiredOwnerId);
 			if (acquired.isEmpty()) {
 				return Optional.empty();
 			}

@@ -1,5 +1,14 @@
 # Test handoff for the next AI tester
 
+2026-09-13 alpha.2 update: the user authorized concurrent player-owned work.
+Read `MULTIPLAYER_SUPPORT.md` and the new section of `MULTIPC_TESTING.md`.
+The old second-player rejection scenario is retired and replaced by two-owner
+concurrent dispatch/application and isolated-disconnect checks. Preserve the
+single shared fixture authority/ledger and its public-seed restriction.
+Latest checkpoint: 246 tests / 52 suites, Phase A–D PASS in
+`test-artifacts/20260913-231321-924/`; runtime verification is tracked in
+`TEST_RESULTS_LATEST.md`. Historical checkpoints below are not current gates.
+
 ## 1. Purpose and authority
 
 This is the operating procedure for a lower-tier AI acting as a test intern.

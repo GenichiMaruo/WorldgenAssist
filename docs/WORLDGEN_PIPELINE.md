@@ -1,5 +1,36 @@
 # World Generation Pipeline Notes
 
+2026-09-13 disconnect-thread recheck: generated 26.2 `Connection` and
+`ServerCommonPacketListenerImpl.disconnect`, together with Fabric API 6.3.3
+`ServerPlayNetworkAddon.invokeDisconnectEvent`, establish that the Fabric
+disconnect callback may run on Netty NIO. Both raw and public-fixture route
+managers now schedule owner-map mutation, cancellation, and connection
+cleanup through `server.execute`; the callback itself does not touch
+worldgen state. The raw route ignores an old disconnect notification if that
+UUID now belongs to a different connected player instance. This preserves the server-thread
+ownership of demand and lifecycle state. A-D `20260913-231321-924` passes with
+246 tests / 52 suites, zero failures/errors/skips, and matching manifests. The
+disconnect runtime `two-client-fixture-disconnect-20260913-231502-332` passes:
+owner A is cancelled on the server thread and owner B subsequently applies its
+result. Both clients exit naturally with code 0. See `TEST_RESULTS_LATEST.md`
+for the separate vanilla comparison and complete current runtime evidence.
+
+2026-09-12 concurrent-owner development: both raw and public-fixture routes
+select direct work from immutable server-tick player-demand snapshots. Vanilla
+`ChunkTrackingView.isInViewDistance` supplies the rounded geometry; the closest
+eligible non-spectator owner wins overlaps, with UUID tie-breaking. Missing or
+busy selected owners fall back locally. Prediction/cache keys include owner and
+raw-route connection generation. No Mixin target, density payload format or
+authoritative vanilla continuation changes. Generated `RandomState` reinspection
+confirms its sampler/positional-factory caches use `ConcurrentHashMap`; each
+recording/validation traversal still owns a separate mutable `NoiseChunk`.
+The fixture's single shared authority controls all owner attempts, reload and
+synchronous-wait cancellation. See `MULTIPLAYER_SUPPORT.md` for verification.
+Timeout-breaker quarantine is visible through a lock-free owner set: cache
+lookup, storage and installation reject that owner immediately. The next server
+tick removes its cached/predicted state and demand, without a watchdog callback
+under the coordinator monitor or invalidating a replacement connection.
+
 ## Status
 
 2026-09-10: direct protocol-v2 client computation now passes two full-height

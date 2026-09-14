@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Root)
+param([Parameter(Mandatory)][string]$Root, [string]$AssetsRoot)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 if (-not $IsWindows -or [Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne 'X64') { throw 'This pinned native-library fixture supports Windows x64 only' }
@@ -55,7 +55,7 @@ Get-ChildItem -LiteralPath (Join-Path $clientDir 'mods') -File | ForEach-Object 
     [ordered]@{file=$_.Name;sha256=(Get-FileHash -LiteralPath $_.FullName).Hash}
 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $resolved 'installed-client-mods.json')
 $provenance | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $resolved 'installed-client-classpath.json')
-$assets=Join-Path $cache 'fabric-loom/assets'
+$assets=if ($AssetsRoot) { [IO.Path]::GetFullPath($AssetsRoot) } else { Join-Path $cache 'fabric-loom/assets' }
 if ((Get-FileHash -LiteralPath (Join-Path $assets 'indexes/26.2-32.json') -Algorithm SHA1).Hash -ne $mojang.assetIndex.sha1) { throw 'Asset index checksum mismatch' }
 $arguments=@('-Xmx2G','--enable-native-access=ALL-UNNAMED','--sun-misc-unsafe-memory-access=allow','-Dfabric.development=false',
     "-Djava.library.path=$clientDir/natives/java","-Djna.tmpdir=$clientDir/natives/jna","-Dorg.lwjgl.system.SharedLibraryExtractPath=$clientDir/natives/lwjgl","-Dio.netty.native.workdir=$clientDir/natives/netty")

@@ -4,14 +4,18 @@
 
 ## Naming
 
+Current release version is `0.1.0-alpha.2+mc26.2`. Alpha.2 publication and the
+fast-forward of `mc/26.2` were authorized by the user. Alpha.1's published tag,
+release and assets remain immutable.
+
 The mod version and Minecraft target are separate settings in `gradle.properties`.
 Include the target as SemVer build metadata in every published mod version:
 
-- Mod version: `0.1.0-alpha.1+mc26.2`
+- Mod version: `0.1.0-alpha.2+mc26.2`
 - Minecraft version: `26.2`
-- Annotated Git tag: `v0.1.0-alpha.1+mc26.2`
+- Annotated Git tag: `v0.1.0-alpha.2+mc26.2`
 - Maintenance branch: `mc/26.2`
-- Distribution JAR: `worldgen-assist-0.1.0-alpha.1+mc26.2.jar`
+- Distribution JAR: `worldgen-assist-0.1.0-alpha.2+mc26.2.jar`
 
 `alpha` is a prerelease, not stable support. The `+mc26.2` suffix identifies the
 target but does not make binaries compatible across Minecraft versions. Fabric's
@@ -41,8 +45,8 @@ version is currently supported, and no speculative port branch is created now.
 ## 日本語
 
 MODのバージョンと対応Minecraft版を区別し、公開版の識別子に両方を含めます。
-今回の版は **`0.1.0-alpha.1+mc26.2`**、Gitタグは
-**`v0.1.0-alpha.1+mc26.2`**、26.2向けの保守ブランチは **`mc/26.2`** です。
+今回の版は **`0.1.0-alpha.2+mc26.2`**、Gitタグは
+**`v0.1.0-alpha.2+mc26.2`**、26.2向けの保守ブランチは **`mc/26.2`** です。
 `alpha` は安定版ではありません。別のMinecraft版でも同じJARが動くという意味
 ではなく、対応条件は `fabric.mod.json` でも指定します。
 

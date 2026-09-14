@@ -1,12 +1,14 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('assisted', 'vanilla', 'wrong-seed', 'timeout', 'malformed', 'pending-reload', 'pending-disconnect', 'second-player')]
+    [ValidateSet('assisted', 'vanilla', 'wrong-seed', 'timeout', 'malformed', 'pending-reload', 'pending-disconnect')]
     [string]$Mode = 'assisted',
     [ValidateRange(30, 240)]
     [int]$StartupTimeoutSeconds = 180
 )
 
 # Isolated functional test, NOT a performance benchmark. Never reuse a ledger/world.
+# The old second-player rejection scenario was replaced by Run-TwoClientFixture.ps1
+# when alpha.2 added concurrent owner support. It must no longer assert rejection.
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $workspace = Split-Path -Parent $PSScriptRoot
@@ -28,7 +30,7 @@ New-Item -ItemType Directory -Path $serverDir, $clientDir | Out-Null
 Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $root 'runner.ps1')
 Copy-Item -LiteralPath $eula -Destination (Join-Path $serverDir 'eula.txt')
 $seed = if ($Mode -eq 'wrong-seed') { '8675310' } else { '8675309' }
-$maxPlayers = if ($Mode -eq 'second-player') { 2 } else { 1 }
+$maxPlayers = 1
 @('server-ip=127.0.0.1', 'server-port=25585', 'online-mode=false', 'level-name=fixture', "level-seed=$seed",
   'view-distance=10', 'simulation-distance=3', "max-players=$maxPlayers", 'gamemode=creative', 'difficulty=peaceful',
   'enable-rcon=false', 'enable-query=false', 'pause-when-empty-seconds=-1', 'spawn-protection=0') |
@@ -66,7 +68,6 @@ function Start-Fixture([string]$Side, [string]$ProfileRoot=$root, [string]$Usern
         'malformed' { 'malformed' }
         'pending-reload' { 'timeout' }
         'pending-disconnect' { 'timeout' }
-        'second-player' { 'timeout' }
         default { 'none' }
     }
     $process = [Diagnostics.Process]::new()
@@ -151,7 +152,7 @@ try {
     if ($Mode -ne 'vanilla' -and $Mode -ne 'wrong-seed') { Wait-ServerLog 'seeded_fixture.handshake accepted=true' 30 }
     if ($Mode -eq 'wrong-seed') { Wait-ServerLog 'seeded_fixture.handshake accepted=false' 30 }
     Command 'tp FixtureWorker 16000 150 -32000'
-    if ($Mode -in @('timeout', 'malformed', 'pending-reload', 'pending-disconnect', 'second-player')) {
+    if ($Mode -in @('timeout', 'malformed', 'pending-reload', 'pending-disconnect')) {
         # Allow the immutable owner-demand snapshot to move before requesting new chunks.
         Start-Sleep -Seconds 5
         Command 'tp FixtureWorker 16032 150 -32000'
@@ -208,20 +209,6 @@ try {
             Command 'kick FixtureWorker Fixture pending-disconnect test'
             Wait-ServerLog ('seeded_fixture.result chunk='+[regex]::Escape($heldChunk)+' status=DISCONNECTED') 30
         }
-        'second-player' {
-            $guestRoot = Join-Path $root 'guest'
-            New-Item -ItemType Directory -Path (Join-Path $guestRoot 'client') | Out-Null
-            Copy-Item -LiteralPath (Join-Path $clientDir 'options.txt') -Destination (Join-Path $guestRoot 'client/options.txt')
-            $guest = Start-Fixture 'Client' $guestRoot 'FixtureGuest'
-            Wait-ServerLog 'FixtureGuest joined the game' $StartupTimeoutSeconds
-            Wait-ServerLog 'seeded_fixture.player_count_suspended count=2' 15
-            Wait-ServerLog 'seeded_fixture.handshake accepted=false' 15
-            $sendsBeforeProbe = ServerMarkerCount 'seeded_fixture.sent id='
-            Command 'tp FixtureWorker 32000 150 -64000'
-            Start-Sleep -Seconds 5
-            if ((ServerMarkerCount 'seeded_fixture.sent id=') -ne $sendsBeforeProbe) { throw 'Dispatched fixture work while two players connected' }
-            Command 'kick FixtureGuest Second-player test complete'
-        }
         default {
             Start-Sleep -Seconds 10
         }
@@ -240,7 +227,7 @@ try {
     if ($Mode -in @('vanilla', 'wrong-seed') -and (Read-ServerLog) -match 'seeded_fixture\.(sent|applied) ') {
         throw 'Negative/local mode unexpectedly dispatched or installed fixture work'
     }
-    if ($Mode -in @('timeout', 'malformed', 'pending-reload', 'pending-disconnect', 'second-player') -and (Read-ServerLog) -match 'seeded_fixture\.applied ') {
+    if ($Mode -in @('timeout', 'malformed', 'pending-reload', 'pending-disconnect') -and (Read-ServerLog) -match 'seeded_fixture\.applied ') {
         throw 'Adversarial fixture mode unexpectedly installed a remote result'
     }
     if ($Mode -eq 'wrong-seed') {

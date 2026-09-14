@@ -6,38 +6,47 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.function.BiConsumer;
 
 import io.github.genichimaruo.worldgenassist.common.AuthorizedSeededLeafJob;
 import io.github.genichimaruo.worldgenassist.common.SeededLeafDensityResultEnvelope;
 import io.github.genichimaruo.worldgenassist.common.SeededLeafJobClaim;
 
-/** One transfer plus one best-effort cancellation, drained by the server thread. */
+/** Bounded owner-specific transfers and best-effort cancellations, drained by the server thread. */
 public final class SeededLeafDispatchQueue implements SeededLeafJobOrchestrator.ClientExchange, AutoCloseable {
 	private final SeededLeafJobOrchestrator orchestrator;
-	private final AtomicReference<Transfer> pending = new AtomicReference<>();
-	private final AtomicReference<Cancellation> cancellation = new AtomicReference<>();
+	private final ConcurrentHashMap<SeededLeafJobOrchestrator.Connection, Transfer> pending = new ConcurrentHashMap<>();
+	private final ArrayBlockingQueue<Cancellation> cancellations;
+	private final int capacity;
 	private final AtomicBoolean closed = new AtomicBoolean();
 	public SeededLeafDispatchQueue(SeededLeafJobOrchestrator orchestrator) {
-		this.orchestrator = Objects.requireNonNull(orchestrator, "orchestrator");
+		this(orchestrator, 1);
 	}
-	@Override public CompletionStage<SeededLeafDensityResultEnvelope> send(
+	public SeededLeafDispatchQueue(SeededLeafJobOrchestrator orchestrator, int capacity) {
+		this.orchestrator = Objects.requireNonNull(orchestrator, "orchestrator");
+		if (capacity < 1 || capacity > 64) { throw new IllegalArgumentException("Invalid dispatch capacity"); }
+		this.capacity = capacity;
+		cancellations = new ArrayBlockingQueue<>(capacity);
+	}
+	@Override public synchronized CompletionStage<SeededLeafDensityResultEnvelope> send(
 		SeededLeafJobOrchestrator.Connection owner, AuthorizedSeededLeafJob job
 	) {
 		Transfer transfer = new Transfer(owner, job);
-		if (closed.get() || !pending.compareAndSet(null, transfer)) {
+		if (closed.get() || pending.size() >= capacity || pending.putIfAbsent(owner, transfer) != null) {
 			throw new RejectedExecutionException("Fixture dispatch queue unavailable");
 		}
 		if (closed.get()) { abandon(transfer); }
 		return transfer.response.minimalCompletionStage();
 	}
 	@Override public void cancel(SeededLeafJobOrchestrator.Connection owner, SeededLeafJobClaim claim) {
-		Transfer transfer = pending.get();
+		Transfer transfer = pending.get(owner);
 		if (transfer != null && transfer.owner == owner && transfer.claim.equals(claim)
-			&& pending.compareAndSet(transfer, null)) {
+			&& pending.remove(owner, transfer)) {
 			transfer.authorization = null;
-			if (transfer.sent.get()) { cancellation.set(new Cancellation(owner, claim)); }
+			if (transfer.sent.get()) { cancellations.offer(new Cancellation(owner, claim)); }
 			transfer.response.completeExceptionally(new CancellationException("Fixture attempt cancelled"));
 		}
 	}
@@ -45,50 +54,51 @@ public final class SeededLeafDispatchQueue implements SeededLeafJobOrchestrator.
 		BiConsumer<SeededLeafJobOrchestrator.Connection, AuthorizedSeededLeafJob> requestSender,
 		BiConsumer<SeededLeafJobOrchestrator.Connection, SeededLeafJobClaim> cancelSender
 	) {
-		Cancellation cancelled = cancellation.getAndSet(null);
-		if (cancelled != null) {
+		for (int index = 0; index < capacity; index++) {
+			Cancellation cancelled = cancellations.poll();
+			if (cancelled == null) { break; }
 			try { cancelSender.accept(cancelled.owner, cancelled.claim); }
 			catch (RuntimeException ignored) { /* Best effort; local fallback has already won. */ }
 		}
-		Transfer transfer = pending.get();
-		if (transfer == null || !transfer.sent.compareAndSet(false, true)) { return; }
+		for (Transfer transfer : List.copyOf(pending.values())) {
+		if (!transfer.sent.compareAndSet(false, true)) { continue; }
 		AuthorizedSeededLeafJob authorization = transfer.authorization;
 		try {
 			if (authorization == null || !orchestrator.dispatchIfCurrent(transfer.owner, transfer.claim, () -> {
-				if (closed.get() || pending.get() != transfer) { throw new CancellationException(); }
+				if (closed.get() || pending.get(transfer.owner) != transfer) { throw new CancellationException(); }
 				requestSender.accept(transfer.owner, authorization);
 			})) { abandon(transfer); }
 		} catch (RuntimeException exception) {
-			if (pending.compareAndSet(transfer, null)) { transfer.response.completeExceptionally(exception); }
+			if (pending.remove(transfer.owner, transfer)) { transfer.response.completeExceptionally(exception); }
 		} finally {
 			transfer.authorization = null;
 		}
+		}
 	}
 	public boolean receive(SeededLeafJobOrchestrator.Connection owner, SeededLeafDensityResultEnvelope result) {
-		Transfer transfer = pending.get();
+		Transfer transfer = pending.get(owner);
 		if (transfer == null || transfer.owner != owner || !transfer.sent.get()
-			|| !transfer.claim.jobId().equals(result.claim().jobId()) || !pending.compareAndSet(transfer, null)) { return false; }
+			|| !transfer.claim.jobId().equals(result.claim().jobId()) || !pending.remove(owner, transfer)) { return false; }
 		transfer.authorization = null;
 		transfer.response.complete(result);
 		return true;
 	}
 	public boolean fail(SeededLeafJobOrchestrator.Connection owner, SeededLeafJobClaim claim) {
-		Transfer transfer = pending.get();
+		Transfer transfer = pending.get(owner);
 		if (transfer == null || transfer.owner != owner || !transfer.claim.equals(claim)) { return false; }
 		return abandon(transfer);
 	}
-	public int pendingCount() { return pending.get() == null ? 0 : 1; }
+	public int pendingCount() { return pending.size(); }
 	private boolean abandon(Transfer transfer) {
-		if (!pending.compareAndSet(transfer, null)) { return false; }
+		if (!pending.remove(transfer.owner, transfer)) { return false; }
 		transfer.authorization = null;
 		transfer.response.completeExceptionally(new CancellationException("Fixture exchange unavailable"));
 		return true;
 	}
 	@Override public void close() {
 		closed.set(true);
-		Transfer transfer = pending.get();
-		if (transfer != null) { abandon(transfer); }
-		cancellation.set(null);
+		for (Transfer transfer : List.copyOf(pending.values())) { abandon(transfer); }
+		cancellations.clear();
 	}
 	private record Cancellation(SeededLeafJobOrchestrator.Connection owner, SeededLeafJobClaim claim) { }
 	private static final class Transfer {

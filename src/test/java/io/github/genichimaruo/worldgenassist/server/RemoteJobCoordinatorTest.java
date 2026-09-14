@@ -326,6 +326,8 @@ class RemoteJobCoordinatorTest {
 			fixture.clock.set(registrationTime + 10L);
 			assertEquals(1, fixture.coordinator.expireTimedOut(false));
 			assertThrows(CompletionException.class, submission.result()::join);
+			assertEquals(timeout == RemoteJobCoordinator.MAX_CONSECUTIVE_TIMEOUTS,
+				fixture.coordinator.isQuarantined(OWNER));
 			registrationTime += 111L;
 		}
 
@@ -333,6 +335,7 @@ class RemoteJobCoordinatorTest {
 		fixture.hello(OWNER);
 		assertTrue(fixture.submit().isEmpty());
 		assertEquals(0, fixture.coordinator.disconnect(OWNER));
+		assertFalse(fixture.coordinator.isQuarantined(OWNER));
 		fixture.clock.set(registrationTime + 111L);
 		fixture.hello(OWNER);
 		assertTrue(fixture.submit().isPresent());

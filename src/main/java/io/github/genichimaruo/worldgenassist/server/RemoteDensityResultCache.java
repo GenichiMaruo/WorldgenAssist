@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 import net.minecraft.resources.Identifier;
 
@@ -67,6 +68,10 @@ public final class RemoteDensityResultCache {
 		return entries.size();
 	}
 
+	public synchronized void removeOwner(UUID ownerId) {
+		entries.keySet().removeIf(key -> ownerId.equals(key.ownerId()));
+	}
+
 	public record Key(
 		long generation,
 		Identifier dimension,
@@ -77,8 +82,18 @@ public final class RemoteDensityResultCache {
 		int minY,
 		int height,
 		int cellWidth,
-		int cellHeight
+		int cellHeight,
+		UUID ownerId,
+		long ownerGeneration
 	) {
+		public Key(long generation, Identifier dimension, int chunkX, int chunkZ, WorldgenContextFingerprint contextFingerprint,
+			Identifier noiseSettings, int minY, int height, int cellWidth, int cellHeight) {
+			this(generation, dimension, chunkX, chunkZ, contextFingerprint, noiseSettings, minY, height, cellWidth, cellHeight, null, 0L);
+		}
+		public Key(long generation, Identifier dimension, int chunkX, int chunkZ, WorldgenContextFingerprint contextFingerprint,
+			Identifier noiseSettings, int minY, int height, int cellWidth, int cellHeight, UUID ownerId) {
+			this(generation, dimension, chunkX, chunkZ, contextFingerprint, noiseSettings, minY, height, cellWidth, cellHeight, ownerId, 0L);
+		}
 		public Key {
 			if (generation < 0L) {
 				throw new IllegalArgumentException("Cache generation must not be negative: " + generation);

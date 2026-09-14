@@ -315,6 +315,9 @@ class SeededLeafJobOrchestratorTest {
 			SeededLeafJobOrchestrator.Connection connection = null;
 			for (int index = 1; index <= SeededLeafJobAuthority.MAX_TRACKED_DISCLOSURE_OWNERS + 1; index++) {
 				connection = orchestrator.connect(new UUID(15L, index));
+				if (index <= SeededLeafJobAuthority.MAX_TRACKED_DISCLOSURE_OWNERS) {
+					orchestrator.disconnect(connection);
+				}
 			}
 			assertEquals(SeededLeafJobOrchestrator.Status.OWNER_INACTIVE,
 				result(orchestrator.submit(connection, second.request, pendingExchange())).status());

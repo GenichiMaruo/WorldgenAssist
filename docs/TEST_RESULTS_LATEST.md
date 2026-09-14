@@ -1,4 +1,162 @@
-# Test results — 2026-09-11
+# Test results — 2026-09-14
+
+## Concurrent-owner release checkpoint (alpha.2)
+
+See [the alpha.2 release verification](releases/v0.1.0-alpha.2+mc26.2-verification.md)
+for the exact distribution hashes and release scope.
+
+### Current source: A-D and concurrent-owner runtime passed
+
+Trusted-raw simultaneous runtime and comparison also PASS on the same final
+JAR: `two-client-trusted-raw-simultaneous-20260914-162621-426` versus the same
+independent vanilla world `two-client-fixture-vanilla-20260913-231956-963`.
+Both overlapping owner jobs complete remotely; their chunks and all **382**
+shared NOISE digests match. Both installed clients exit naturally with code 0
+and `Stopping!`. Six other jobs time out and fall back locally, with expired
+result rejections and a tick-delay warning; no quarantine is recorded. The raw
+test uses timeout 10,000 ms, global capacity 8, validation 8 cells, cache 0,
+prediction false. Performance remains NOT_EVALUATED.
+
+On 2026-09-14 after these runs, dedicated remote Java count, local two-client
+Java count, remote port 25585 listeners and local port 25585 listeners were all
+zero. This is process/port cleanup verification, not deep heap or long-session
+retention analysis. Both client processes run on one PC; the installed server
+runs on the second PC, with Minecraft limited to the loopback SSH tunnel.
+
+Public-fixture simultaneous runtime and comparison PASS on the current JAR:
+`two-client-fixture-simultaneous-20260914-162349-988` versus vanilla
+`two-client-fixture-vanilla-20260913-231956-963`. Each owner has one applied
+result, the two corresponding requests overlap, and both applied chunks plus
+all **588** shared NOISE digests match. Both installed clients exit naturally
+with code 0 and `Stopping!`. Three later fixture attempts time out during
+save/flush and one admission hits the unchanged disclosure budget; these are
+local-fallback paths, not further successful remote applications.
+
+The current source moves both route managers' Fabric disconnect handling onto
+`server.execute`, because generated 26.2 `Connection` and
+`ServerCommonPacketListenerImpl.disconnect`, together with Fabric API 6.3.3
+`ServerPlayNetworkAddon.invokeDisconnectEvent`, show that the event can arrive
+on a Netty NIO thread. The raw route ignores a stale disconnect when the UUID
+now identifies a different connected player instance.
+The development-client shutdown probe retains the actual process handle before
+reading its exit code.
+
+`test-artifacts/20260913-231321-924/` passes A-D on JDK 25.0.4. Final D reports
+**246 tests / 52 suites**, zero failures/errors/skips, and the before/after
+source/build manifests have no difference. The distribution JAR is 425,930
+bytes, SHA-256
+`4463070DAC7DB305601B6DC9FD1020E578EC6811027387C013E9726E7ADE69A0`; the
+141,558-byte sources JAR has SHA-256
+`8F52E7754F782D92D9A0C0DBF2049288FBA0ADFDF3B719F4AE3901BA1E7B73DB`.
+
+The current disconnect runtime
+`two-client-fixture-disconnect-20260913-231502-332` passes, including
+server-thread owner cancellation, owner B application after owner A's pending
+job becomes `DISCONNECTED`, and natural exit 0 / `Stopping!` for both clients.
+A uses the existing development-only WITHHOLD_RESULT probe; B and the server
+use the installed JAR. Comparison against the successful independent vanilla
+run `two-client-fixture-vanilla-20260913-231956-963` passes: all three B-applied
+chunks, A's disconnected/local-fallback chunk, and all **406** shared NOISE
+digests match. Both vanilla clients also exit naturally with code 0.
+The 23:10:27 fixture disconnect observed owner A `DISCONNECTED` and a
+subsequent owner B application, but could not confirm the dev process exit
+code; its overall result is false. It is retained as an observed lifecycle
+signal, not a passing disconnect or natural-exit check.
+
+`two-client-fixture-vanilla-20260913-231627-124` generated its world and both
+clients exited naturally, but the harness detected that the comparator script
+changed during the run and recorded `success=False`. Only
+`scripts/Compare-TwoClientFixture.ps1` differs between its manifests; Java and
+build inputs did not change. This is retained as a failed harness-integrity
+check. The replacement vanilla run freezes all harness scripts. Comparisons
+require identical source/test/build inputs across runs; script revisions remain
+recorded separately in each manifest and copied runner.
+
+### Preceding source snapshot: completed runtime evidence
+
+Trusted-raw simultaneous runtime and comparison PASS:
+`two-client-trusted-raw-simultaneous-20260913-230805-614` versus
+`two-client-trusted-raw-vanilla-20260913-181624-500`. Two overlapping jobs
+complete remotely for their own players; both target chunks and all **378**
+shared NOISE digests match. Both installed clients exit naturally with code 0
+and `Stopping!`. Six other jobs fall back on timeout, with expired-result
+rejections and a tick-delay warning; this is not uninterrupted assistance or
+a performance result. Settings: timeout 10,000 ms, global capacity 8,
+validation 8 cells, cache 0, prediction false. Client offline-profile/Realms
+errors and the client-side integrated-server raw gate warning remain recorded.
+
+The preceding-source trusted-raw vanilla baseline
+`two-client-trusted-raw-vanilla-20260913-181624-500` passed, including natural
+exit 0 and `Stopping!` for both clients. The preceding assisted attempt
+`two-client-trusted-raw-simultaneous-20260913-181338-230` is retained as failed:
+its selected overlapping pair timed out during initial generation, while later
+overlapping jobs completed for both owners. The harness waited for the already
+timed-out pair, so this is not a successful runtime checkpoint. Its corrected
+simultaneous matcher requires an overlapping pair with both successful terminal
+events; the fresh successful run above uses that correction. The comparator's
+PowerShell `return if` parsing error was also corrected before its successful
+comparison; no earlier comparison result was overwritten.
+
+The preceding-source `test-artifacts/20260913-181155-891/` passes compile, focused tests, full tests
+and build on JDK 25.0.4. Final C and D XML each report **246 tests / 52 suites**,
+zero failures/errors/skips. The focused phase reports 168 tests / 33 suites,
+also with zero failures/errors/skips. Source/build manifests match before and
+after.
+The six added multiplayer tests cover real two-owner transcript exchanges,
+owner-scoped connection replacement/quarantine, global/per-owner capacity and
+real recorder exit, shared-budget retention on reload, exact-owner raw leases,
+view selection and owner/connection-specific cache identity.
+
+That preceding checkpoint includes the timeout-triggered quarantine tightening: the raw
+manager now rejects an owner-keyed cache lookup, store, or install as soon as
+the coordinator marks that owner quarantined; the coordinator predicate takes
+no manager lock.
+The next server tick removes that owner's cache entries, predictions, demand
+snapshot, and owner generation. The preceding completed checkpoint
+`test-artifacts/20260913-005006-026/` remains evidence for the earlier source
+snapshot only.
+
+Installed alpha.2 JAR SHA-256:
+`BC8E3BA0486EE5CF14157F2DA4E9AD8DFAB7DBC06CEFF4E687C8F31C7631F117`
+(425,699 bytes). Sources SHA-256:
+`AC7D404562FE30CE38DAA2016149E88EA6C3A0605E8319BCAED7455F9612B773`
+(141,441 bytes).
+
+Public-fixture two-client runtime and digest comparison PASS for the preceding
+source snapshot: assisted
+`two-client-fixture-simultaneous-20260913-005854-196` versus independent vanilla
+`two-client-fixture-vanilla-20260913-010033-570` (under test-artifacts).
+Both owners receive an applied result in their own disjoint view area. Their
+requests overlap before either response; both applied chunks and all 360 shared
+NOISE digests match. Both clients close naturally with exit 0 and `Stopping!`.
+Two later attempts time out during save/flush and use local fallback. The
+clients retain offline-profile HTTP 401/Realms errors; server warnings identify
+offline mode and digest logging. No new Mixin/decode/executor error was found.
+The first-pair matcher was corrected after the failed
+`two-client-fixture-disconnect-20260913-180742-514` run applied both owners'
+results, but polling missed the short pending interval; it then exhausted the
+100,000-entry fixture budget and timed out. It is not counted as a successful
+disconnect check. These are preceding-source results only; performance remains
+NOT_EVALUATED.
+
+Failed runtime preparations are retained: `two-client-simultaneous-20260913-005306-572`
+stopped before client launch because the cached asset index differed from current
+pinned official metadata (47 language entries). A separate verified asset root
+now contains all 5,057 objects, with 47 official downloads and 5,010 cache copies;
+shared caches were not modified. The remote controller reached its bounded
+missing-client timeout and stopped its JVM; final failure logs are retained.
+`two-client-fixture-disconnect-20260913-175912-731` reached two-owner overlapping
+dispatch but the harness compared only the first job per owner and rejected an
+earlier completed B job. No disconnect assertion passed in that failed run;
+the matcher is being corrected to correlate individual job intervals.
+The initial focused attempt `20260912-183922-197` was blocked by sandbox network
+preflight; `20260912-183943-852` compiled and ran 49 tests with one historical
+test failure: its owner-tracker loop assumed each connect replaced the previous
+owner. It now disconnects each owner explicitly before testing cumulative tracker
+exhaustion; the final checkpoint passes. A later launch was blocked by an
+automatic-approval usage limit, and no test process started from that rejection.
+
+The alpha.1 release verification and earlier results below remain historical.
 
 ## Versioned alpha checkpoint — 2026-09-11
 

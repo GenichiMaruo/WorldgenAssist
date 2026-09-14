@@ -1,5 +1,49 @@
 # Multi-PC fixture testing — 2026-09-09
 
+## Alpha.2 concurrent-owner procedure (2026-09-13)
+
+`Run-TwoClientFixture.ps1 -Route fixture -Mode simultaneous` now starts two
+independently installed local client profiles against the remote installed
+server. `-Mode vanilla` creates a separate local-generation baseline, and
+`Compare-TwoClientFixture.ps1 -Route fixture -AssistedRoot ... -VanillaRoot ...`
+checks each owner's applied chunks and all shared NOISE digests. `-Mode disconnect`
+tests owner-local cancellation. The `trusted-raw` route uses its explicit seed
+disclosure opt-in with cache/prediction disabled for direct-work verification.
+This is two client processes on one PC plus a server on the second PC, not three
+physical machines or a performance test.
+
+The deterministic pending-disconnect probe is explicit:
+
+```powershell
+.\scripts\Run-TwoClientFixture.ps1 -Route fixture -Mode disconnect -OwnerADevelopmentWithhold
+```
+
+For that command only, owner A runs through the Fabric Loader development
+runtime with the development-only `WITHHOLD_RESULT` fixture fault. Owner B and
+the remote server remain installed-JAR runtimes; B continues normal owner-local
+assistance while the server kicks A with its bounded claim pending. The ordinary
+`simultaneous` and `vanilla` commands keep both local clients installed, with no
+fault enabled. This mixed-runtime disconnect setup is a controlled lifecycle
+probe, not installed-client fault coverage or a production hook.
+
+The current trusted-raw direct-work settings are `timeout=10000`,
+`maxAttempts=8`, `cache=0`, `prediction=false`, and `sample=8`. Its bounded
+initialization and saving waits are harness timeouts. They make stalled setup or
+save observable; they are not performance measurements or timing limits from
+which throughput or latency claims may be drawn.
+
+Both players join as spectators, with spectator generation disabled, and move
+to separate areas before entering creative mode. This preserves the fixture's
+unchanged shared disclosure budget during setup. All source/config inputs and
+exact JAR hashes are recorded. Installed assets are prepared under test-artifacts
+from the fixed official index and verified by content hash; shared caches remain
+untouched. Authentication/Realms errors of offline test profiles must be reported.
+
+The old `Run-SeededLeafRuntimeFixture.ps1 -Mode second-player` rejection scenario
+is retired: rejecting the second worker is no longer the expected behavior.
+Its historical results below remain evidence for alpha.1 only. Current execution
+status is in `TEST_RESULTS_LATEST.md`, not implied by this procedure.
+
 ## Authority and isolation
 
 The user explicitly authorized multi-PC tests on 2026-09-09 and provided SSH

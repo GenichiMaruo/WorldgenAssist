@@ -1,5 +1,25 @@
 # Advanced configuration and implementation guide
 
+## Concurrent-owner assistance (alpha.2)
+
+See `MULTIPLAYER_SUPPORT.md` for the current scope and verification. Both
+existing opt-in routes now support multiple accepted workers. The raw route's
+`WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT` is a **global** limit, default 8, range
+1..64; each owner is limited to one job. Setting the global limit to 1 still
+serializes assistance. The fixture has a fixed global limit of 8 and one per
+owner, with its original shared persistent 100,000-entry budget. Neither route
+enables remote work by default or removes its seed-disclosure gate.
+
+Direct demand uses non-spectator players' own vanilla view ranges. The nearest
+accepted worker within that range is selected (UUID breaks ties). If that
+owner is busy, generation falls back locally. Prediction is observed per owner;
+raw cache keys include owner and connection generation, and disconnect removes
+only that owner's entries. Raw validation remains separately opt-in.
+
+The single-player limits and default-one descriptions in the historical
+sections below describe alpha.1. Alpha.2 does not claim hostile-server safety,
+private-seed confidentiality or a speedup.
+
 [English overview](../README.md) · [日本語の概要](../README.ja.md)
 
 This guide preserves detailed developer/operator configuration from the original

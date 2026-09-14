@@ -1,5 +1,14 @@
 # AGENTS.md
 
+## Concurrent-owner scope update (2026-09-12)
+
+The user explicitly authorized extending the single-player PoC so each player
+can assist their own terrain concurrently. See `MULTIPLAYER_SUPPORT.md` for
+the decision, ownership/capacity invariants and current verification. Older
+single-worker/player-count-rejection scope below describes alpha.1, not a ban
+on this authorized extension. Preserve server authority, owner-specific work,
+all disclosure gates and the public fixture's one shared persistent budget.
+
 ## Current public-fixture exception (2026-09-05)
 
 Read `SEEDED_LEAF_FIXTURE_PROTOCOL.md` before runtime/network changes. A separate

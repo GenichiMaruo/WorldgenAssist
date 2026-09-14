@@ -1,5 +1,31 @@
 # Mixin Targets
 
+2026-09-13 disconnect-thread recheck adds no Mixin or descriptor. Generated
+26.2 `Connection` and `ServerCommonPacketListenerImpl.disconnect` and Fabric
+API 6.3.3 `ServerPlayNetworkAddon.invokeDisconnectEvent` show that Fabric's
+disconnect notification can originate on a Netty NIO thread. Both route
+managers therefore submit owner-map mutation, cancellation, and replacement
+handling through `MinecraftServer.execute`; no worldgen or manager state is
+mutated from the callback. The raw route ignores an old disconnect notification
+when the UUID now belongs to a different connected player instance. A-D
+`20260913-231321-924` passes with 246 tests / 52 suites and zero failures,
+errors, or skips; its manifests have no difference. The disconnect runtime
+`two-client-fixture-disconnect-20260913-231502-332` passes: its owner-disconnect
+log runs on the server thread, owner B applies after owner A cancellation,
+and both client JVMs exit naturally with code 0. Digest comparison is recorded
+in `TEST_RESULTS_LATEST.md`.
+
+2026-09-12 multiplayer work adds no Mixin or descriptor. Rechecked generated
+26.2 `ChunkMap.getPlayerViewDistance` (line 813) and
+`ChunkTrackingView.isInViewDistance(int,int,int,int,int)` (line 69): owner demand
+uses the vanilla rounded view test without neighbor padding, rather than a
+square. `ServerPlayer.isSpectator`, `isChangingDimension`, `chunkPosition`,
+`requestedViewDistance` and `level` are sampled only on the server tick thread;
+generation uses immutable `PlayerChunkDemand` values. `getGameProfile().name()`
+is also verified in generated `PlayerList` for owner-name test diagnostics.
+The existing synchronous-wait Mixin now cancels all active fixture attempts
+through the shared orchestrator. Runtime verification must cover this change.
+
 2026-09-10 installed-client verification adds no Mixin. Generated client
 `Minecraft.runTick` / `stop` / `exitWorldAndClose` and `Window.shouldClose` were
 read to interpret the owned-window-close test; the `Stopping!` marker and a

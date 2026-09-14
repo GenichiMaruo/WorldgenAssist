@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Set;
 
 import io.github.genichimaruo.worldgenassist.common.WorldgenProtocolVersion;
 import io.github.genichimaruo.worldgenassist.network.WorkerAcceptedPayload;
@@ -33,6 +34,9 @@ public final class WorkerRegistry {
 		if (!hello.protocolVersion().isSupported()) {
 			workers.remove(ownerId);
 			return rejected(WorkerAcceptedPayload.Status.UNSUPPORTED_PROTOCOL);
+		}
+		if (!workers.containsKey(ownerId) && workers.size() >= 64) {
+			return rejected(WorkerAcceptedPayload.Status.REMOTE_DISABLED);
 		}
 
 		int maxInFlight = Math.min(serverMaxInFlightPerWorker, hello.maxParallelJobs());
@@ -68,6 +72,16 @@ public final class WorkerRegistry {
 	public synchronized Optional<UUID> soleWorkerOwner() {
 		return workers.size() == 1 ? Optional.of(workers.keySet().iterator().next()) : Optional.empty();
 	}
+
+	public synchronized Optional<Lease> tryAcquireWorker(UUID ownerId) {
+		requireOwner(ownerId);
+		WorkerState state = workers.get(ownerId);
+		if (state == null || state.inFlight >= state.maxInFlight) { return Optional.empty(); }
+		state.inFlight++;
+		return Optional.of(new Lease(ownerId, state.implementationVersion));
+	}
+
+	public synchronized Set<UUID> workerOwners() { return Set.copyOf(workers.keySet()); }
 
 	public synchronized void release(UUID ownerId) {
 		requireOwner(ownerId);

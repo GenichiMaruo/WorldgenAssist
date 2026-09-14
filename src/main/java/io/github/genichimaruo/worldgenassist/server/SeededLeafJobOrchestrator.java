@@ -4,6 +4,11 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -25,7 +30,7 @@ import io.github.genichimaruo.worldgenassist.common.SeededLeafDensityResultEnvel
 import io.github.genichimaruo.worldgenassist.common.SeededLeafJobClaim;
 
 /**
- * Transport-free, single-owner research orchestration. The opt-in public fixture
+ * Transport-free, bounded owner-specific research orchestration. The opt-in public fixture
  * supplies its only live adapter. The supplied active authority is exclusively owned
  * by this object until close; its persistent disclosure budget remains external.
  * All control transitions share the authority monitor. Recording runs on a
@@ -40,15 +45,20 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 	private final LongSupplier nanoTime;
 	private final ThreadPoolExecutor recorder;
 	private final ScheduledThreadPoolExecutor watchdog;
-	private Connection connection;
-	private Attempt pending;
-	private boolean recordingOccupied;
+	private final Map<UUID, Connection> connections = new HashMap<>();
+	private final Map<Connection, Attempt> pending = new HashMap<>();
+	private final Set<Attempt> recordings = new HashSet<>();
+	private final int maximumAttempts;
 	private boolean changingLifecycle;
 	private boolean closed;
 	private int admissionSuspensions;
 
 	public SeededLeafJobOrchestrator(SeededLeafJobAuthority authority, int sampleCells, Duration timeout) {
 		this(authority, sampleCells, timeout, request -> { });
+	}
+
+	public SeededLeafJobOrchestrator(SeededLeafJobAuthority authority, int sampleCells, Duration timeout, int maximumAttempts) {
+		this(authority, sampleCells, timeout, request -> { }, System::nanoTime, maximumAttempts);
 	}
 
 	SeededLeafJobOrchestrator(
@@ -60,16 +70,25 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 	SeededLeafJobOrchestrator(
 		SeededLeafJobAuthority authority, int sampleCells, Duration timeout, RecordingHook recordingHook, LongSupplier nanoTime
 	) {
+		this(authority, sampleCells, timeout, recordingHook, nanoTime, 1);
+	}
+
+	SeededLeafJobOrchestrator(
+		SeededLeafJobAuthority authority, int sampleCells, Duration timeout, RecordingHook recordingHook,
+		LongSupplier nanoTime, int maximumAttempts
+	) {
+		if (maximumAttempts < 1 || maximumAttempts > 64) { throw new IllegalArgumentException("Invalid attempt capacity"); }
+		this.maximumAttempts = maximumAttempts;
 		this.authority = Objects.requireNonNull(authority, "authority");
 		this.recordingHook = Objects.requireNonNull(recordingHook, "recordingHook");
 		this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
 		if (!authority.isActive()) {
 			throw new IllegalArgumentException("Orchestration requires an active authority");
 		}
-		validator = new SeededLeafResultValidationExecutor(authority, 1, sampleCells, timeout);
+		validator = new SeededLeafResultValidationExecutor(authority, maximumAttempts, sampleCells, timeout);
 		timeoutNanos = timeout.toNanos();
 		recorder = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.NANOSECONDS,
-			new ArrayBlockingQueue<>(1), work -> daemon(work, "CAWG-SeededLeafRecord"),
+			new ArrayBlockingQueue<>(maximumAttempts), work -> daemon(work, "CAWG-SeededLeafRecord"),
 			new ThreadPoolExecutor.AbortPolicy());
 		watchdog = new ScheduledThreadPoolExecutor(1, work -> daemon(work, "CAWG-SeededLeafAttemptTimeout"));
 		watchdog.setRemoveOnCancelPolicy(true);
@@ -88,13 +107,16 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 			}
 			changingLifecycle = true;
 			try {
-				if (connection != null) {
-					deactivateConnection();
+				Connection previous = connections.get(ownerId);
+				if (previous != null) {
+					deactivateConnection(previous);
 				}
 				if (closed) {
 					throw new IllegalStateException("Orchestrator closed during connection replacement");
 				}
-				connection = new Connection(ownerId);
+				if (connections.size() >= 64) { throw new IllegalStateException("Worker connection capacity reached"); }
+				Connection connection = new Connection(ownerId);
+				connections.put(ownerId, connection);
 				validator.connectOwner(ownerId);
 				return connection;
 			} finally {
@@ -106,23 +128,23 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 	/** Old disconnect callbacks cannot disconnect a newer connection of the same UUID. */
 	public void disconnect(Connection owner) {
 		synchronized (authority) {
-			if (owner == null || owner != connection || changingLifecycle) {
+			if (owner == null || connections.get(owner.ownerId) != owner || changingLifecycle) {
 				return;
 			}
 			changingLifecycle = true;
 			try {
-				deactivateConnection();
+				deactivateConnection(owner);
 			} finally {
 				changingLifecycle = false;
 			}
 		}
 	}
 
-	private void deactivateConnection() {
-		Connection previous = connection;
-		connection = null;
-		if (pending != null) {
-			finish(pending, Status.DISCONNECTED, null);
+	private void deactivateConnection(Connection previous) {
+		connections.remove(previous.ownerId, previous);
+		Attempt attempt = pending.get(previous);
+		if (attempt != null) {
+			finish(attempt, Status.DISCONNECTED, null);
 		}
 		validator.disconnectOwner(previous.ownerId);
 		authority.cancelAllForOwner(previous.ownerId);
@@ -136,10 +158,10 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 			Status rejected = closed ? Status.CLOSED
 				: admissionSuspensions != 0 ? Status.BUSY
 				: changingLifecycle ? Status.STALE_CONTEXT
-				: owner == null || owner != connection ? Status.OWNER_INACTIVE
+				: owner == null || connections.get(owner.ownerId) != owner ? Status.OWNER_INACTIVE
 				: !validator.isOwnerActive(owner.ownerId) ? Status.OWNER_INACTIVE
 				: owner.quarantined ? Status.WORKER_QUARANTINED
-				: pending != null || recordingOccupied || validator.pendingCount() != 0 ? Status.BUSY
+				: occupied(owner) || occupiedCount() >= maximumAttempts ? Status.BUSY
 				: !authority.isActive() ? Status.STALE_CONTEXT : null;
 			if (rejected == null) {
 				SeededLeafGlobalDisclosureBudget.Snapshot disclosure = authority.globalDisclosureSnapshot();
@@ -156,8 +178,8 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 			attempt.request = request;
 			attempt.exchange = exchange;
 			attempt.task = new RecordingTask(attempt);
-			pending = attempt;
-			recordingOccupied = true;
+			pending.put(owner, attempt);
+			recordings.add(attempt);
 			try {
 				attempt.timeout = watchdog.schedule(() -> {
 					synchronized (authority) {
@@ -166,7 +188,7 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 				}, timeoutNanos, TimeUnit.NANOSECONDS);
 				recorder.execute(attempt.task);
 			} catch (RejectedExecutionException exception) {
-				recordingOccupied = false;
+				recordings.remove(attempt);
 				attempt.task = null;
 				finish(attempt, Status.CLOSED, null);
 			}
@@ -176,7 +198,7 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 
 	public boolean cancel(Attempt attempt) {
 		synchronized (authority) {
-			return attempt != null && attempt == pending && finish(attempt, Status.CANCELLED, null);
+			return attempt != null && attempt == pending.get(attempt.owner) && finish(attempt, Status.CANCELLED, null);
 		}
 	}
 
@@ -184,7 +206,9 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 	public boolean suspendAdmission() {
 		synchronized (authority) {
 			admissionSuspensions++;
-			return pending != null && finish(pending, Status.CANCELLED, null);
+			boolean cancelled = !pending.isEmpty();
+			for (Attempt attempt : List.copyOf(pending.values())) { finish(attempt, Status.CANCELLED, null); }
+			return cancelled;
 		}
 	}
 
@@ -200,7 +224,7 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 		Objects.requireNonNull(claim, "claim");
 		Objects.requireNonNull(send, "send");
 		synchronized (authority) {
-			Attempt attempt = pending;
+			Attempt attempt = pending.get(owner);
 			if (attempt == null || attempt.owner != owner || !current(attempt)
 				|| attempt.claim == null || !attempt.claim.equals(claim)) {
 				return false;
@@ -227,9 +251,7 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 			}
 			changingLifecycle = true;
 			try {
-				if (pending != null) {
-					finish(pending, Status.STALE_CONTEXT, null);
-				}
+				for (Attempt attempt : List.copyOf(pending.values())) { finish(attempt, Status.STALE_CONTEXT, null); }
 				if (!closed) {
 					validator.invalidateAndReloadAuthority();
 				}
@@ -242,8 +264,30 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 	/** Includes interrupt-insensitive recording and validation after logical timeout. */
 	public boolean isBusy() {
 		synchronized (authority) {
-			return admissionSuspensions != 0 || pending != null || recordingOccupied || validator.pendingCount() != 0;
+			return admissionSuspensions != 0 || occupiedCount() != 0;
 		}
+	}
+
+	public boolean isBusy(Connection owner) {
+		synchronized (authority) {
+			return closed || changingLifecycle || admissionSuspensions != 0 || owner == null
+				|| connections.get(owner.ownerId) != owner || owner.quarantined
+				|| occupied(owner) || occupiedCount() >= maximumAttempts;
+		}
+	}
+
+	public int pendingCount() { synchronized (authority) { return pending.size(); } }
+
+	private boolean occupied(Connection owner) {
+		return pending.containsKey(owner) || recordings.stream().anyMatch(attempt -> attempt.owner.ownerId.equals(owner.ownerId))
+			|| validator.hasPendingOwner(owner.ownerId);
+	}
+
+	private int occupiedCount() {
+		Set<UUID> owners = new HashSet<>(validator.pendingOwners());
+		pending.keySet().forEach(owner -> owners.add(owner.ownerId));
+		recordings.forEach(attempt -> owners.add(attempt.owner.ownerId));
+		return owners.size();
 	}
 
 	/**
@@ -260,7 +304,7 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 				return false;
 			}
 			offer.used = true;
-			if (closed || offer.owner != connection || offer.owner.quarantined || !authority.isActive()
+			if (closed || connections.get(offer.owner.ownerId) != offer.owner || offer.owner.quarantined || !authority.isActive()
 				|| offer.generation != authority.contextGeneration()
 				|| nanoTime.getAsLong() - offer.deadlineNanos >= 0L) {
 				return false;
@@ -277,15 +321,13 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 				return;
 			}
 			closed = true;
-			connection = null;
-			if (pending != null) {
-				finish(pending, Status.CLOSED, null);
-			}
+			connections.clear();
+			for (Attempt attempt : List.copyOf(pending.values())) { finish(attempt, Status.CLOSED, null); }
 			for (Runnable abandoned : recorder.shutdownNow()) {
 				Attempt attempt = ((RecordingTask)abandoned).attempt;
 				attempt.request = null;
 				attempt.task = null;
-				recordingOccupied = false;
+				recordings.remove(attempt);
 			}
 			watchdog.shutdownNow();
 			validator.close();
@@ -378,11 +420,11 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 	}
 
 	private boolean current(Attempt attempt) {
-		if (attempt.done || pending != attempt) {
+		if (attempt.done || pending.get(attempt.owner) != attempt) {
 			return false;
 		}
 		Status invalid = closed ? Status.CLOSED
-			: attempt.owner != connection ? Status.DISCONNECTED
+			: connections.get(attempt.owner.ownerId) != attempt.owner ? Status.DISCONNECTED
 			: !authority.isActive() || attempt.generation != authority.contextGeneration() ? Status.STALE_CONTEXT
 			: nanoTime.getAsLong() - attempt.deadlineNanos >= 0L ? Status.TIMED_OUT : null;
 		if (invalid != null) {
@@ -416,7 +458,7 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 			if (attempt.runner != null) {
 				attempt.runner.interrupt();
 			} else if (attempt.task != null && recorder.remove(attempt.task)) {
-				recordingOccupied = false;
+				recordings.remove(attempt);
 				attempt.task = null;
 			}
 			if (attempt.claim != null) {
@@ -433,9 +475,7 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 		attempt.validationContext = null;
 		attempt.exchange = null;
 		attempt.claim = null;
-		if (pending == attempt) {
-			pending = null;
-		}
+		pending.remove(attempt.owner, attempt);
 		attempt.completion.complete(new Result(status, Optional.ofNullable(offer)));
 		return true;
 	}
@@ -527,7 +567,7 @@ public final class SeededLeafJobOrchestrator implements AutoCloseable {
 					attempt.request = null;
 					attempt.runner = null;
 					attempt.task = null;
-					recordingOccupied = false;
+					recordings.remove(attempt);
 				}
 			}
 		}

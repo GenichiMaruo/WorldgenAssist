@@ -325,6 +325,16 @@ public final class SeededLeafResultValidationExecutor implements AutoCloseable {
 		return tasks.size();
 	}
 
+	boolean hasPendingOwner(UUID ownerId) {
+		return tasks.values().stream().anyMatch(task -> task.ownerId.equals(ownerId));
+	}
+
+	java.util.Set<UUID> pendingOwners() {
+		java.util.Set<UUID> owners = new java.util.HashSet<>();
+		tasks.values().forEach(task -> owners.add(task.ownerId));
+		return owners;
+	}
+
 	/** Read-only preparation admission; submit still rechecks the captured owner epoch. */
 	boolean isOwnerActive(UUID ownerId) {
 		return !closed.get() && captureOwnerAdmission(Objects.requireNonNull(ownerId, "ownerId")).active();

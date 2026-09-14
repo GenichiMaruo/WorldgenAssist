@@ -2,14 +2,14 @@
 
 [English](INSTALL.md) | [日本語](INSTALL.ja.md) · [Overview](../README.md)
 
-This alpha is for disposable test worlds with a trusted participant. It is not
+This alpha is for disposable test worlds with trusted participants. It is not
 ready for ordinary public servers. Installing it does not automatically enable
 remote generation, and measured speedup is not established.
 
 1. Back up any existing installation and use a separate test profile/world.
 2. Prepare Minecraft Java Edition **26.2**, Java **25** (tested: 25.0.4),
    Fabric Loader **0.19.3**, and Fabric API **0.156.0+26.2**.
-3. Download `worldgen-assist-0.1.0-alpha.1+mc26.2.jar` from
+3. Download `worldgen-assist-0.1.0-alpha.2+mc26.2.jar` from
    [GitHub Releases](https://github.com/GenichiMaruo/WorldgenAssist/releases).
    The `-sources.jar` is developer source code, not an installable mod.
 4. Put Fabric API and the same Worldgen Assist mod JAR in the client and server
@@ -25,12 +25,18 @@ Neither is a private-seed-safe mode for an ordinary survival server. Do not
 enable both routes together. For the controlled fixture, follow the
 [fixture protocol and procedure](SEEDED_LEAF_FIXTURE_PROTOCOL.md).
 
+Alpha.2 lets participating clients assist their own terrain concurrently.
+Install alpha.2 on the server and every participating client; do not mix it
+with alpha.1. The global default is eight jobs, at most one per player. A busy
+or disconnected owner falls back locally. Controlled two-owner checks pass;
+larger groups, other dimensions and hostile participants are not guaranteed.
+
 ## Verify a download
 
 Compare the SHA-256 with the matching filename in the release's `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash -Algorithm SHA256 -LiteralPath '.\worldgen-assist-0.1.0-alpha.1+mc26.2.jar'
+Get-FileHash -Algorithm SHA256 -LiteralPath '.\worldgen-assist-0.1.0-alpha.2+mc26.2.jar'
 ```
 
 The checksums detect mismatched files; they are not a separate publisher signature.

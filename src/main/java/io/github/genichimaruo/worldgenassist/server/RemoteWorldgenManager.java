@@ -2,6 +2,7 @@ package io.github.genichimaruo.worldgenassist.server;
 
 import java.security.SecureRandom;
 import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -64,6 +65,9 @@ public final class RemoteWorldgenManager {
 	private final Object resultStateLock = new Object();
 	private final SecureRandom validationRandom = new SecureRandom();
 	private long predictionTicks;
+	private volatile List<PlayerChunkDemand> demands = List.of();
+	private final Map<UUID, Long> ownerGenerations = new ConcurrentHashMap<>();
+	private final AtomicLong nextOwnerGeneration = new AtomicLong();
 	private volatile MinecraftServer server;
 
 	private RemoteWorldgenManager(RemoteWorldgenConfig config) {
@@ -118,6 +122,9 @@ public final class RemoteWorldgenManager {
 	private void registerHandlers() {
 		ServerPlayNetworking.registerGlobalReceiver(WorkerHelloPayload.TYPE, (payload, context) -> {
 			WorkerAcceptedPayload response = coordinator.handleHello(context.player().getUUID(), payload);
+			if (response.accepted()) {
+				ownerGenerations.computeIfAbsent(context.player().getUUID(), ignored -> nextOwnerGeneration.incrementAndGet());
+			} else { invalidateOwner(context.player().getUUID()); }
 			context.responseSender().sendPacket(response);
 			WorldgenAssist.LOGGER.info(
 				"[CAWG] worker.register owner={} status={} requested_parallel={} version={}",
@@ -167,19 +174,25 @@ public final class RemoteWorldgenManager {
 				status
 			);
 		});
-		ServerPlayConnectionEvents.DISCONNECT.register((listener, currentServer) -> {
+		ServerPlayConnectionEvents.DISCONNECT.register((listener, currentServer) -> currentServer.execute(() -> {
+			ServerPlayer connected = currentServer.getPlayerList().getPlayer(listener.player.getUUID());
+			if (connected != null && connected != listener.player) { return; }
+			invalidateOwner(listener.player.getUUID());
 			int cancelled = coordinator.disconnect(listener.player.getUUID());
 			predictor.remove(listener.player.getUUID());
 			if (cancelled > 0) {
 				WorldgenAssist.LOGGER.info("[CAWG] worker.disconnect owner={} cancelled_jobs={}", listener.player.getUUID(), cancelled);
 			}
-		});
+		}));
 		ServerLifecycleEvents.SERVER_STARTING.register(currentServer -> {
+			demands = List.of();
+			ownerGenerations.clear();
 			server = currentServer;
 			contextFingerprints.clear();
 			clearResultState("server_starting");
 		});
 		ServerLifecycleEvents.START_DATA_PACK_RELOAD.register((currentServer, resourceManager) -> {
+			demands = List.of();
 			int cancelled = coordinator.cancelAllForReload();
 			contextFingerprints.clear();
 			clearResultState("datapack_reload");
@@ -188,6 +201,8 @@ public final class RemoteWorldgenManager {
 			}
 		});
 		ServerLifecycleEvents.SERVER_STOPPING.register(currentServer -> {
+			demands = List.of();
+			ownerGenerations.clear();
 			int cancelled = coordinator.shutdown();
 			contextFingerprints.clear();
 			clearResultState("server_stopping");
@@ -197,12 +212,22 @@ public final class RemoteWorldgenManager {
 		});
 		ServerLifecycleEvents.SERVER_STOPPED.register(currentServer -> server = null);
 		ServerTickEvents.END_SERVER_TICK.register(currentServer -> {
+			demands = coordinator.workerOwners().stream().map(owner -> currentServer.getPlayerList().getPlayer(owner))
+				.filter(player -> player != null && !player.isChangingDimension() && !player.isSpectator()).map(player -> new PlayerChunkDemand(
+					player.getUUID(), player.level().dimension().identifier(), player.chunkPosition().x(), player.chunkPosition().z(),
+					Math.clamp(player.requestedViewDistance(), 2, currentServer.getPlayerList().getViewDistance()))).toList();
 			int expired = coordinator.expireTimedOut();
+			// Connection replacement and physical owner-state cleanup both run on
+			// the server thread. Cache access independently rejects quarantine as
+			// soon as the watchdog marks it, including between server ticks.
+			for (UUID ownerId : ownerGenerations.keySet()) {
+				if (coordinator.isQuarantined(ownerId)) { invalidateOwner(ownerId); }
+			}
 			if (expired > 0) {
 				logTimeout(expired, "server_tick");
 			}
 			if (config.predictionEnabled() && ++predictionTicks % config.predictionIntervalTicks() == 0L) {
-				predictForSoleWorker(currentServer);
+				for (PlayerChunkDemand demand : demands) { predictForWorker(currentServer, demand.ownerId()); }
 			}
 		});
 	}
@@ -290,14 +315,10 @@ public final class RemoteWorldgenManager {
 		}
 	}
 
-	private void predictForSoleWorker(MinecraftServer currentServer) {
-		Optional<UUID> owner = coordinator.soleWorkerOwner();
-		if (owner.isEmpty()) {
-			return;
-		}
-		ServerPlayer player = currentServer.getPlayerList().getPlayer(owner.get());
+	private void predictForWorker(MinecraftServer currentServer, UUID owner) {
+		ServerPlayer player = currentServer.getPlayerList().getPlayer(owner);
 		if (player == null || player.isChangingDimension()) {
-			predictor.remove(owner.get());
+			predictor.remove(owner);
 			return;
 		}
 		int effectiveViewDistance = PlayerOwnedChunkPredictor.effectiveViewDistance(
@@ -305,7 +326,7 @@ public final class RemoteWorldgenManager {
 			currentServer.getPlayerList().getViewDistance()
 		);
 		Optional<PlayerOwnedChunkPredictor.Prediction> prediction = predictor.observe(
-			owner.get(),
+			owner,
 			player.level().dimension().identifier(),
 			player.chunkPosition().x(),
 			player.chunkPosition().z(),
@@ -349,6 +370,7 @@ public final class RemoteWorldgenManager {
 			);
 			var noiseSettings = speculative.settings().unwrapKey().orElseThrow().identifier();
 			RemoteDensityResultCache.Key cacheKey = createCacheKey(
+				targetPrediction.ownerId(),
 				level,
 				chunkPos,
 				fingerprint,
@@ -485,6 +507,9 @@ public final class RemoteWorldgenManager {
 		if (!config.remoteExecutionEnabled()) {
 			return invokeFallback(localFallback);
 		}
+		PlayerChunkDemand demand = PlayerChunkDemand.select(demands, context.level().dimension().identifier(),
+			chunk.getPos().x(), chunk.getPos().z()).orElse(null);
+		if (demand == null) { return invokeFallback(localFallback); }
 		Optional<RemoteWorldgenEligibility.EligibleContext> eligible = RemoteWorldgenEligibility.evaluate(context, step, chunks, chunk);
 		if (eligible.isEmpty()) {
 			return invokeFallback(localFallback);
@@ -507,6 +532,7 @@ public final class RemoteWorldgenManager {
 				));
 			var noiseSettings = eligibleContext.settings().unwrapKey().orElseThrow().identifier();
 			cacheKey = createCacheKey(
+				demand.ownerId(),
 				eligibleContext.level(),
 				chunk.getPos(),
 				fingerprint,
@@ -562,7 +588,8 @@ public final class RemoteWorldgenManager {
 					);
 				}).thenCompose(future -> future);
 			}
-			submission = coordinator.trySubmit(
+			submission = coordinator.trySubmitForOwner(
+				demand.ownerId(),
 				eligibleContext.level().dimension().identifier(),
 				chunk.getPos().x(),
 				chunk.getPos().z(),
@@ -592,12 +619,13 @@ public final class RemoteWorldgenManager {
 			config.cacheEntries()
 		);
 		WorldgenAssist.LOGGER.info(
-			"[CAWG] job.sent id={} chunk={},{} samples={} timeout_ms={}",
+			"[CAWG] job.sent id={} chunk={},{} samples={} timeout_ms={} owner={}",
 			remote.job().identity().jobId(),
 			remote.job().identity().chunkX(),
 			remote.job().identity().chunkZ(),
 			remote.job().sampleCount(),
-			config.jobTimeout().toMillis()
+			config.jobTimeout().toMillis(),
+			remote.ownerId()
 		);
 		return remote.result().handle((result, error) -> {
 			if (error != null) {
@@ -660,6 +688,7 @@ public final class RemoteWorldgenManager {
 	}
 
 	private RemoteDensityResultCache.Key createCacheKey(
+		UUID ownerId,
 		ServerLevel level,
 		ChunkPos chunkPos,
 		WorldgenContextFingerprint fingerprint,
@@ -676,19 +705,36 @@ public final class RemoteWorldgenManager {
 			noise.minY(),
 			noise.height(),
 			noise.getCellWidth(),
-			noise.getCellHeight()
+			noise.getCellHeight(),
+			ownerId,
+			ownerGenerations.getOrDefault(ownerId, -1L)
 		);
+	}
+
+	private boolean currentCacheKey(RemoteDensityResultCache.Key key) {
+		return key.generation() == cacheGeneration.get() && key.ownerId() != null
+			&& !coordinator.isQuarantined(key.ownerId())
+			&& key.ownerGeneration() == ownerGenerations.getOrDefault(key.ownerId(), -2L);
+	}
+
+	private void invalidateOwner(UUID ownerId) {
+		synchronized (resultStateLock) {
+			ownerGenerations.remove(ownerId);
+			resultCache.removeOwner(ownerId);
+			predictedJobs.keySet().removeIf(key -> ownerId.equals(key.ownerId()));
+			demands = demands.stream().filter(demand -> !ownerId.equals(demand.ownerId())).toList();
+		}
 	}
 
 	private Optional<double[]> cachedResult(RemoteDensityResultCache.Key cacheKey) {
 		synchronized (resultStateLock) {
-			return cacheKey.generation() == cacheGeneration.get() ? resultCache.get(cacheKey) : Optional.empty();
+			return currentCacheKey(cacheKey) ? resultCache.get(cacheKey) : Optional.empty();
 		}
 	}
 
 	private boolean hasCachedResult(RemoteDensityResultCache.Key cacheKey) {
 		synchronized (resultStateLock) {
-			return cacheKey.generation() == cacheGeneration.get() && resultCache.contains(cacheKey);
+			return currentCacheKey(cacheKey) && resultCache.contains(cacheKey);
 		}
 	}
 
@@ -698,7 +744,7 @@ public final class RemoteWorldgenManager {
 		String source
 	) {
 		synchronized (resultStateLock) {
-			if (cacheKey.generation() != cacheGeneration.get()) {
+			if (!currentCacheKey(cacheKey)) {
 				return false;
 			}
 			resultCache.put(cacheKey, result);
@@ -747,7 +793,7 @@ public final class RemoteWorldgenManager {
 				throw new IllegalStateException("Chunk has no installable NoiseChunk at the NOISE stage");
 			}
 			synchronized (resultStateLock) {
-				if (cacheKey.generation() != cacheGeneration.get()) {
+				if (!currentCacheKey(cacheKey)) {
 					throw new IllegalStateException("Remote density context was invalidated before application");
 				}
 				target.worldgenAssist$installRemoteDensity(densityField);
@@ -819,6 +865,7 @@ public final class RemoteWorldgenManager {
 	}
 
 	private void quarantineWorker(UUID ownerId, UUID failedJobId, String source, String reason) {
+		invalidateOwner(ownerId);
 		int cancelled = coordinator.quarantine(ownerId);
 		predictor.remove(ownerId);
 		WorldgenAssist.LOGGER.warn(
