@@ -2,13 +2,16 @@
 
 ## Scope and sources
 
-Worldgen Assist targets Minecraft Java Edition **26.2**, Fabric Loader
+The published line targets Minecraft Java Edition **26.2**, Fabric Loader
 **0.19.3**, Fabric API **0.156.0+26.2**, and Java **25** (verification JDK
-25.0.4). Keep dependency and protocol changes explicit. The current version is
-defined by `gradle.properties`; use `scripts/Get-WorldgenArtifact.ps1` to select
-its exact JAR and tag. Published tags, releases, and assets are immutable.
+25.0.4). Branch `feature/mc26.3-multiloader` is an **incomplete 26.3 port**:
+do not install, tag or publish its artifacts. Its dependency versions are in
+`gradle.properties`; see `PORT_26_3.md` for source-verified breaking changes.
+Keep dependency and protocol changes explicit. Use
+`scripts/Get-WorldgenArtifact.ps1` to select exact JAR names. Published tags,
+releases, and assets are immutable.
 
-For Minecraft internals, inspect the generated **26.2** source before changing
+For Minecraft internals, inspect the generated source for the **target version** before changing
 symbols, descriptors, threading assumptions, or Mixins. Run `genSources` if it
 is missing. Keep verified findings in `MIXIN_TARGETS.md` and
 `WORLDGEN_PIPELINE.md` synchronized with code. Consult Fabric sources/docs for
@@ -32,12 +35,12 @@ security boundary and `ALPHA3_PERFORMANCE.md` for measured performance.
   requires a second explicit seed-disclosure choice and reveals the seed to
   participating clients. It is for trusted friends' test worlds, not an
   untrusted public server. Seed confidentiality is unresolved.
-- The separate transcript fixture is limited to the already public seed
+- On the published 26.2 line, the separate transcript fixture is limited to the already public seed
   **8675309**. Its persistent disclosure budget and authority lifecycle must
   remain intact. General protocol `CURRENT` is **2**; fixture packets use their
-  separate v3 family. Read `SEEDED_LEAF_FIXTURE_PROTOCOL.md` before changing
-  runtime or network behavior.
-- Trusted raw-seed assistance supports vanilla Overworld, Nether, and End for
+  separate v3 family. It is **not ported to 26.3**. Read
+  `SEEDED_LEAF_FIXTURE_PROTOCOL.md` before changing runtime or network behavior.
+- Published 26.2 trusted raw-seed assistance supports vanilla Overworld, Nether, and End for
   eligible new chunks. Mod-added dimensions and custom generators are outside
   the verified scope. Do not claim a speedup: the twelve measured alpha.3
   conditions showed lower assisted throughput.
@@ -55,8 +58,9 @@ not silently turn a historical checkpoint into a current test result.
 Run **only the tests affected by the change**. For a focused code edit, run its
 relevant JUnit class(es) and the build tasks needed to produce or verify the
 artifact. For a runtime/Mixin change, add the smallest affected vanilla and
-assisted scenarios with `Run-ValidationMatrix.ps1 -CaseId`; run the public
-fixture separately only if that path changed. Use the full matrix only when a
+assisted scenarios with `Run-ValidationMatrix.ps1 -CaseId` **after its
+installed-client harness is ported to 26.3**; the current capability flag is
+off because the runner pins 26.2. Use the full matrix only when a
 broad change or unresolved evidence gap actually requires it. Documentation
 and release packaging alone do not require another Minecraft runtime matrix.
 Reuse successful evidence only with its original source, harness, and JAR

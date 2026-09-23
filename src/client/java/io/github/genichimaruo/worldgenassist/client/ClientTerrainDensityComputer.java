@@ -35,8 +35,7 @@ final class ClientTerrainDensityComputer {
 		NoiseSettings noiseSettings = settings.value().noiseSettings();
 		if (noiseSettings.minY() != job.minY()
 			|| noiseSettings.height() != job.height()
-			|| noiseSettings.getCellWidth() != job.cellWidth()
-			|| noiseSettings.getCellHeight() != job.cellHeight()) {
+			|| job.cellWidth() != 1 || job.cellHeight() != 1) {
 			throw new RejectedJobException(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT);
 		}
 
@@ -53,8 +52,8 @@ final class ClientTerrainDensityComputer {
 			throw new RejectedJobException(TerrainJobFailurePayload.Reason.CONTEXT_MISMATCH);
 		}
 
-		HolderLookup.RegistryLookup<NormalNoise.NoiseParameters> noiseRegistry = worldgenRegistries.lookupOrThrow(Registries.NOISE);
-		RandomState randomState = RandomState.create(settings.value(), noiseRegistry, job.worldSeed());
+		HolderLookup.RegistryLookup<NormalNoise> noiseRegistry = worldgenRegistries.lookupOrThrow(Registries.NOISE);
+		RandomState randomState = RandomState.create(noiseRegistry, job.worldSeed(), settings.value());
 		ClientDensitySampler.Sample sample = new ClientDensitySampler(
 			job.identity().chunkX(),
 			job.identity().chunkZ(),

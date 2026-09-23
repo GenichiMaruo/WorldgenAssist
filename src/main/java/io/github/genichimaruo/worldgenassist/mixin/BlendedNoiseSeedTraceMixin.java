@@ -1,6 +1,6 @@
 package io.github.genichimaruo.worldgenassist.mixin;
 
-import net.minecraft.world.level.levelgen.DensityFunction;
+import net.minecraft.world.level.levelgen.densityfunction.DensityFunction;
 import net.minecraft.world.level.levelgen.synth.BlendedNoise;
 
 import io.github.genichimaruo.worldgenassist.server.SeededLeafTrace;

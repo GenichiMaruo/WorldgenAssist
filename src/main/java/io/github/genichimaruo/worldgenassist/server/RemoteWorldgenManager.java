@@ -32,7 +32,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.status.ChunkStep;
 import net.minecraft.world.level.chunk.status.WorldGenContext;
-import net.minecraft.world.level.levelgen.NoiseChunk;
 import net.minecraft.world.level.levelgen.NoiseSettings;
 
 import io.github.genichimaruo.worldgenassist.WorldgenAssist;
@@ -42,8 +41,6 @@ import io.github.genichimaruo.worldgenassist.common.TerrainDensityResultEnvelope
 import io.github.genichimaruo.worldgenassist.common.TerrainJobIdentity;
 import io.github.genichimaruo.worldgenassist.common.WorldgenContextFingerprint;
 import io.github.genichimaruo.worldgenassist.common.WorldgenProtocolVersion;
-import io.github.genichimaruo.worldgenassist.mixin.ChunkAccessNoiseChunkAccessor;
-import io.github.genichimaruo.worldgenassist.mixin.NoiseBasedChunkGeneratorInvoker;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobFailurePayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobResultPayload;
 import io.github.genichimaruo.worldgenassist.network.WorkerAcceptedPayload;
@@ -111,8 +108,6 @@ public final class RemoteWorldgenManager {
 		ChunkAccess chunk,
 		Supplier<CompletableFuture<ChunkAccess>> localFallback
 	) {
-		Optional<CompletableFuture<ChunkAccess>> fixture = SeededLeafFixtureManager.tryGenerate(context, step, chunks, chunk, localFallback);
-		if (fixture.isPresent()) { return fixture.orElseThrow(); }
 		RemoteWorldgenManager manager = instance;
 		return manager == null
 			? invokeFallback(localFallback)
@@ -544,13 +539,6 @@ public final class RemoteWorldgenManager {
 				eligibleContext.level().dimension(),
 				ignored -> WorldgenContextFingerprintFactory.create(eligibleContext.level(), eligibleContext.generator())
 			);
-			chunk.getOrCreateNoiseChunk(candidate -> ((NoiseBasedChunkGeneratorInvoker)(Object)eligibleContext.generator())
-				.worldgenAssist$createNoiseChunk(
-					candidate,
-					eligibleContext.structureManager(),
-					eligibleContext.blender(),
-					eligibleContext.level().getChunkSource().randomState()
-				));
 			var noiseSettings = eligibleContext.settings().unwrapKey().orElseThrow().identifier();
 			cacheKey = createCacheKey(
 				demand.ownerId(),
@@ -686,8 +674,8 @@ public final class RemoteWorldgenManager {
 			noiseSettings,
 			eligibleContext.noise().minY(),
 			eligibleContext.noise().height(),
-			eligibleContext.noise().getCellWidth(),
-			eligibleContext.noise().getCellHeight()
+			1,
+			1
 		);
 	}
 
@@ -703,8 +691,8 @@ public final class RemoteWorldgenManager {
 			noiseSettings,
 			speculative.noise().minY(),
 			speculative.noise().height(),
-			speculative.noise().getCellWidth(),
-			speculative.noise().getCellHeight()
+			1,
+			1
 		);
 	}
 
@@ -725,8 +713,8 @@ public final class RemoteWorldgenManager {
 			noiseSettings,
 			noise.minY(),
 			noise.height(),
-			noise.getCellWidth(),
-			noise.getCellHeight(),
+			1,
+			1,
 			ownerId,
 			ownerGenerations.getOrDefault(ownerId, -1L)
 		);
@@ -816,10 +804,7 @@ public final class RemoteWorldgenManager {
 					source
 				);
 			}
-			NoiseChunk noiseChunk = ((ChunkAccessNoiseChunkAccessor)chunk).worldgenAssist$getNoiseChunk();
-			if (!(noiseChunk instanceof RemoteDensityTarget target)) {
-				throw new IllegalStateException("Chunk has no installable NoiseChunk at the NOISE stage");
-			}
+			RemoteDensityTarget target = (RemoteDensityTarget) chunk;
 			synchronized (resultStateLock) {
 				if (!currentCacheKey(cacheKey)) {
 					throw new IllegalStateException("Remote density context was invalidated before application");

@@ -3,15 +3,9 @@
 	"package": "io.github.genichimaruo.worldgenassist.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
-		"BlendedNoiseSeedTraceMixin",
-		"ChunkAccessNoiseChunkAccessor",
+		"ChunkAccessRemoteDensityMixin",
 		"ChunkStatusTasksMixin",
-		"NoiseBasedChunkGeneratorMixin",
-		"NoiseBasedChunkGeneratorInvoker",
-		"NoiseChunkCacheAllInCellAccessor",
-		"NoiseChunkRemoteDensityMixin",
-		"NormalNoiseSeedTraceMixin",
-		"ServerChunkCacheFixtureWaitMixin"
+		"NoiseBasedChunkGeneratorMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

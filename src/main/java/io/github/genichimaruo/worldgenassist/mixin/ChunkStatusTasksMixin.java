@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.Mixin;
 @Mixin(ChunkStatusTasks.class)
 abstract class ChunkStatusTasksMixin {
 	@WrapMethod(
-		method = "generateNoise(Lnet/minecraft/world/level/chunk/status/WorldGenContext;Lnet/minecraft/world/level/chunk/status/ChunkStep;Lnet/minecraft/util/StaticCache2D;Lnet/minecraft/world/level/chunk/ChunkAccess;)Ljava/util/concurrent/CompletableFuture;"
+		method = "buildTerrain(Lnet/minecraft/world/level/chunk/status/WorldGenContext;Lnet/minecraft/world/level/chunk/status/ChunkStep;Lnet/minecraft/util/StaticCache2D;Lnet/minecraft/world/level/chunk/ChunkAccess;)Ljava/util/concurrent/CompletableFuture;"
 	)
 	private static CompletableFuture<ChunkAccess> worldgenAssist$measureNoise(
 		WorldGenContext context,

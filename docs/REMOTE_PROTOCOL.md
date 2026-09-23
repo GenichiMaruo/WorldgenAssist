@@ -1,5 +1,15 @@
 # Remote Protocol
 
+## Minecraft 26.3 development branch
+
+The sections below describe the published **26.2** line unless explicitly
+stated otherwise. On `feature/mc26.3-multiloader`, the Fabric candidate sends
+full-block float-exact density volumes and sets general `CURRENT=3`; the
+separate public-seed fixture is unavailable. This candidate has targeted
+sampler/transport tests but no assisted network runtime comparison or
+Forge/NeoForge implementation yet. See `PORT_26_3.md`. Do not interpret the
+fixture's historical v3 packet family as the new general protocol.
+
 ## Separate public-fixture family — 2026-09-05
 
 Protocol `CURRENT` remains 2. An explicitly enabled `seeded_leaf_fixture_v3_*`

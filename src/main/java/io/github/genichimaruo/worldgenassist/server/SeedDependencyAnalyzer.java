@@ -9,7 +9,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.level.levelgen.DensityFunction;
+import net.minecraft.world.level.levelgen.densityfunction.DensityFunction;
 import net.minecraft.world.level.levelgen.synth.BlendedNoise;
 
 /**

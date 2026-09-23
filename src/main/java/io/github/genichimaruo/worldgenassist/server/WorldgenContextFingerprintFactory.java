@@ -26,7 +26,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.levelgen.DensityFunctions;
+import net.minecraft.world.level.levelgen.densityfunction.DensityFunctions;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.WorldOptions;
@@ -101,7 +101,7 @@ public final class WorldgenContextFingerprintFactory {
 			settings.unwrapKey().map(ResourceKey::identifier),
 			encode(NoiseGeneratorSettings.DIRECT_CODEC, ops, settings.value(), "selected noise settings"),
 			encodeRegistry(registries, Registries.DENSITY_FUNCTION, DensityFunctions.DIRECT_CODEC, ops),
-			encodeRegistry(registries, Registries.NOISE, NormalNoise.NoiseParameters.DIRECT_CODEC, ops),
+			encodeRegistry(registries, Registries.NOISE, NormalNoise.DIRECT_CODEC, ops),
 			SharedConstants.DEBUG_AQUIFERS,
 			SharedConstants.DEBUG_DISABLE_AQUIFERS,
 			SharedConstants.DEBUG_DISABLE_FLUID_GENERATION,

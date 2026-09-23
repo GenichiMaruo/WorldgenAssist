@@ -1,5 +1,21 @@
 # Mixin Targets
 
+## 26.3 port finding (2026-09-23; Fabric candidate only)
+
+Generated 26.3 `NoiseChunk` no longer owns interpolation cells or exposes
+`advanceCellX`, `selectCellYZ`, or `DensityFunction.fillArray`. The published
+26.2 `NoiseChunkRemoteDensityMixin` and its `NoiseChunkCacheAllInCellAccessor`
+therefore have no valid 26.3 target. `NoiseBasedChunkGenerator.buildTerrain`
+creates a scoped `NoiseChunk`; its private `doFill(NoiseChunk,ChunkAccess)` calls
+`DensitySampler.Bound.sampleVolume(DensityVolume)` for `finalDensity` before
+server-side aquifer/block writes. The Fabric candidate uses
+`ChunkStatusTasks.buildTerrain` for admission, a `ChunkAccess`-scoped remote
+field, and a `doFill` `sampleVolume` WrapOperation to substitute a bounded
+float buffer. The field is cleared when generation completes. A default-off
+Fabric dedicated-server smoke reached 25 spawn NOISE chunks without a Mixin
+error; assisted runtime and all Forge/NeoForge transformations remain unverified.
+See `PORT_26_3.md`.
+
 ## Alpha.3 source checks (2026-09-15, runtime pending)
 
 The settings menu uses resolved Fabric screen-api 5.1.0 `ScreenEvents.AFTER_INIT`

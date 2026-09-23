@@ -56,7 +56,7 @@ final class ClientWorldgenWorker {
 
 	ClientWorldgenWorker() {
 		long startedNanos = System.nanoTime();
-		this.worldgenRegistries = VanillaRegistries.createLookup();
+		this.worldgenRegistries = VanillaRegistries.createWorldLookup();
 		this.corruptResultsForAdversarialTest = FabricLoader.getInstance().isDevelopmentEnvironment()
 			&& (Boolean.getBoolean(CORRUPT_RESULT_TEST_SYSTEM_PROPERTY)
 				|| "true".equalsIgnoreCase(System.getenv(CORRUPT_RESULT_TEST_ENVIRONMENT_VARIABLE)));

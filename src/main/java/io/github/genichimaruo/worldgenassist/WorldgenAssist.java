@@ -11,14 +11,10 @@ import io.github.genichimaruo.worldgenassist.server.NoiseTaskBenchmarkLogger;
 import io.github.genichimaruo.worldgenassist.server.RemoteWorldgenConfig;
 import io.github.genichimaruo.worldgenassist.server.RemoteWorldgenManager;
 import io.github.genichimaruo.worldgenassist.server.ServerTickBenchmarkLogger;
-import io.github.genichimaruo.worldgenassist.server.SeededLeafJobSecurityLifecycle;
 import io.github.genichimaruo.worldgenassist.server.VanillaDelegatingWorldgenTaskBackend;
 import io.github.genichimaruo.worldgenassist.server.WorldgenContextFingerprintFactory;
 import io.github.genichimaruo.worldgenassist.server.WorldgenContextFingerprintLogger;
 import io.github.genichimaruo.worldgenassist.network.WorldgenPayloadTypes;
-import io.github.genichimaruo.worldgenassist.network.SeededLeafFixturePayloads;
-import io.github.genichimaruo.worldgenassist.common.SeededLeafFixtureConfig;
-import io.github.genichimaruo.worldgenassist.server.SeededLeafFixtureManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,20 +24,15 @@ public final class WorldgenAssist implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		if (unsupportedFixtureFlag("worldgen_assist.seeded_leaf.public_fixture", "WORLDGEN_ASSIST_SEEDED_LEAF_PUBLIC_FIXTURE")
+			|| unsupportedFixtureFlag("worldgen_assist.client.seeded_leaf.public_fixture", "WORLDGEN_ASSIST_CLIENT_SEEDED_LEAF_PUBLIC_FIXTURE")) {
+			throw new IllegalStateException("The public-seed transcript fixture is not available on Minecraft 26.3");
+		}
 		LOGGER.info("[CAWG] initialized");
 		WorldgenPayloadTypes.register();
 		RemoteWorldgenConfig remoteConfig = RemoteWorldgenConfig.current(io.github.genichimaruo.worldgenassist.server.ServerSettingsStore.load());
 		io.github.genichimaruo.worldgenassist.server.ServerSettingsMenu.register();
-		if (SeededLeafFixtureConfig.serverEnabled() && remoteConfig.remoteExecutionEnabled()) {
-			throw new IllegalArgumentException("Public fixture and trusted_raw remote modes cannot run together");
-		}
-		SeededLeafFixturePayloads.registerIfEnabled();
 		RemoteWorldgenManager.register(remoteConfig);
-		if (SeededLeafFixtureConfig.serverEnabled()) {
-			SeededLeafFixtureManager.register();
-		} else {
-			SeededLeafJobSecurityLifecycle.register(remoteConfig);
-		}
 		if (remoteConfig.remoteExecutionEnabled()) {
 			LOGGER.warn(
 				"[CAWG] remote.enabled seed_disclosure={} max_in_flight={} timeout_ms={} cache_entries={} prediction={} prediction_interval_ticks={} prediction_lead_chunks={} validation_sample_cells={} property={} environment_variable={}",
@@ -129,5 +120,13 @@ public final class WorldgenAssist implements ModInitializer {
 				WorldgenContextFingerprintLogger.ENVIRONMENT_VARIABLE
 			);
 		}
+	}
+
+	private static boolean unsupportedFixtureFlag(String property, String environment) {
+		String value = System.getProperty(property);
+		if (value == null) { value = System.getenv(environment); }
+		if (value == null || value.equalsIgnoreCase("false")) { return false; }
+		if (value.equalsIgnoreCase("true")) { return true; }
+		throw new IllegalArgumentException("Expected true/false for " + property);
 	}
 }

@@ -1,5 +1,25 @@
 # World Generation Pipeline Notes
 
+## 26.3 source finding (2026-09-23; port incomplete)
+
+In generated 26.3 source, `NoiseSettings` has only `minY`/`height`.
+`NoiseBasedChunkGenerator.buildTerrain` makes a
+`DensityVolume(16,height,16,chunkMinX,minY,chunkMinZ)` and a scoped
+`NoiseChunk`. `doFill` binds `noiseRouter().finalDensity()` through that
+chunk's `DensitySamplerSet`, samples the full volume into a
+`ScopedDensityBuffer`, and reads **float** densities by
+`DensityVolume.indexUnchecked(x,y,z)`. Aquifer selection, block placement,
+heightmaps and later stages remain server-side. The 26.2 interpolation-cell
+transport and injection do not apply. The Fabric candidate transports a full
+block-density volume as exact float values represented by doubles. A focused
+test matches vanilla's caching `sampleVolume` for one chunk each in Overworld,
+Nether and End, including every value computed as an independent vertical
+column. Single-point `sampleValue` was found to differ by one bit at some
+coordinates, so optional server validation uses column `sampleVolume` instead.
+No 26.3 assisted runtime comparison is verified.
+See `PORT_26_3.md` for the migration gate. The sections below document the
+published 26.2 implementation.
+
 ## Alpha.3 source findings (2026-09-15, verification pending)
 
 Generated 26.2 `NoiseSettings` defines Overworld as minY -64, height 384,

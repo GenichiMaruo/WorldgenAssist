@@ -11,6 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.AccessibilityOnboardingScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.client.input.KeyEvent;
@@ -37,11 +38,19 @@ final class SettingsScreenSmoke {
 		}
 		if (++ticks % 20 != 0) return;
 		try {
-			if (System.nanoTime() > deadline) throw new IllegalStateException("Settings smoke deadline exceeded");
 			Screen screen = client.gui.screen();
+			if (System.nanoTime() > deadline) {
+				throw new IllegalStateException("Settings smoke deadline exceeded at screen="
+					+ (screen == null ? "null" : screen.getClass().getName())
+					+ " overlay=" + (client.gui.overlay() == null ? "null" : client.gui.overlay().getClass().getName()));
+			}
 			if (step == 0) {
+				if (screen instanceof AccessibilityOnboardingScreen onboarding) {
+					onboarding.onClose();
+					return;
+				}
 				if (!(screen instanceof TitleScreen)) return;
-				client.gui.setScreen(new OptionsScreen(screen, client.options, false));
+				client.gui.setScreen(new OptionsScreen(screen, client.options));
 			} else if (step == 1) {
 				press(screen, Component.literal("WorldgenAssist"));
 			} else if (step == 2) {

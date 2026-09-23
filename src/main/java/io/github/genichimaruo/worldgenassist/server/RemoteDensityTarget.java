@@ -6,4 +6,6 @@ public interface RemoteDensityTarget {
 	void worldgenAssist$installRemoteDensity(RemoteDensityField densityField);
 
 	void worldgenAssist$clearRemoteDensity(UUID jobId);
+
+	RemoteDensityField worldgenAssist$getRemoteDensity();
 }

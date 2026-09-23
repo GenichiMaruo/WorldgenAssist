@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityJob;
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityResult;
+import net.minecraft.world.level.levelgen.densityfunction.DensityBuffer;
+import net.minecraft.world.level.levelgen.densityfunction.DensityVolume;
 
 public final class RemoteDensityField {
 	private final UUID jobId;
@@ -37,38 +39,6 @@ public final class RemoteDensityField {
 		densities = result.densities();
 	}
 
-	private RemoteDensityField(SeededLeafDensityResultGate.AcceptedResult accepted) {
-		Objects.requireNonNull(accepted, "accepted");
-		jobId = accepted.jobId();
-		chunkX = accepted.chunkX();
-		chunkZ = accepted.chunkZ();
-		minY = accepted.minY();
-		height = accepted.height();
-		cellWidth = accepted.cellWidth();
-		cellHeight = accepted.cellHeight();
-		densities = accepted.densityResult().densities();
-	}
-
-	/** Constructs an installable field only from the executor's authoritative validation success. */
-	public static RemoteDensityField fromValidated(
-		SeededLeafResultValidationExecutor.Outcome outcome,
-		SeededLeafJobAuthority authority
-	) {
-		Objects.requireNonNull(outcome, "outcome");
-		Objects.requireNonNull(authority, "authority");
-		if (outcome.status() != SeededLeafResultValidationExecutor.Status.VALIDATED) {
-			throw new IllegalArgumentException("Only a validated seeded-leaf outcome can become a remote density field");
-		}
-		synchronized (authority) {
-			SeededLeafDensityResultGate.AcceptedResult accepted = outcome.acceptedResult().orElseThrow();
-			if (outcome.authorityGeneration() != authority.contextGeneration()
-				|| authority.contextId().filter(accepted.contextId()::equals).isEmpty()) {
-				throw new IllegalStateException("Validated seeded-leaf outcome belongs to a stale authority context");
-			}
-			return new RemoteDensityField(accepted);
-		}
-	}
-
 	public UUID jobId() {
 		return jobId;
 	}
@@ -95,6 +65,29 @@ public final class RemoteDensityField {
 
 	public int cellHeight() {
 		return cellHeight;
+	}
+
+	/** Writes only an exact 26.3 full-block volume; never applies block state. */
+	public void copyVolume(DensityVolume volume, DensityBuffer destination) {
+		if (cellWidth != 1 || cellHeight != 1
+			|| volume.sizeX() != TerrainDensityJob.CHUNK_SIDE
+			|| volume.sizeZ() != TerrainDensityJob.CHUNK_SIDE
+			|| volume.sizeY() != height
+			|| volume.minBlockX() != Math.multiplyExact(chunkX, TerrainDensityJob.CHUNK_SIDE)
+			|| volume.minBlockZ() != Math.multiplyExact(chunkZ, TerrainDensityJob.CHUNK_SIDE)
+			|| volume.minBlockY() != minY
+			|| volume.stepBlockX() != 1 || volume.stepBlockY() != 1 || volume.stepBlockZ() != 1
+			|| destination.size() != densities.length || volume.size() != densities.length) {
+			throw new IllegalArgumentException("Remote density geometry does not match the 26.3 volume");
+		}
+		for (int index = 0; index < densities.length; index++) {
+			double value = densities[index];
+			float density = (float) value;
+			if (!Double.isFinite(value) || !Float.isFinite(density) || (double)density != value) {
+				throw new IllegalArgumentException("Remote density is not an exact finite float at " + index);
+			}
+			destination.set(index, density);
+		}
 	}
 
 	public void copyCell(int cellXIndex, int cellYIndex, int cellZIndex, double[] destination) {

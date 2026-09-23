@@ -54,6 +54,17 @@ loom {
 	}
 }
 
+// The 26.2 public-seed transcript fixture depends on the removed 26.3
+// interpolation pipeline. Keep its source for the published maintenance line,
+// but never compile or register it in a 26.3 artifact until reverified.
+sourceSets.main.java.exclude '**/*SeededLeaf*.java', '**/SeedDependencyAnalyzer.java',
+	'**/BlendedNoiseSeedTraceMixin.java', '**/NormalNoiseSeedTraceMixin.java',
+	'**/ServerChunkCacheFixtureWaitMixin.java'
+sourceSets.client.java.exclude '**/*SeededLeaf*.java'
+// The 26.2 JUnit sources exercise APIs removed in 26.3. Keep them on the
+// published maintenance branch; this branch uses a small 26.3-focused suite.
+sourceSets.test.java.setSrcDirs(['src/portTest/java'])
+
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"

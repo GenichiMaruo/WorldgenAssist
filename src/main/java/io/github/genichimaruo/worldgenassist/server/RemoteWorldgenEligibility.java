@@ -81,11 +81,8 @@ final class RemoteWorldgenEligibility {
 			&& (long)noise.minY() + noise.height() <= (long)minY + height
 			&& noise.height() <= TerrainDensityJob.MAX_HEIGHT
 			&& noise.height() > 0
-			&& noise.getCellWidth() > 0
-			&& TerrainDensityJob.CHUNK_SIDE % noise.getCellWidth() == 0
-			&& noise.getCellHeight() > 0
-			&& noise.height() % noise.getCellHeight() == 0
-			&& Math.floorMod(noise.minY(), noise.getCellHeight()) == 0;
+			&& noise.height() % 16 == 0
+			&& Math.floorMod(noise.minY(), 16) == 0;
 	}
 
 	record EligibleContext(
