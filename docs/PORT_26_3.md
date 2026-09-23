@@ -15,6 +15,14 @@ builds and runtime comparisons pass.
   Its current documentation is still versioned for 26.1, so verify 26.3
   behavior against the actual MDK/generated sources rather than extrapolating.
 
+The official Forge `26.3-66.0.3` MDK archive was downloaded for inspection;
+its SHA-1 `a9446ea6c6ebf1e0cce86c6f65b642e11fa954c7` matches the Forge
+download page. Its build uses ForgeGradle `[7.0.17,8)` and Java 25. The
+official NeoForge 26.3 ModDevGradle template uses plugin `2.0.147`, Java 25
+and currently pins `26.3.0.10-beta`. Inspection copies are under ignored
+`.gradle/loader-inspect/`; these are upstream templates, **not** working
+WorldgenAssist loader projects.
+
 ## Generated 26.3 source findings
 
 `genSources` succeeded on JDK 25.0.4 with Gradle 9.6.0 and Loom 1.17.20.
@@ -79,6 +87,21 @@ artifact. Enabling either old public-fixture flag now fails initialization.
 `scripts/validation-capabilities.json` disables the existing matrix because
 its installed-client harness still pins 26.2 binaries. Port the harness before
 using it as 26.3 evidence.
+
+## Loader split to implement
+
+The job identity, bounded codecs, density calculation, eligibility, result
+cache, coordinator and chunk Mixins can be shared only after compilation and
+target verification against each loader's 26.3 game source. Fabric-specific
+calls currently live in `WorldgenAssist`, `WorldgenPayloadTypes`,
+`RemoteWorldgenManager.registerHandlers`, `FabricRemoteJobSender`,
+`ServerSettingsMenu`, the two server loggers, `ServerSettingsStore`,
+`ClientWorldgenWorker`, `ClientSettings`, and `WorldgenSettingsScreen`.
+Extract lifecycle callbacks, payload registration/send, config directory,
+mod-version lookup and options-screen entry into loader adapters. Forge and
+NeoForge then need independent metadata, development builds, Mixin startup,
+dedicated-server/client launches and assisted/vanilla comparisons. The
+templates alone cannot satisfy this gate.
 
 ## Remaining acceptance gates
 
