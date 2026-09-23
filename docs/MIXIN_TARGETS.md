@@ -1,5 +1,18 @@
 # Mixin Targets
 
+## Alpha.3 source checks (2026-09-15, runtime pending)
+
+The settings menu uses resolved Fabric screen-api 5.1.0 `ScreenEvents.AFTER_INIT`
+and `Screens.getWidgets`, with generated 26.2 `OptionsScreen`, `Screen`,
+`Button.builder` and `StringWidget`. Screen changes use `Minecraft.gui.setScreen`.
+No GUI Mixin is needed. The generated `Screen.init(int,int)`/resize lifecycle
+rebuilds widgets, and the settings screen uses the same lifecycle.
+
+The generated `WorldGenContext` record supplies the authoritative `ServerLevel`
+to the existing `ChunkStatusTasks.generateNoise` wrapper. Geometry findings for
+Nether and End are recorded in `WORLDGEN_PIPELINE.md`; the injection descriptor
+does not need to change for dimension support.
+
 2026-09-13 disconnect-thread recheck adds no Mixin or descriptor. Generated
 26.2 `Connection` and `ServerCommonPacketListenerImpl.disconnect` and Fabric
 API 6.3.3 `ServerPlayNetworkAddon.invokeDisconnectEvent` show that Fabric's
@@ -756,7 +769,7 @@ seed-free geometry so a `VALIDATED` seeded-leaf result can eventually reuse the
 existing `NoiseChunkRemoteDensityMixin`; the target method and descriptor are
 unchanged. The original hook/descriptor has prior runtime evidence, but the
 generic field refactor itself awaits the delegated compile, regression suite,
-and single-PC runtime smoke in `TEST_HANDOFF.md`.
+and single-PC runtime smoke described in `TEST_RESULTS_LATEST.md`.
 
 Fabric JUnit proves that a trace recorded from seed `8675309` reproduces all
 interpolated density bits with an unrelated dummy seed for both a 16-block
@@ -873,6 +886,13 @@ Seed-confidentiality hardening:
 ---
 
 ## 10. Version-change policy
+
+2026-09-20: the existing `ServerChunkCacheFixtureWaitMixin` wraps trusted-raw
+admission as well as fixture admission. The two `MainThreadExecutor.managedBlock`
+targets and descriptors are unchanged and were rechecked in generated 26.2
+source. Pending raw jobs fall back without timeout quarantine, and nested waits
+restore admission in `finally`. See WORLDGEN_PIPELINE section 20. Runtime
+verification of the added route is pending.
 
 When updating Minecraft:
 

@@ -6,7 +6,7 @@ suspension below is the alpha.1 baseline: development now admits up to 64
 workers, 8 total attempts and 1 per owner, with an owner-specific dispatch queue.
 The one shared authority and persistent 100,000-entry world budget are unchanged.
 Only non-spectator owner-view demand is eligible; no arbitrary/private seeds
-are enabled. The current alpha.2 passes two-owner installed-JAR simultaneous
+are enabled. The historical alpha.2 run passed two-owner installed-JAR simultaneous
 dispatch/application and a development-withholding owner-disconnect probe;
 their shared vanilla NOISE comparisons pass (588 and 406 shared digests).
 See `TEST_RESULTS_LATEST.md` for exact snapshots, warnings and limits. This is

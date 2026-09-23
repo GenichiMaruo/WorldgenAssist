@@ -34,7 +34,7 @@ ledger state, and sensitive logger arguments. Three-seed standard-height
 DEFLATE/RAW fixtures now compare all 98,304 values against a separate authoritative
 traversal; the executor itself samples 64/768 cells. Orchestration/continuation
 tests cover final lifecycle gates, one-shot use and vanilla cleanup. See
-`TEST_RESULTS_LATEST.md` and `TEST_HANDOFF.md`.
+`TEST_RESULTS_LATEST.md` and `VALIDATION_MATRIX.md`.
 
 ## Security goal
 

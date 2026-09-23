@@ -30,7 +30,8 @@ public final class WorldgenAssist implements ModInitializer {
 	public void onInitialize() {
 		LOGGER.info("[CAWG] initialized");
 		WorldgenPayloadTypes.register();
-		RemoteWorldgenConfig remoteConfig = RemoteWorldgenConfig.current();
+		RemoteWorldgenConfig remoteConfig = RemoteWorldgenConfig.current(io.github.genichimaruo.worldgenassist.server.ServerSettingsStore.load());
+		io.github.genichimaruo.worldgenassist.server.ServerSettingsMenu.register();
 		if (SeededLeafFixtureConfig.serverEnabled() && remoteConfig.remoteExecutionEnabled()) {
 			throw new IllegalArgumentException("Public fixture and trusted_raw remote modes cannot run together");
 		}

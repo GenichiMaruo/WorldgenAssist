@@ -28,6 +28,15 @@ loom {
 			throw new GradleException('fixtureRunRoot must be a child of test-artifacts')
 		}
 		runs {
+			settingsSmokeClient {
+				client()
+				runDir new File(fixtureRoot, 'settings-client').absolutePath
+				vmArg '-Xmx2G'
+				vmArg '-Dworldgen_assist.settings_smoke=true'
+				vmArg "-Dworldgen_assist.settings_smoke_root=${evidenceRoot}"
+				programArgs '--username', 'SettingsSmoke'
+				ideConfigGenerated false
+			}
 			fixtureServer {
 				server()
 				runDir new File(fixtureRoot, 'server').absolutePath

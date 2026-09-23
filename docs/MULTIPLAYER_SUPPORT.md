@@ -8,7 +8,8 @@ transcript transport, hostile-server support, or a performance claim.
 
 Both existing routes retain their disclosure gates. General protocol CURRENT
 stays 2; fixture protocol 3 stays restricted to public seed 8675309. Published
-alpha.1 tags/assets are immutable; development uses alpha.2.
+alpha.1 tags/assets are immutable. The concurrent-owner work first shipped in
+alpha.2 and remains in alpha.3.
 
 The implementation selects an owner from server-thread snapshots of player
 dimension, chunk position and effective view distance. Only an eligible worker

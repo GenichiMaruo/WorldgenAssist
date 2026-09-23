@@ -89,6 +89,27 @@ class RemoteJobCoordinatorTest {
 	}
 
 	@Test
+	void synchronousWaitCancelsPendingAndRestoresAdmissionAfterNestedException() {
+		Fixture fixture = fixture();
+		fixture.hello(OWNER);
+		RemoteJobCoordinator.Submission submission = fixture.submit().orElseThrow();
+		assertThrows(IllegalStateException.class, () -> fixture.coordinator.duringSynchronousChunkWait(() -> {
+			assertTrue(submission.result().isCompletedExceptionally());
+			assertEquals(0, fixture.coordinator.pendingCount());
+			assertFalse(fixture.coordinator.isQuarantined(OWNER));
+			assertTrue(fixture.submit().isEmpty());
+			fixture.coordinator.duringSynchronousChunkWait(() -> assertTrue(fixture.submit().isEmpty()));
+			assertTrue(fixture.submit().isEmpty());
+			throw new IllegalStateException("vanilla wait failed");
+		}));
+		assertEquals(1, fixture.sender.jobs.size());
+		RemoteJobCoordinator.Submission resumed = fixture.submit().orElseThrow();
+		assertEquals(PendingTerrainJobRegistry.ResponseStatus.ACCEPTED,
+			fixture.coordinator.handleResult(OWNER, result(resumed.job())));
+		assertTrue(resumed.result().isDone());
+	}
+
+	@Test
 	void asynchronousDecodeClaimRejectsDuplicatesUntilCompletion() {
 		Fixture fixture = fixture();
 		fixture.hello(OWNER);
@@ -283,6 +304,39 @@ class RemoteJobCoordinatorTest {
 		assertEquals(1, fixture.sender.cancels.size());
 		assertThrows(java.util.concurrent.CancellationException.class, submission.result()::join);
 		assertTrue(fixture.submit().isPresent());
+	}
+
+	@Test
+	void dimensionChangeCancelsOnlyThatOwnerAndRetainsBothWorkers() {
+		AtomicLong clock = new AtomicLong();
+		AtomicLong identifiers = new AtomicLong();
+		FakeSender sender = new FakeSender();
+		RemoteJobCoordinator coordinator = new RemoteJobCoordinator(
+			true,
+			new WorkerRegistry(1),
+			new PendingTerrainJobRegistry(2, 1, Duration.ofNanos(10), Duration.ofNanos(100), clock::get,
+				() -> new UUID(0L, identifiers.incrementAndGet())),
+			sender
+		);
+		coordinator.handleHello(OWNER, new WorkerHelloPayload(WorldgenProtocolVersion.CURRENT, 1, "test"));
+		coordinator.handleHello(WRONG_OWNER, new WorkerHelloPayload(WorldgenProtocolVersion.CURRENT, 1, "test"));
+		RemoteJobCoordinator.Submission changing = coordinator.trySubmitForOwner(OWNER,
+			Identifier.parse("minecraft:overworld"), 0, 0, FINGERPRINT, RemoteJobCoordinatorTest::job).orElseThrow();
+		RemoteJobCoordinator.Submission unaffected = coordinator.trySubmitForOwner(WRONG_OWNER,
+			Identifier.parse("minecraft:overworld"), 1, 0, FINGERPRINT, RemoteJobCoordinatorTest::job).orElseThrow();
+
+		assertEquals(1, coordinator.cancelForDimensionChange(OWNER));
+		assertThrows(java.util.concurrent.CancellationException.class, changing.result()::join);
+		assertEquals(1, sender.cancels.size());
+		assertEquals(PendingTerrainJobRegistry.ResponseStatus.CANCELLED,
+			coordinator.handleResult(OWNER, result(changing.job())));
+		assertEquals(PendingTerrainJobRegistry.ResponseStatus.ACCEPTED,
+			coordinator.handleResult(WRONG_OWNER, result(unaffected.job())));
+		assertSame(unaffected.job().identity(), unaffected.result().join().identity());
+
+		RemoteJobCoordinator.Submission destination = coordinator.trySubmitForOwner(OWNER,
+			Identifier.parse("minecraft:the_nether"), 2, 0, FINGERPRINT, RemoteJobCoordinatorTest::job).orElseThrow();
+		assertEquals(Identifier.parse("minecraft:the_nether"), destination.job().identity().dimension());
 	}
 
 	@Test

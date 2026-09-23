@@ -111,7 +111,7 @@ gates. Fixture transport, live eligibility and runtime evidence are tracked in
 ## Verification and handoff
 
 The latest authoritative results and exact evidence paths are in
-`TEST_RESULTS_LATEST.md`. The test ladder is in `TEST_HANDOFF.md`.
+`TEST_RESULTS_LATEST.md`. Current test selection is in `VALIDATION_MATRIX.md`.
 
 Focused tests must use the real recorder, client replay, envelope decoding and
 validator. `RecordingHook` is package-scoped, no-op in public construction, and

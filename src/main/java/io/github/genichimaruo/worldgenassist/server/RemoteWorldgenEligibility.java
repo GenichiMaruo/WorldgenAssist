@@ -19,6 +19,7 @@ import net.minecraft.world.level.levelgen.NoiseSettings;
 import net.minecraft.world.level.levelgen.blending.Blender;
 
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityJob;
+import io.github.genichimaruo.worldgenassist.common.SupportedDimensions;
 
 final class RemoteWorldgenEligibility {
 	private RemoteWorldgenEligibility() {
@@ -34,7 +35,7 @@ final class RemoteWorldgenEligibility {
 			return Optional.empty();
 		}
 		ServerLevel level = context.level();
-		if (!level.dimension().equals(Level.OVERWORLD) || chunk.isOldNoiseGeneration() || chunk.getBelowZeroRetrogen() != null) {
+		if (!SupportedDimensions.contains(level.dimension().identifier()) || chunk.isOldNoiseGeneration() || chunk.getBelowZeroRetrogen() != null) {
 			return Optional.empty();
 		}
 
@@ -53,14 +54,14 @@ final class RemoteWorldgenEligibility {
 			return Optional.empty();
 		}
 		NoiseSettings noise = settings.value().noiseSettings().clampToHeightAccessor(chunk.getHeightAccessorForGeneration());
-		if (!hasProtocolGeometry(noise, level.getMinY(), level.getHeight())) {
+		if (!noise.equals(settings.value().noiseSettings()) || !hasProtocolGeometry(noise, level.getMinY(), level.getHeight())) {
 			return Optional.empty();
 		}
 		return Optional.of(new EligibleContext(level, generator, settings, noise, structureManager, blender));
 	}
 
 	static Optional<SpeculativeContext> evaluatePrediction(ServerLevel level) {
-		if (!level.dimension().equals(Level.OVERWORLD)
+		if (!SupportedDimensions.contains(level.dimension().identifier())
 			|| !(level.getChunkSource().getGenerator() instanceof NoiseBasedChunkGenerator generator)) {
 			return Optional.empty();
 		}
@@ -69,15 +70,15 @@ final class RemoteWorldgenEligibility {
 			return Optional.empty();
 		}
 		NoiseSettings noise = settings.value().noiseSettings().clampToHeightAccessor(level);
-		if (!hasProtocolGeometry(noise, level.getMinY(), level.getHeight())) {
+		if (!noise.equals(settings.value().noiseSettings()) || !hasProtocolGeometry(noise, level.getMinY(), level.getHeight())) {
 			return Optional.empty();
 		}
 		return Optional.of(new SpeculativeContext(level, generator, settings, noise));
 	}
 
-	private static boolean hasProtocolGeometry(NoiseSettings noise, int minY, int height) {
-		return noise.minY() == minY
-			&& noise.height() == height
+	static boolean hasProtocolGeometry(NoiseSettings noise, int minY, int height) {
+		return height > 0 && noise.minY() >= minY
+			&& (long)noise.minY() + noise.height() <= (long)minY + height
 			&& noise.height() <= TerrainDensityJob.MAX_HEIGHT
 			&& noise.height() > 0
 			&& noise.getCellWidth() > 0

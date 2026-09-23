@@ -1,5 +1,29 @@
 # Advanced configuration and implementation guide
 
+## Alpha.3 scope
+
+The current release extends the trusted raw-seed route to vanilla
+Overworld, Nether and End. Each accepted player still assists only demand in
+that player's own view. Dimension is bound into every job, fingerprint and
+cache key; a level change cancels that owner's old outstanding work, removes
+their cache/prediction state, and retains the connection for new work in the
+destination. Arbitrary mod dimensions and custom generators are not admitted.
+
+The vanilla Options screen now has a `WorldgenAssist` button. The client page
+controls whether that client participates on its next connection. The server
+pages edit the saved server policy; a remote player must have Minecraft's admin
+permission, while the main-menu path edits the local/integrated-server file.
+Server changes apply after a server-process restart (a game restart for the
+integrated server). JVM properties and environment variables override saved
+values, including explicit `false`. Enabling assistance and consenting to
+`trusted_raw` seed disclosure remain two separate settings.
+
+Settings are stored under Fabric's config directory as
+`worldgen-assist-client.properties` and `worldgen-assist-server.properties`.
+Files are size bounded, strictly validated and atomically replaced; invalid
+server settings fail closed to disabled/DENY. The settings network channel is
+`settings_v1`; it does not change general density protocol CURRENT=2.
+
 ## Concurrent-owner assistance (alpha.2)
 
 See `MULTIPLAYER_SUPPORT.md` for the current scope and verification. Both
@@ -36,7 +60,7 @@ It investigates whether a player's client can safely compute selected terrain
 generation work for chunks requested by that player, while the server remains
 authoritative.
 
-Verification status (2026-09-10): the latest consolidated run passes 240 tests
+Historical verification (2026-09-10): that consolidated run passed 240 tests
 in 51 suites. Public-fixture timeout, malformed result, pending reload/disconnect
 and second-player behavior have now run in real local Fabric server/client
 sessions. Both-installed-JAR multi-PC assisted/vanilla tests also pass: four
@@ -48,8 +72,8 @@ and [multi-PC procedure](MULTIPC_TESTING.md) for exact status and limits.
 
 Phase 5 now adds an optional adversarial-validation layer to the deliberately
 narrow player-owned prediction path and compressed remote worker.
-With remote mode explicitly enabled, one trusted client can calculate the
-Overworld's interpolated final-density field for an eligible new chunk, encode
+With remote mode explicitly enabled, each trusted client can calculate the
+dimension-specific interpolated final-density field for an eligible new chunk, encode
 it losslessly as RAW or DEFLATE, and return it to a bounded server decoder. The
 server validates the result, stores an optional bounded context-keyed cache
 entry, and injects only that mathematical intermediate into the
@@ -64,9 +88,9 @@ installation or caching.
 The default remains remote-disabled. Phase 1's exact-executor `delegate`
 baseline is still available; the experimental project-owned `local`
 `ForkJoinPool` remains a research backend after failing its performance gate.
-The remote PoC is for one controlled client and vanilla-compatible registry
-context, not hostile public servers, arbitrary datapacks, multiple workers, or
-production anti-cheat.
+The remote path is for trusted participants and vanilla-compatible registry
+context, not hostile public servers, arbitrary datapacks, arbitrary dimensions,
+or production anti-cheat.
 
 The Phase 0 instrumentation measures the complete
 `ChunkStatusTasks.generateNoise` future, including `fillFromNoise` and its
@@ -97,7 +121,7 @@ $env:WORLDGEN_ASSIST_NOISE_DIGEST = "true"
 Successful chunks then emit a SHA-256 digest:
 
 ```text
-[CAWG] stage.digest stage=noise chunk=10,20 format=1 algorithm=SHA-256 digest=... digest_ms=... blocks=... heightmap_longs=... post_processing=...
+[CAWG] stage.digest stage=noise chunk=10,20 format=1 algorithm=SHA-256 digest=... digest_ms=... blocks=... heightmap_longs=... post_processing=... dimension=minecraft:overworld
 ```
 
 Digest mode deliberately waits at the NOISE boundary while hashing so later
@@ -139,13 +163,13 @@ Then connect one client that has the same mod, for example from another shell:
 ```
 
 The client handshake and one-thread worker are automatic. The server currently
-offloads only eligible new Overworld chunks with empty blending, no retrogen or
-old-noise state, exact `Beardifier.EMPTY`, keyed noise settings, and exactly one
-registered worker. Custom datapack registry content that the vanilla client
+offloads eligible new chunks in vanilla Overworld, Nether and End with empty
+blending, no retrogen or old-noise state, exact `Beardifier.EMPTY`, keyed noise
+settings, and one in-flight job per registered owner. Custom datapack registry content that the vanilla client
 lookup cannot reproduce fails the context fingerprint and falls back locally.
 
-Configuration bounds are 1–64 in-flight jobs, 50–60,000 ms timeout, and 0–256
-cached results; defaults are 1, 2,000 ms, and 16. Set the cache to zero to
+Configuration bounds are 1–64 global in-flight jobs, 50–60,000 ms timeout, and 0–256
+cached results; defaults are 8, 2,000 ms, and 16. Set the cache to zero to
 disable it. A daemon watchdog enforces deadlines even if a synchronous server
 command is waiting for chunk completion. The response carries at most 98,304
 finite doubles, is capped at 787,456 packet bytes, and is decompressed away from
@@ -205,10 +229,10 @@ All 98,304 standard-height values match a separate authoritative traversal;
 the production executor itself samples 64/768 cells. Latch-backed tests cover
 real-exit capacity and lifecycle races, and continuation tests cover one-shot
 application, local fallback and cleanup. See `TEST_RESULTS_LATEST.md`,
-`SEEDED_LEAF_ORCHESTRATION.md` and `TEST_HANDOFF.md` for exact evidence,
+`SEEDED_LEAF_ORCHESTRATION.md` and `VALIDATION_MATRIX.md` for exact evidence,
 contracts and remaining security/runtime gates.
 
-Player-owned prediction is a separate opt-in. It samples only the sole worker's
+Player-owned prediction is a separate opt-in. It samples only each worker's
 own server-side position and movement, never forces a chunk stage, and sends a
 bounded density-only job back to that same player:
 
@@ -232,9 +256,10 @@ by default:
 $env:WORLDGEN_ASSIST_REMOTE_VALIDATION_SAMPLE_CELLS = "8"
 ```
 
-The accepted range is `0..64` cells (`0` disables validation). A standard
-Overworld density field has 768 interpolation cells, each containing 128 block
-density values. The server selects cells with `SecureRandom` only after the
+The accepted range is `0..64` cells (`0` disables validation). Standard vanilla
+geometry has 768 interpolation cells in Overworld, 256 in Nether and 128 in End;
+each selected cell contains its dimension-specific number of block-density
+values. The server selects cells with `SecureRandom` only after the
 client result is fixed, reconstructs an independent vanilla `NoiseChunk`, and
 compares every selected value bit-for-bit. Invalid results are not installed or
 cached; the producing worker is disabled for the rest of that connection and

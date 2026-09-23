@@ -12,6 +12,22 @@ Does client-assisted terrain computation reduce server world-generation cost eno
 
 Measure before optimizing.
 
+The alpha.3 harness can run this as one explicitly selected batch:
+
+```powershell
+.\scripts\Run-ValidationMatrix.ps1 -Execute
+```
+
+The full batch is expensive; use `-CaseId` for only affected scenarios after a
+focused change. It runs warm-up plus repeated vanilla/assisted cases for vanilla Overworld,
+Nether and End, one/two players, and direct/cache/prediction/validation
+profiles. Correctness cases enable canonical digests; timing cases disable
+them. Independent cases continue after an ordinary failure, while unproved
+process/port cleanup safety skips later runtimes. Only after all eligible cases
+finish does `Compare-WorldgenScenarioMatrix.ps1` calculate paired median/p95,
+reliability rates and remote-path timing. See `VALIDATION_MATRIX.md` for the
+evidence contract and monitoring policy.
+
 ---
 
 ## 2. Primary metrics

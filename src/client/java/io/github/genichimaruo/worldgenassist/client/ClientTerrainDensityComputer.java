@@ -12,6 +12,7 @@ import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityJob;
+import io.github.genichimaruo.worldgenassist.common.SupportedDimensions;
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityResult;
 import io.github.genichimaruo.worldgenassist.common.WorldgenContextFingerprint;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobFailurePayload;
@@ -22,7 +23,7 @@ final class ClientTerrainDensityComputer {
 	}
 
 	static TerrainDensityResult compute(HolderLookup.Provider worldgenRegistries, Identifier currentDimension, TerrainDensityJob job) {
-		if (!Level.OVERWORLD.identifier().equals(job.identity().dimension()) || !currentDimension.equals(job.identity().dimension())) {
+		if (!SupportedDimensions.contains(job.identity().dimension()) || !currentDimension.equals(job.identity().dimension())) {
 			throw new RejectedJobException(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT);
 		}
 

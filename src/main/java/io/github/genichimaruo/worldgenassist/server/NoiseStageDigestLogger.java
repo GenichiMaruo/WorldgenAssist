@@ -15,13 +15,13 @@ public final class NoiseStageDigestLogger {
 		return Boolean.getBoolean(SYSTEM_PROPERTY) || "true".equalsIgnoreCase(System.getenv(ENVIRONMENT_VARIABLE));
 	}
 
-	public static void computeAndLog(ChunkAccess chunk) {
+	public static void computeAndLog(ChunkAccess chunk, net.minecraft.resources.Identifier dimension) {
 		long startedNanos = System.nanoTime();
 		try {
 			NoiseStageDigest.Result result = NoiseStageDigest.compute(chunk);
 			double elapsedMillis = (System.nanoTime() - startedNanos) / 1_000_000.0;
 			WorldgenAssist.LOGGER.info(
-				"[CAWG] stage.digest stage=noise chunk={},{} format={} algorithm={} digest={} digest_ms={} blocks={} heightmap_longs={} post_processing={}",
+				"[CAWG] stage.digest stage=noise chunk={},{} format={} algorithm={} digest={} digest_ms={} blocks={} heightmap_longs={} post_processing={} dimension={}",
 				chunk.getPos().x(),
 				chunk.getPos().z(),
 				result.formatVersion(),
@@ -30,7 +30,8 @@ public final class NoiseStageDigestLogger {
 				elapsedMillis,
 				result.blockCount(),
 				result.heightmapLongCount(),
-				result.postProcessingCount()
+				result.postProcessingCount(),
+				dimension
 			);
 		} catch (RuntimeException | Error error) {
 			WorldgenAssist.LOGGER.warn(

@@ -133,5 +133,5 @@ Post-completion reload/kick are idle smokes, not controlled in-flight race tests
   interruption at a selected internal leaf, deep heap/GC retention, direct v2
   client-computer integration. None is silently marked complete.
 
-Next tester: read `TEST_HANDOFF.md` and `SEEDED_LEAF_FIXTURE_PROTOCOL.md` for exact
+For current testing, read `VALIDATION_MATRIX.md` and `SEEDED_LEAF_FIXTURE_PROTOCOL.md` for exact
 commands, runtime acceptance criteria, comparison and evidence rules.

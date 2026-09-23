@@ -7,7 +7,7 @@ new terrain. Its goal is to reduce server world-generation work while keeping
 the server in control of the world. It is currently an experimental alpha;
 measured performance improvements have not yet been established.
 
-When Minecraft needs a new eligible Overworld chunk, the mod can ask that same
+When Minecraft needs a new eligible Overworld, Nether or End chunk, the mod can ask that same
 player's client to calculate the terrain density field. The server receives the
 result, checks it, and continues normal vanilla generation itself. Ores,
 structures, fluids, block placement, saving, and all gameplay-relevant world
@@ -15,24 +15,31 @@ state remain server-authoritative.
 
 ## Alpha status
 
-Alpha version: **0.1.0-alpha.2+mc26.2**. This release adds concurrent
-assistance by each player's own client. Direct work is
+Version **0.1.0-alpha.3+mc26.2** adds player-owned assistance across vanilla
+Overworld, Nether and End, an in-game settings screen, and a one-command
+correctness/performance matrix. In the twelve measured conditions, assisted
+throughput was lower than vanilla; see the [performance report](docs/ALPHA3_PERFORMANCE.md)
+and [verification details](docs/TEST_RESULTS_LATEST.md). Open vanilla
+**Options → WorldgenAssist**. Client
+participation applies on reconnect; saved server policy applies after a server
+restart and is editable remotely only by a server administrator. Full-seed
+disclosure is still a separate explicit choice.
+
+Each player's own client can assist concurrently. Direct work is
 assigned only within that worker's view; overlapping views choose one owner.
 The global default is eight jobs, with at most one per owner. See
 [multiplayer development and verification](docs/MULTIPLAYER_SUPPORT.md).
-It passes 246 tests in 52 suites, two-owner concurrent runtime checks and an
-owner-disconnect test.
 
 This alpha is for controlled trials, not everyday use on public servers.
 Remote assistance is disabled by default, and no speedup is promised. The
 implemented remote paths are limited to explicitly trusted participants,
-a freshly generated vanilla-compatible Overworld, and eligible new terrain.
-It is not for hostile public servers, arbitrary datapacks, other dimensions, or
+fresh vanilla-compatible Overworld, Nether and End worlds, and eligible new terrain.
+It is not for hostile public servers, arbitrary datapacks, mod-added dimensions, or
 sharing one player's compute work with other players.
 
-Download [alpha.2 for Minecraft 26.2](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.2%2Bmc26.2)
-(Git tag `v0.1.0-alpha.2+mc26.2`). Use the same version on the server and every
-participating client. The older alpha.1 release remains available separately.
+Download [alpha.3 for Minecraft 26.2](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.3%2Bmc26.2)
+(Git tag `v0.1.0-alpha.3+mc26.2`). Use the same version on the server and every
+participating client. Older releases remain available separately.
 
 ## What is implemented
 
@@ -46,15 +53,13 @@ participating client. The older alpha.1 release remains available separately.
   bounded context-aware cache, and player-owned prediction. Cache and
   prediction are not part of the public fixture described below.
 
-The release build passes **246 tests in 52 suites** on Java 25.0.4.
-Two installed client profiles and a server on a second PC pass simultaneous
-assistance in both routes: 588 public-fixture and 382 trusted-raw shared NOISE
-digests match independent normal generation. An owner-disconnect probe using
-the existing development-only result withholding on one client also passes,
-with 406 shared digests matching. Timeouts and offline-profile/Realms errors
-remain in the test logs. This evidence establishes functional behavior within the stated
-scope; it does not prove a speedup, private-seed confidentiality, or
-public-server safety. See the English [test results](docs/TEST_RESULTS_LATEST.md).
+The alpha.3 checkpoint ran **264 tests in 58 suites** on Java 25.0.4. Later
+settings fixes passed focused tests and a build on the final JAR; the full suite
+was not rerun. Three selected all-dimension correctness pairs matched **4,284**
+shared NOISE digests. Offline-profile/Realms errors and an intermittent vanilla
+server shutdown appear in the test evidence. These checks do not prove a
+speedup, private-seed confidentiality, or public-server safety. See the
+[test results](docs/TEST_RESULTS_LATEST.md).
 
 ## Important security distinction
 

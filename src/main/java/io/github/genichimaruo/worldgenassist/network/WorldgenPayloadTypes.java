@@ -20,6 +20,8 @@ public final class WorldgenPayloadTypes {
 			return;
 		}
 		PayloadTypeRegistry.serverboundPlay().register(WorkerHelloPayload.TYPE, WorkerHelloPayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(SettingsPayload.TYPE, SettingsPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(SettingsPayload.TYPE, SettingsPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(WorkerAcceptedPayload.TYPE, WorkerAcceptedPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(TerrainJobRequestPayload.TYPE, TerrainJobRequestPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().registerLarge(

@@ -1,6 +1,9 @@
 # Testing Strategy
 
-Latest checkpoint (2026-09-05): `test-artifacts/20260905-133450-551/` passed
+This is a historical testing strategy. For current selected runs and results,
+use `VALIDATION_MATRIX.md` and `TEST_RESULTS_LATEST.md`.
+
+The 2026-09-05 checkpoint `test-artifacts/20260905-133450-551/` passed
 Phase A-D on JDK 25.0.4 with **224 tests / 48 suites**, zero failures/errors/skips.
 This verifies the inactive seeded-leaf orchestration and vanilla continuation,
 the canonical pre-record geometry guard, expanded lifecycle assertions, and
@@ -9,7 +12,8 @@ equality uses a separate full authoritative traversal; executor validation
 samples 64/768 cells. No new Fabric payload/Mixin/live runtime caller was enabled,
 and no remote PC was used. Exact evidence and remaining gaps are in
 `TEST_RESULTS_LATEST.md`; repeatable commands are automated by
-`scripts/Run-SeededLeafVerification.ps1` and explained in `TEST_HANDOFF.md`.
+`scripts/Run-SeededLeafVerification.ps1`; current selection rules are in
+`VALIDATION_MATRIX.md`.
 Historical checkpoints below retain the counts and limitations of their dates.
 
 ## 1. Testing layers
@@ -956,7 +960,7 @@ the 163/40 result is a historical baseline and is not evidence for these new
 changes.
 
 The complete sequential test-writing, execution, evidence-capture, failure-
-handling, and report procedure is in `TEST_HANDOFF.md`. Multi-PC tests are
+handling, and report procedure is now in `VALIDATION_MATRIX.md`. Multi-PC tests were
 explicitly deferred. The implementation is not fully verified until the
 required race, capacity, complete-chain, client-worker, and static protocol
 assertions have fresh evidence in addition to compilation, the full suite, and
@@ -974,7 +978,7 @@ That run also launched Gradle under Oracle JDK 26.0.2 even though the repository
 target is JDK 25. This did not cause the `ChunkPos` access error, and compilation
 still used `--release 25`, but subsequent evidence should use the installed
 `C:\Program Files\Java\jdk-25.0.4` explicitly as documented in
-`TEST_HANDOFF.md`.
+`VALIDATION_MATRIX.md`.
 
 The second delegated Phase A run (`20260904-141138`) correctly used JDK 25.0.4
 and confirmed the `ChunkPos` fix, then exposed one independent constructor bug:

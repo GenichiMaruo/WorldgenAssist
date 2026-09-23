@@ -60,13 +60,16 @@ public final class WorldgenContextFingerprintFactory {
 
 	static ContextSnapshot capture(ServerLevel level, NoiseBasedChunkGenerator generator) {
 		WorldOptions worldOptions = level.getServer().getWorldGenSettings().options();
+		// The exchanged field describes the generator's sampled range. Nether
+		// and End sample 128 blocks within a taller dimension height accessor.
+		var noise = generator.generatorSettings().value().noiseSettings().clampToHeightAccessor(level);
 		return capture(
 			level.registryAccess(),
 			level.dimension().identifier(),
 			worldOptions.seed(),
 			worldOptions.generateStructures(),
-			level.getMinY(),
-			level.getHeight(),
+			noise.minY(),
+			noise.height(),
 			generator.generatorSettings()
 		);
 	}

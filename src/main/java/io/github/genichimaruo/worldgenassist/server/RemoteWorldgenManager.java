@@ -119,6 +119,13 @@ public final class RemoteWorldgenManager {
 			: manager.generate(context, step, chunks, chunk, localFallback);
 	}
 
+	public static void duringSynchronousChunkWait(Runnable wait) {
+		RemoteWorldgenManager manager = instance;
+		MinecraftServer current = manager == null ? null : manager.server;
+		if (current == null || !current.isSameThread()) { wait.run(); return; }
+		manager.coordinator.duringSynchronousChunkWait(wait);
+	}
+
 	private void registerHandlers() {
 		ServerPlayNetworking.registerGlobalReceiver(WorkerHelloPayload.TYPE, (payload, context) -> {
 			WorkerAcceptedPayload response = coordinator.handleHello(context.player().getUUID(), payload);
@@ -184,6 +191,13 @@ public final class RemoteWorldgenManager {
 				WorldgenAssist.LOGGER.info("[CAWG] worker.disconnect owner={} cancelled_jobs={}", listener.player.getUUID(), cancelled);
 			}
 		}));
+		net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, origin, destination) -> {
+			invalidateOwner(player.getUUID(), true);
+			predictor.remove(player.getUUID());
+			int cancelled = coordinator.cancelForDimensionChange(player.getUUID());
+			WorldgenAssist.LOGGER.info("[CAWG] worker.dimension_changed owner={} from={} to={} cancelled_jobs={}",
+				player.getUUID(), origin.dimension().identifier(), destination.dimension().identifier(), cancelled);
+		});
 		ServerLifecycleEvents.SERVER_STARTING.register(currentServer -> {
 			demands = List.of();
 			ownerGenerations.clear();
@@ -211,11 +225,9 @@ public final class RemoteWorldgenManager {
 			}
 		});
 		ServerLifecycleEvents.SERVER_STOPPED.register(currentServer -> server = null);
+		ServerTickEvents.START_SERVER_TICK.register(this::refreshDemands);
 		ServerTickEvents.END_SERVER_TICK.register(currentServer -> {
-			demands = coordinator.workerOwners().stream().map(owner -> currentServer.getPlayerList().getPlayer(owner))
-				.filter(player -> player != null && !player.isChangingDimension() && !player.isSpectator()).map(player -> new PlayerChunkDemand(
-					player.getUUID(), player.level().dimension().identifier(), player.chunkPosition().x(), player.chunkPosition().z(),
-					Math.clamp(player.requestedViewDistance(), 2, currentServer.getPlayerList().getViewDistance()))).toList();
+			refreshDemands(currentServer);
 			int expired = coordinator.expireTimedOut();
 			// Connection replacement and physical owner-state cleanup both run on
 			// the server thread. Cache access independently rejects quarantine as
@@ -230,6 +242,15 @@ public final class RemoteWorldgenManager {
 				for (PlayerChunkDemand demand : demands) { predictForWorker(currentServer, demand.ownerId()); }
 			}
 		});
+	}
+
+	private void refreshDemands(MinecraftServer currentServer) {
+		// Publish immutable owner positions before level/chunk ticks as well as
+		// after them, so fresh movement does not spend a tick using the old view.
+		demands = coordinator.workerOwners().stream().map(owner -> currentServer.getPlayerList().getPlayer(owner))
+			.filter(player -> player != null && !player.isChangingDimension() && !player.isSpectator()).map(player -> new PlayerChunkDemand(
+				player.getUUID(), player.level().dimension().identifier(), player.chunkPosition().x(), player.chunkPosition().z(),
+				Math.clamp(player.requestedViewDistance(), 2, currentServer.getPlayerList().getViewDistance()))).toList();
 	}
 
 	private void clearResultState(String reason) {
@@ -718,8 +739,15 @@ public final class RemoteWorldgenManager {
 	}
 
 	private void invalidateOwner(UUID ownerId) {
+		invalidateOwner(ownerId, false);
+	}
+
+	private void invalidateOwner(UUID ownerId, boolean retainConnection) {
 		synchronized (resultStateLock) {
-			ownerGenerations.remove(ownerId);
+			Long previous = ownerGenerations.remove(ownerId);
+			if (retainConnection && previous != null) {
+				ownerGenerations.put(ownerId, nextOwnerGeneration.incrementAndGet());
+			}
 			resultCache.removeOwner(ownerId);
 			predictedJobs.keySet().removeIf(key -> ownerId.equals(key.ownerId()));
 			demands = demands.stream().filter(demand -> !ownerId.equals(demand.ownerId())).toList();

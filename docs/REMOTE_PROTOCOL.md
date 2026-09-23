@@ -14,11 +14,12 @@ new fixture exception or permit private-world activation.
 ## Status
 
 Phase 5's optional server-side cell validation, Phase 4's player-owned
-prediction path, and Phase 3's compressed network/cache path are implemented
-and runtime-verified for the
-repository's narrow initial scope: Minecraft 26.2, one trusted client, new
-Overworld chunks, one remote job at a time by default, and server-authoritative
-application. Remote mode is disabled unless the server explicitly sets both
+prediction path, and Phase 3's compressed network/cache path are implemented.
+The current alpha.3 scope is Minecraft 26.2, trusted clients, new
+chunks in vanilla Overworld/Nether/End, one job per owner under a global bound,
+and server-authoritative application. Exact alpha.3 verification is in
+`TEST_RESULTS_LATEST.md`. Remote mode is disabled
+unless the server explicitly sets both
 `WORLDGEN_ASSIST_REMOTE=true` and
 `WORLDGEN_ASSIST_REMOTE_SEED_DISCLOSURE=trusted_raw` (or the equivalent JVM
 properties `worldgen_assist.remote=true` and
@@ -47,7 +48,20 @@ server -> client  TerrainJobRequestPayload
 client -> server  TerrainJobResultPayload       (bounded large payload)
 client -> server  TerrainJobFailurePayload
 server -> client  TerrainJobCancelPayload
+client <-> server SettingsPayload (`settings_v1`, bounded fixed fields)
 ```
+
+The alpha.3 `settings_v1` payload carries an action, settings
+revision, nonnegative request ID and bounded validated settings. The client
+allocates distinct IDs across settings-screen instances; the server echoes the
+request ID for STATE, SAVED, DENIED, STALE, IO_ERROR and RATE_LIMITED. After a timeout or a
+new request, the screen ignores a delayed response with another ID. The server
+checks current-player identity and `COMMANDS_ADMIN` before reading or saving
+policy, then serializes optimistic revision decisions on its server thread.
+The settings channel does not change general terrain protocol `CURRENT=2` or
+the public fixture's dedicated v3 gate.
+The 250 ms per-owner settings request limit returns RATE_LIMITED with a retry
+message; it does not silently drop a rapid Save after Read.
 
 `WorkerHelloPayload` advertises protocol version, requested parallelism, and a
 bounded implementation-version string. The current client advertises one
@@ -88,6 +102,11 @@ Geometry is constructor-validated. Height is limited to `1..384`; cell width is
 a positive divisor of 16; cell height is a positive divisor of the height; and
 minimum Y must align with cell height. The noise-settings identifier is limited
 to 256 UTF-8 bytes. The maximum job shape is 16 x 16 x 384.
+
+The vanilla shapes resolved from generated 26.2 source are Overworld
+`-64/384/4x8`, Nether `0/128/4x8`, and End `0/128/8x4`. Eligibility requires
+the complete generator noise range to fit inside the level height; it does not
+mistake Nether/End's taller build space for density height.
 
 The raw seed is deliberately disclosed only in explicitly authorized
 `TRUSTED_RAW` mode. The default `DENY` mode sends no job at all. The context
@@ -225,12 +244,14 @@ mutable chunk state. Those are checked per job.
 
 Before submission the server requires:
 
-- `minecraft:overworld` and `NoiseBasedChunkGenerator`;
+- one of `minecraft:overworld`, `minecraft:the_nether`, `minecraft:the_end`,
+  and `NoiseBasedChunkGenerator`;
 - no old-noise-generation marker or below-zero retrogen;
 - `Blender.isEmpty()`;
 - exact singleton `Beardifier.EMPTY` for the target chunk;
-- a keyed noise-settings holder and protocol-valid geometry matching the level;
-- exactly one accepted worker.
+- a keyed noise-settings holder whose complete protocol-valid noise range is
+  contained by the level;
+- an accepted worker whose own view contains the requested chunk.
 
 The server ensures the chunk has the exact vanilla cached `NoiseChunk`, using a
 verified invoker for private `NoiseBasedChunkGenerator.createNoiseChunk` when a
@@ -252,8 +273,8 @@ are also independently recomputed before cache insertion. The cached
 The server chooses `0..64` unique cells through `SecureRandom` after the result
 has arrived. For each cell it reconstructs vanilla interpolation state from the
 authoritative `RandomState` and noise settings, then compares all values using
-exact IEEE-754 bits. A standard Overworld job has 768 cells and 128 density
-values per cell. An invalid result is evicted, never installed, and falls back
+exact IEEE-754 bits. Standard jobs have 768 cells in Overworld, 256 in Nether,
+and 128 in End. An invalid result is evicted, never installed, and falls back
 locally; its owner is quarantined until disconnect so a new hello on the same
 connection cannot immediately resume work. Cache hits contain only results that
 already passed validation when validation was enabled.

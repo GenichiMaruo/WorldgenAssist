@@ -1,4 +1,124 @@
-# Test results — 2026-09-14
+# Test results — alpha.3, 2026-09-23
+
+## Alpha.3 release evidence
+
+Performance evaluation is now complete for twelve selected pairs, with matched
+within-pair conditions and zero analysis issues. See
+[the performance report](ALPHA3_PERFORMANCE.md) for results and provenance.
+Throughput regressed in all twelve measured conditions. The historical failed
+runs below are retained; they do not supersede the later selected evidence.
+The settings response-correlation correction and focused verification finished
+on 2026-09-23. Six settings suites / 20 tests passed, with zero failures,
+errors or skips; the distribution build passed on JDK 25.0.4. Evidence is in
+`test-artifacts/settings-correlation-verification-retry-20260923-182455-047/`.
+The first invocation accidentally expanded a wildcard test selector to
+`settings.gradle` under Windows and found no tests; it is retained separately
+in `settings-correlation-verification-20260922-141108-854` and is not counted
+as a passing test run. The explicit-class retry is the authoritative result.
+The testable server decision path now proves denied READ/SAVE cannot touch the
+settings store, authorized save and stale revision behavior, IO retry and
+request-ID echo. Client tests prove late replies cannot complete a newer
+request, even across screen instances. This is focused path verification;
+there was no additional connected menu UI runtime after the local smoke.
+On 2026-09-23 a rapid Read → Save could otherwise be silently dropped by the
+existing 250 ms request limit. A `RATE_LIMITED` response now echoes the request
+ID and tells the user to retry. The two directly affected suites / five tests
+and build passed, with zero failures/errors/skips, in
+`test-artifacts/settings-rate-limit-verification-20260923-182905-264/`.
+The focused runs cover 21 distinct settings tests; they do not claim a fresh
+run of all 264 historical tests. The final alpha.3 distribution JAR SHA-256 is
+`FFEDD9D8B780A6496500ACA955D1D62C3AB7DE4FF85209CAA55D760D8BDF2AC9`.
+Its class comparison against the measured JAR is preserved in that evidence
+directory: 205 unchanged classes, three changed settings classes, four added
+settings classes and zero removed classes.
+
+This section records the evidence used for alpha.3. The alpha.2 evidence below
+remains a historical checkpoint. See [selected-case execution](VALIDATION_MATRIX.md)
+and [alpha.3 release verification](releases/v0.1.0-alpha.3+mc26.2-verification.md).
+
+- `validation-matrix-20260921-012249-436`: 264 JUnit tests / 58 suites,
+  zero failures/errors/skips. Settings smoke passed persistence and the separate
+  disclosure gate, with four English screenshots. All four screenshots have
+  been visually reviewed at 854 x 480 without clipped controls. This smoke uses
+  local settings from the title screen; it does not prove a connected remote
+  operator/non-operator save exchange. The permission predicate and codecs have
+  unit coverage; connected settings behavior still needs focused verification.
+- `validation-matrix-20260921-152005-951`: three selected correctness pairs
+  matched 4,284 shared NOISE digests (Overworld two-player direct: 1,802;
+  Nether two-player prediction: 1,641; End one-player prediction: 841).
+  All selected assisted cases succeeded. The Overworld vanilla shutdown failed,
+  so the run as a whole failed; it is not an all-cases success claim.
+- `shutdown-overworld-vanilla-p2-20260921-154325-547`: that vanilla case alone
+  subsequently succeeded with `cleanup_safe=true`. An intermittent shutdown
+  fault remains unresolved, with bounded thread capture added for recurrence.
+
+The above runtime evidence used artifact SHA-256
+`3A8D1EB51D81AF204C9CD90DE8F6CC467218429D2FBD133F18D952449182720C`.
+Each run retains its own before/after source/harness manifests. Harness changes
+between runs must not be represented as one frozen full-matrix result.
+
+### Existing performance observations
+
+In `validation-matrix-20260921-012249-436/analysis/scenario-matrix-analysis.json`,
+six pairs have matching completed-task counts and complete metrics. Each uses
+one excluded warm-up and three measured repeats, view distance 10, a 30-second
+remote job timeout, and one or two installed clients on one PC with the server
+on the second PC. These are descriptive median changes, assisted versus vanilla:
+
+A subsequent read-only audit of the retained server logs also compared sorted
+NOISE chunk-coordinate sets between each measured BEGIN/END marker. All three
+repeats matched in each of these six pairs; this audit did not rerun Minecraft.
+
+| Dimension / players / profile | Server CPU | Throughput | Tick p95 |
+|---|---:|---:|---:|
+| Overworld / 1 / baseline | -5.7% | -2.6% | -0.5% |
+| Overworld / 1 / cache + prediction + validation | +0.8% | -1.0% | -2.9% |
+| End / 1 / baseline | -11.5% | -13.0% | -11.9% |
+| End / 1 / cache + prediction + validation | +9.2% | -10.1% | -12.5% |
+| End / 2 / baseline | -1.2% | -8.7% | -7.3% |
+| End / 2 / cache + prediction + validation | -7.5% | -15.6% | -11.9% |
+
+CPU reductions did not translate into throughput gains in these samples;
+some CPU measurements regressed. Three repeats do not establish statistical
+significance or general acceleration. Per-owner client process CPU/memory and
+remote overhead are retained in the JSON; client process load includes startup
+and warm-up and is not a steady-state client measurement. At this earlier
+checkpoint, five other pairs had unequal workloads and one further pair had a
+shutdown/client-load failure. The later selected review at the top resolves
+those six pairs without rerunning the six unaffected successful pairs.
+
+The follow-up `validation-matrix-20260921-154954-662` finished with 8 passed,
+7 failed and 3 intentionally skipped rows, with cleanup safe. Its 12 runtime
+cases include six connection-timeout failures. Post-run review found
+`Failed to load options` in every scenario's client logs: the harness added
+modern key names without the options data-version header, triggering legacy
+integer-key migration. Therefore even that run's six successful runtime rows
+are unsuitable for controlled performance comparison (client defaults could
+differ). Preserve the original summary as evidence of the reporting gap; do
+not reuse its measurements as corrected results. The harness now supplies
+the pinned 26.2 data version 4903 and rejects this options error explicitly.
+`targeted-nether-vanilla-p1-20260921-220808-029` validates that fix: success and
+safe cleanup, no options-load error, and 841 completed tasks in each of three
+measured repeats. The saved options confirm version 4903, FPS cap 30 and
+unbound movement. Modern options also select the Fancy graphics preset, while
+the older migrated profiles used Custom (including a different chunk-update
+priority and texture filtering). Server view distance remains 10 in both.
+Do not silently combine these runs into a controlled performance ratio:
+client rendering conditions differ, despite matching server workload counts.
+
+Offline client authentication/Realms errors can appear in retained logs.
+No claim of error-free logs, long-session stability, deep heap retention proof,
+seed confidentiality, or hostile-server readiness is made.
+
+The same retained End two-player cache/prediction/validation performance log
+also proves overlapping successful owner work: job
+`c2512083-b688-48e8-929e-c98297702792` at `1516,-2516` for owner
+`0557a034-0101-3132-9f82-f0d4761d4b04` overlaps job
+`3a15bbad-5aed-4d9a-92de-a728e4dda0a9` at `-1516,2508` for owner
+`c7afee9d-8411-38e2-8537-1c157fc2c41b`; both have `job.complete` records.
+This is concurrent-owner runtime evidence, not a digest comparison: performance
+logging deliberately disables NOISE digests. End output equivalence is covered
+separately by the selected one-player correctness pair and geometry tests.
 
 ## Concurrent-owner release checkpoint (alpha.2)
 
@@ -401,4 +521,4 @@ verified with an isolated exit-97 diagnostic and fixed the subsequent fresh run.
 The previous 233-test batch, its four matching installs and 1,005 shared matching
 digests, and its wrong-seed negative test are preserved in
 `TEST_RESULTS_20260905.md`; they are historical evidence, not a new run.
-See `TEST_HANDOFF.md` for execution/recording rules.
+See `VALIDATION_MATRIX.md` for current execution/recording rules.

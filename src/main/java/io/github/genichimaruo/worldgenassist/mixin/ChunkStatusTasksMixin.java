@@ -38,7 +38,8 @@ abstract class ChunkStatusTasksMixin {
 			local
 		);
 		if (NoiseStageDigestLogger.isEnabled()) {
-			return WorldgenStageMetrics.NOISE.measureAndThen(chunk.getPos(), operation, NoiseStageDigestLogger::computeAndLog);
+			return WorldgenStageMetrics.NOISE.measureAndThen(chunk.getPos(), operation,
+				generated -> NoiseStageDigestLogger.computeAndLog(generated, context.level().dimension().identifier()));
 		}
 
 		return WorldgenStageMetrics.NOISE.measure(chunk.getPos(), operation);

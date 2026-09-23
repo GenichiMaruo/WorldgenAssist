@@ -90,7 +90,7 @@ final class ClientWorldgenWorker {
 		});
 		ClientPlayConnectionEvents.JOIN.register((listener, sender, client) -> {
 			accepted = false;
-			if (!ClientPlayNetworking.canSend(WorkerHelloPayload.TYPE)) {
+			if (!ClientSettings.participation() || !ClientPlayNetworking.canSend(WorkerHelloPayload.TYPE)) {
 				return;
 			}
 			String implementationVersion = FabricLoader.getInstance()

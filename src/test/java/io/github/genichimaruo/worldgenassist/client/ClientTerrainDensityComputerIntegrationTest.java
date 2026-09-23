@@ -14,6 +14,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.registries.VanillaRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -40,6 +41,8 @@ import org.junit.jupiter.api.Timeout;
 /** Direct protocol-v2 client calculation compared to a separate vanilla NoiseChunk traversal. */
 class ClientTerrainDensityComputerIntegrationTest {
 	private static final Identifier OVERWORLD = Identifier.parse("minecraft:overworld");
+	private static final Identifier NETHER = Identifier.parse("minecraft:the_nether");
+	private static final Identifier END = Identifier.parse("minecraft:the_end");
 
 	@BeforeAll
 	static void bootstrapMinecraftRegistries() {
@@ -49,17 +52,27 @@ class ClientTerrainDensityComputerIntegrationTest {
 
 	@Test
 	@Timeout(90)
-	void computesFullOverworldFieldsBitExactlyAgainstIndependentAuthoritativeTraversal() {
-		assertClientMatchesAuthoritativeTraversal(8675309L, 0, 0);
-		assertClientMatchesAuthoritativeTraversal(123456789L, -11, 7);
+	void computesFullVanillaDimensionFieldsBitExactlyAgainstIndependentAuthoritativeTraversal() {
+		assertClientMatchesAuthoritativeTraversal(OVERWORLD, NoiseGeneratorSettings.OVERWORLD, 8675309L, 0, 0, 4, 8);
+		assertClientMatchesAuthoritativeTraversal(OVERWORLD, NoiseGeneratorSettings.OVERWORLD, 123456789L, -11, 7, 4, 8);
+		assertClientMatchesAuthoritativeTraversal(NETHER, NoiseGeneratorSettings.NETHER, 8675309L, -11, 7, 4, 8);
+		assertClientMatchesAuthoritativeTraversal(NETHER, NoiseGeneratorSettings.NETHER, -987654321L, 23, -19, 4, 8);
+		assertClientMatchesAuthoritativeTraversal(END, NoiseGeneratorSettings.END, 8675309L, 1_000, -1_000, 8, 4);
+		assertClientMatchesAuthoritativeTraversal(END, NoiseGeneratorSettings.END, -987654321L, -1_001, 997, 8, 4);
 	}
 
 	@Test
 	void rejectsUnsupportedDimensionsGeometryAndContextMismatches() {
-		Fixture fixture = fixture(8675309L, 10, -20);
+		Fixture fixture = fixture(OVERWORLD, NoiseGeneratorSettings.OVERWORLD, 8675309L, 10, -20);
 
 		assertRejected(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT,
 			() -> ClientTerrainDensityComputer.compute(fixture.registries(), Level.NETHER.identifier(), fixture.job()));
+		Fixture netherFixture = fixture(NETHER, NoiseGeneratorSettings.NETHER, 8675309L, 10, -20);
+		assertRejected(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT,
+			() -> ClientTerrainDensityComputer.compute(netherFixture.registries(), OVERWORLD, netherFixture.job()));
+		Fixture endFixture = fixture(END, NoiseGeneratorSettings.END, 8675309L, 1_000, -1_000);
+		assertRejected(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT,
+			() -> ClientTerrainDensityComputer.compute(endFixture.registries(), NETHER, endFixture.job()));
 
 		TerrainDensityJob incompatibleGeometry = new TerrainDensityJob(
 			fixture.job().identity(), fixture.job().worldSeed(), fixture.job().generateStructures(), fixture.job().noiseSettings(),
@@ -82,11 +95,26 @@ class ClientTerrainDensityComputerIntegrationTest {
 		);
 		assertRejected(TerrainJobFailurePayload.Reason.CONTEXT_MISMATCH,
 			() -> ClientTerrainDensityComputer.compute(fixture.registries(), OVERWORLD, contextMismatch));
+
+		TerrainJobIdentity unknownDimensionIdentity = new TerrainJobIdentity(
+			WorldgenProtocolVersion.CURRENT,
+			UUID.fromString("3bb03bb1-0254-4b36-9dc9-28278227d5d4"),
+			Identifier.parse("worldgenassist:unknown_dimension"),
+			fixture.job().identity().chunkX(),
+			fixture.job().identity().chunkZ(),
+			fixture.job().identity().contextFingerprint()
+		);
+		TerrainDensityJob unknownDimension = new TerrainDensityJob(
+			unknownDimensionIdentity, fixture.job().worldSeed(), fixture.job().generateStructures(), fixture.job().noiseSettings(),
+			fixture.job().minY(), fixture.job().height(), fixture.job().cellWidth(), fixture.job().cellHeight()
+		);
+		assertRejected(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT,
+			() -> ClientTerrainDensityComputer.compute(fixture.registries(), unknownDimensionIdentity.dimension(), unknownDimension));
 	}
 
 	@Test
 	void observesThreadInterruptionAtTheClientSamplingBoundary() {
-		Fixture fixture = fixture(8675309L, 10, -20);
+		Fixture fixture = fixture(OVERWORLD, NoiseGeneratorSettings.OVERWORLD, 8675309L, 10, -20);
 		Thread.currentThread().interrupt();
 		try {
 			assertThrows(CancellationException.class,
@@ -96,9 +124,19 @@ class ClientTerrainDensityComputerIntegrationTest {
 		}
 	}
 
-	private static void assertClientMatchesAuthoritativeTraversal(long seed, int chunkX, int chunkZ) {
-		Fixture fixture = fixture(seed, chunkX, chunkZ);
-		TerrainDensityResult client = ClientTerrainDensityComputer.compute(fixture.registries(), OVERWORLD, fixture.job());
+	private static void assertClientMatchesAuthoritativeTraversal(
+		Identifier dimension,
+		ResourceKey<NoiseGeneratorSettings> settingsKey,
+		long seed,
+		int chunkX,
+		int chunkZ,
+		int expectedCellWidth,
+		int expectedCellHeight
+	) {
+		Fixture fixture = fixture(dimension, settingsKey, seed, chunkX, chunkZ);
+		assertEquals(expectedCellWidth, fixture.noiseSettings().getCellWidth(), "vanilla cell width for " + dimension);
+		assertEquals(expectedCellHeight, fixture.noiseSettings().getCellHeight(), "vanilla cell height for " + dimension);
+		TerrainDensityResult client = ClientTerrainDensityComputer.compute(fixture.registries(), dimension, fixture.job());
 		double[] authoritative = new AuthoritativeDensitySampler(
 			RandomState.create(fixture.settings().value(), fixture.noises(), seed),
 			fixture.settings().value(),
@@ -115,23 +153,29 @@ class ClientTerrainDensityComputerIntegrationTest {
 			assertEquals(
 				Double.doubleToRawLongBits(authoritative[index]),
 				Double.doubleToRawLongBits(client.densityAt(index)),
-				"seed/chunk/index=" + seed + "/" + chunkX + "," + chunkZ + "/" + index
+				"dimension/seed/chunk/index=" + dimension + "/" + seed + "/" + chunkX + "," + chunkZ + "/" + index
 			);
 		}
 	}
 
-	private static Fixture fixture(long seed, int chunkX, int chunkZ) {
+	private static Fixture fixture(
+		Identifier dimension,
+		ResourceKey<NoiseGeneratorSettings> settingsKey,
+		long seed,
+		int chunkX,
+		int chunkZ
+	) {
 		HolderLookup.Provider registries = VanillaRegistries.createLookup();
 		Holder.Reference<NoiseGeneratorSettings> settings = registries.lookupOrThrow(Registries.NOISE_SETTINGS)
-			.getOrThrow(NoiseGeneratorSettings.OVERWORLD);
+			.getOrThrow(settingsKey);
 		NoiseSettings noiseSettings = settings.value().noiseSettings();
 		WorldgenContextFingerprint fingerprint = WorldgenContextFingerprintFactory.create(
-			registries, OVERWORLD, seed, true, noiseSettings.minY(), noiseSettings.height(), settings
+			registries, dimension, seed, true, noiseSettings.minY(), noiseSettings.height(), settings
 		);
 		TerrainJobIdentity identity = new TerrainJobIdentity(
 			WorldgenProtocolVersion.CURRENT,
 			UUID.nameUUIDFromBytes(("direct-v2/" + seed + "/" + chunkX + "/" + chunkZ).getBytes(StandardCharsets.UTF_8)),
-			OVERWORLD,
+			dimension,
 			chunkX,
 			chunkZ,
 			fingerprint
@@ -140,7 +184,7 @@ class ClientTerrainDensityComputerIntegrationTest {
 			identity,
 			seed,
 			true,
-			NoiseGeneratorSettings.OVERWORLD.identifier(),
+			settingsKey.identifier(),
 			noiseSettings.minY(),
 			noiseSettings.height(),
 			noiseSettings.getCellWidth(),

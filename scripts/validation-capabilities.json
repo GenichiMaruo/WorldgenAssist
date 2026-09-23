@@ -1,0 +1,14 @@
+{
+  "schema": "worldgen-assist.validation-capabilities.v1",
+  "runtime": {
+    "available": true,
+    "reason": "Vanilla dimension support, isolated installed-client scenario runner, and cleanup contract are implemented",
+    "loopback_only": true,
+    "artifact_policy": "fresh_build_exact_version",
+    "public_test_seed": 8675309
+  },
+  "aggregation": {
+    "available": true,
+    "reason": "Post-run correctness and performance comparator is installed"
+  }
+}

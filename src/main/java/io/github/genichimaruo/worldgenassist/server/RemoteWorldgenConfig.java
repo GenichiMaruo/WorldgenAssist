@@ -143,27 +143,38 @@ public record RemoteWorldgenConfig(
 	}
 
 	public static RemoteWorldgenConfig current() {
-		boolean enabled = Boolean.getBoolean(ENABLED_SYSTEM_PROPERTY)
-			|| "true".equalsIgnoreCase(System.getenv(ENABLED_ENVIRONMENT_VARIABLE));
-		SeedDisclosureMode seedDisclosureMode = readSeedDisclosureMode();
-		int maxInFlight = readInt(MAX_IN_FLIGHT_SYSTEM_PROPERTY, MAX_IN_FLIGHT_ENVIRONMENT_VARIABLE, DEFAULT_MAX_IN_FLIGHT_JOBS);
-		long timeoutMillis = readLong(TIMEOUT_MILLIS_SYSTEM_PROPERTY, TIMEOUT_MILLIS_ENVIRONMENT_VARIABLE, DEFAULT_TIMEOUT_MILLIS);
-		int cacheEntries = readInt(CACHE_ENTRIES_SYSTEM_PROPERTY, CACHE_ENTRIES_ENVIRONMENT_VARIABLE, DEFAULT_CACHE_ENTRIES);
-		boolean predictionEnabled = readBoolean(PREDICTION_ENABLED_SYSTEM_PROPERTY, PREDICTION_ENABLED_ENVIRONMENT_VARIABLE, false);
+		return current(defaults());
+	}
+
+	public static RemoteWorldgenConfig defaults() {
+		return new RemoteWorldgenConfig(false, SeedDisclosureMode.DENY, DEFAULT_MAX_IN_FLIGHT_JOBS,
+			Duration.ofMillis(DEFAULT_TIMEOUT_MILLIS), DEFAULT_CACHE_ENTRIES, false,
+			DEFAULT_PREDICTION_INTERVAL_TICKS, DEFAULT_PREDICTION_LEAD_CHUNKS, DEFAULT_VALIDATION_SAMPLE_CELLS);
+	}
+
+	/** Command-line/environment settings override saved menu settings, including explicit false. */
+	public static RemoteWorldgenConfig current(RemoteWorldgenConfig saved) {
+		boolean enabled = readBoolean(ENABLED_SYSTEM_PROPERTY, ENABLED_ENVIRONMENT_VARIABLE, saved.enabled());
+		SeedDisclosureMode seedDisclosureMode = readValue(SEED_DISCLOSURE_MODE_SYSTEM_PROPERTY, SEED_DISCLOSURE_MODE_ENVIRONMENT_VARIABLE) == null
+			? saved.seedDisclosureMode() : readSeedDisclosureMode();
+		int maxInFlight = readInt(MAX_IN_FLIGHT_SYSTEM_PROPERTY, MAX_IN_FLIGHT_ENVIRONMENT_VARIABLE, saved.maxInFlightJobs());
+		long timeoutMillis = readLong(TIMEOUT_MILLIS_SYSTEM_PROPERTY, TIMEOUT_MILLIS_ENVIRONMENT_VARIABLE, saved.jobTimeout().toMillis());
+		int cacheEntries = readInt(CACHE_ENTRIES_SYSTEM_PROPERTY, CACHE_ENTRIES_ENVIRONMENT_VARIABLE, saved.cacheEntries());
+		boolean predictionEnabled = readBoolean(PREDICTION_ENABLED_SYSTEM_PROPERTY, PREDICTION_ENABLED_ENVIRONMENT_VARIABLE, saved.predictionEnabled());
 		int predictionIntervalTicks = readInt(
 			PREDICTION_INTERVAL_TICKS_SYSTEM_PROPERTY,
 			PREDICTION_INTERVAL_TICKS_ENVIRONMENT_VARIABLE,
-			DEFAULT_PREDICTION_INTERVAL_TICKS
+			saved.predictionIntervalTicks()
 		);
 		int predictionLeadChunks = readInt(
 			PREDICTION_LEAD_CHUNKS_SYSTEM_PROPERTY,
 			PREDICTION_LEAD_CHUNKS_ENVIRONMENT_VARIABLE,
-			DEFAULT_PREDICTION_LEAD_CHUNKS
+			saved.predictionLeadChunks()
 		);
 		int validationSampleCells = readInt(
 			VALIDATION_SAMPLE_CELLS_SYSTEM_PROPERTY,
 			VALIDATION_SAMPLE_CELLS_ENVIRONMENT_VARIABLE,
-			DEFAULT_VALIDATION_SAMPLE_CELLS
+			saved.validationSampleCells()
 		);
 		return new RemoteWorldgenConfig(
 			enabled,

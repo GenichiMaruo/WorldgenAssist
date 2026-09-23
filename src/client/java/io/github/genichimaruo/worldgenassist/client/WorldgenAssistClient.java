@@ -9,6 +9,8 @@ public final class WorldgenAssistClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		WorldgenPayloadTypes.register();
+		WorldgenSettingsScreen.register();
+		SettingsScreenSmoke.registerIfEnabled();
 		if (SeededLeafFixtureConfig.clientEnabled()) {
 			new SeededLeafFixtureClient().register();
 		} else {

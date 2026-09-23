@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerChunkCache;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import io.github.genichimaruo.worldgenassist.server.SeededLeafFixtureManager;
+import io.github.genichimaruo.worldgenassist.server.RemoteWorldgenManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Coerce;
@@ -21,6 +22,7 @@ abstract class ServerChunkCacheFixtureWaitMixin {
 	)
 	private void worldgenAssist$localDuringSynchronousWait(@Coerce Object executor, BooleanSupplier completed, Operation<Void> original) {
 		if (completed.getAsBoolean()) { original.call(executor, completed); return; }
-		SeededLeafFixtureManager.duringSynchronousChunkWait(() -> original.call(executor, completed));
+		RemoteWorldgenManager.duringSynchronousChunkWait(() ->
+			SeededLeafFixtureManager.duringSynchronousChunkWait(() -> original.call(executor, completed)));
 	}
 }

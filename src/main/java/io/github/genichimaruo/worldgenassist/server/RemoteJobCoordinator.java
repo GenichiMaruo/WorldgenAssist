@@ -42,6 +42,7 @@ public final class RemoteJobCoordinator {
 	private final Map<UUID, Integer> consecutiveTimeouts = new HashMap<>();
 	private final Set<UUID> decodingResults = new HashSet<>();
 	private final Set<UUID> quarantinedOwners = ConcurrentHashMap.newKeySet();
+	private int synchronousWaitDepth;
 
 	// Cache consumers must observe watchdog quarantine without acquiring the
 	// coordinator monitor while holding the manager's result-state lock.
@@ -136,6 +137,7 @@ public final class RemoteJobCoordinator {
 		TerrainDensityJob job;
 		Attempt attempt;
 		synchronized (this) {
+			if (synchronousWaitDepth > 0) { return Optional.empty(); }
 			Optional<WorkerRegistry.Lease> acquired = requiredOwnerId == null
 				? workers.tryAcquireSoleWorker() : workers.tryAcquireWorker(requiredOwnerId);
 			if (acquired.isEmpty()) {
@@ -332,6 +334,13 @@ public final class RemoteJobCoordinator {
 		);
 	}
 
+	/** Cancel obsolete terrain without dropping the still-connected worker handshake. */
+	public int cancelForDimensionChange(UUID ownerId) {
+		Objects.requireNonNull(ownerId, "ownerId");
+		return cancelIdentities(ownerId, pendingJobs.cancelAllForOwner(ownerId),
+			new CancellationException("Remote worker changed dimension"), true);
+	}
+
 	public int shutdown() {
 		int cancelled = cancelAll("Server stopped", false);
 		workers.clear();
@@ -344,6 +353,21 @@ public final class RemoteJobCoordinator {
 
 	public int cancelAllForReload() {
 		return cancelAll("Data pack reload invalidated the worldgen context", true);
+	}
+
+	/** Admission and registration share a monitor; callbacks run outside it. */
+	public void duringSynchronousChunkWait(Runnable wait) {
+		Objects.requireNonNull(wait, "wait");
+		synchronized (this) { synchronousWaitDepth++; }
+		try {
+			int cancelled = cancelAll("Main server thread is waiting for a chunk", true);
+			if (cancelled > 0) {
+				WorldgenAssist.LOGGER.info("[CAWG] remote.sync_fallback cancelled_jobs={}", cancelled);
+			}
+			wait.run();
+		} finally {
+			synchronized (this) { synchronousWaitDepth--; }
+		}
 	}
 
 	private int cancelAll(String reason, boolean sendCancel) {

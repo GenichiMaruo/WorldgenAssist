@@ -1,5 +1,29 @@
 # World Generation Pipeline Notes
 
+## Alpha.3 source findings (2026-09-15, verification pending)
+
+Generated 26.2 `NoiseSettings` defines Overworld as minY -64, height 384,
+cell width 4 and cell height 8; Nether as 0/128/4/8; End as 0/128/8/4.
+Nether/End noise can occupy only part of the dimension's build height.
+Eligibility now checks that the complete generator noise range is contained
+within the level, rather than requiring equality with level height. Truncated
+noise, old-noise/retrogen, blending and nonempty structure beardifiers still
+fall back. The context fingerprint uses that same noise range, matching client
+sampling and authoritative validation. Dimension remains part of job identity
+and cache keys. Only vanilla dimension identifiers are admitted.
+
+Fabric entity-events 5.0.5 exposes `AFTER_PLAYER_CHANGE_LEVEL` with the actual
+player and origin/destination ServerLevel. It invalidates that owner's cached
+results and prediction state and cancels outstanding work while retaining the
+worker handshake. Other owners continue. This also covers cross-level respawn
+according to the resolved Fabric source. Runtime verification is still pending.
+
+The settings channel is separately named `settings_v1`; density CURRENT remains
+2 and the public transcript fixture remains Overworld/public seed only. Saved
+server policy is loaded at mod initialization with command-line/environment
+overrides, so changes require a process restart. Server permission checks use
+generated `PermissionSet.hasPermission(Permissions.COMMANDS_ADMIN)`.
+
 2026-09-13 disconnect-thread recheck: generated 26.2 `Connection` and
 `ServerCommonPacketListenerImpl.disconnect`, together with Fabric API 6.3.3
 `ServerPlayNetworkAddon.invokeDisconnectEvent`, establish that the Fabric
@@ -1096,3 +1120,79 @@ recorder now calls the canonical `SeededLeafJob.validateGeometry` before opening
 a trace session or constructing a `NoiseChunk`. This rejects misaligned or
 non-divisible geometry before any leaf traversal, while retaining exact valid
 clamped slices. See `SEEDED_LEAF_ORCHESTRATION.md` for integration contracts.
+
+## 19. Client result transmission thread
+
+The trusted raw-seed client computes and encodes a result on its single bounded
+worker, then returns to the render thread before calling Fabric's client play
+networking API. Initial resource synchronization and large teleports can delay
+that handoff even after density calculation has finished, so runtime evidence
+must distinguish client compute/encode time from end-to-end RTT.
+
+The implementation retains Fabric's render-thread handoff. Earlier failed
+fixtures also tried worker-thread transmission, but their logs do not establish
+where execution stalled; they are not proof that this API blocks the worker.
+The
+validation harness requires one successful result from each installed client
+in a separate warm-up region before it opens a measured generation region. It
+does not hide later render-thread delay, which remains part of RTT and
+reliability.
+
+## 20. Trusted-raw synchronous chunk waits
+
+Generated 26.2 `ServerChunkCache.getChunk` and `getChunkFuture` invoke the
+chunk cache's `MainThreadExecutor.managedBlock`. That executor pumps chunk
+generation tasks, not the ordinary server play-payload handler queue. Waiting
+there for a remote density while its result needs the server thread forms a
+dependency cycle, broken previously only by the watchdog timeout.
+
+The existing `ServerChunkCacheFixtureWaitMixin` now brackets both routes.
+Trusted-raw admission is suspended under the same monitor as job registration;
+pending jobs are cancelled into vanilla fallback without quarantining workers.
+Callbacks execute outside the coordinator monitor. A nesting counter and
+`finally` restore admission even when a nested vanilla wait throws. The public
+fixture keeps its existing independent suspension. The 2026-09-20 complete
+batch executed all Overworld trusted-raw scenarios successfully; cross-dimension
+application exposed the separate owner-epoch defect described below. A final
+all-dimension verification after corrections is still pending.
+
+## 21. Dimension-change owner epoch
+
+The accepted connection survives a vanilla dimension change, so invalidating its
+cached results must rotate its application epoch, not remove it permanently.
+The 2026-09-20 Nether evidence reached successful density validation but rejected
+installation because the removed owner epoch could never match a new job key.
+`invalidateOwner(owner, true)` now issues a new epoch only when one already
+exists, removes that owner's cached/predicted work and demand, and leaves other
+owners untouched. Disconnect/quarantine still remove the epoch. A focused
+regression checks repeated transitions, the other owner, and no resurrection
+after disconnect. Runtime verification after this fix remains pending.
+
+The next batch (`validation-matrix-20260920-230807-000`) passed 264 tests in
+58 suites and executed all performance cases in all three dimensions. Eight
+correctness scenarios still lacked the required successful measured owner
+application. Several completed their generation while demand retained a prior
+position, or cancelled the only attempt during a synchronous chunk wait.
+The resolved Fabric lifecycle source injects `START_SERVER_TICK` immediately
+before `MinecraftServer.tickChildren`, and END at `tickServer`'s tail. Owner
+demand is now refreshed at both boundaries, before level/chunk ticks and after
+them, retaining immutable snapshots for background generation. This scheduling
+change was subsequently covered by the selected runtime evidence recorded in
+`TEST_RESULTS_LATEST.md`; local fallback remains intentional.
+
+For the correctness harness, generated 26.2 `ForceLoadCommand` confirms the
+`forceload add <from> <to>` column range and 256-chunk limit. The post-assistance
+comparison completion uses 441 chunks per owner in four commands below that
+limit; it does not alter performance
+windows or permit another player to supply their computation.
+
+The generated client `Options.processOptions` serializes bindings as `key_`
+plus the key mapping's name, and `InputConstants` maps `key.keyboard.unknown`
+to the unbound key. The scenario runner unbinds movement, jump, sneak, sprint,
+attack and use in its newly created test profiles to isolate stationary
+measurements from desktop input. User profiles and production defaults remain
+untouched; scenario relocation is still performed by server commands.
+`Options.dataFix` defaults a missing file version to zero. Modern key names
+then enter the legacy integer-key migration and fail parsing. These generated
+profiles therefore include `version:4903`, verified from the pinned 26.2 client
+JAR's `version.json` (`world_version`); `Options.save` writes this data version.
