@@ -1237,3 +1237,11 @@ reports the pair PASS and overall INCOMPLETE only because this deliberately
 selected pair has no full `matrix-plan.json`. This does not verify Nether, End,
 two owners, another loader, or performance. The 26.3 fixture profile uses
 `version:5023`, read from its original client JAR `version.json`.
+
+Forge `26.3-66.0.3` and NeoForge `26.3.0.13-beta` official MDK builds also
+generated patched 26.3 source on 2026-09-24. Their `buildTerrain` and
+`doFill` still sample final density into a `ScopedDensityBuffer`, and their
+server chunk caches still synchronously `managedBlock` in the two retrieval
+routes. Forge and NeoForge include other chunk patches around these calls;
+the Fabric runtime comparison does not validate either loader's scheduling,
+injection, networking, or final chunk output.

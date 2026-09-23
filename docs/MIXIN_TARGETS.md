@@ -29,6 +29,15 @@ wait, while asynchronous owner work can still complete remotely. The
 public transcript fixture has not been ported.
 See `PORT_26_3.md`.
 
+The official Forge `26.3-66.0.3` injected source and NeoForge
+`26.3.0.13-beta` patched source were generated from successful isolated MDK
+builds on 2026-09-24. Forge keeps the two managed waits at lines 163/221;
+NeoForge keeps them at 169/223. Both retain
+`ChunkStatusTasks.buildTerrain` and the `doFill` `sampleVolume` call returning
+`ScopedDensityBuffer`. This confirms the source-level call shapes only.
+Neither WorldgenAssist Mixin config has been applied under those loaders, and
+their patched source may change surrounding chunk lifecycle behavior.
+
 ## Alpha.3 source checks (2026-09-15, runtime pending)
 
 The settings menu uses resolved Fabric screen-api 5.1.0 `ScreenEvents.AFTER_INIT`

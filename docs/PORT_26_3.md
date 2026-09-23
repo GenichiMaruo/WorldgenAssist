@@ -5,23 +5,45 @@ maintenance branch and JAR remain unchanged. The 26.3 working version is
 `0.1.0-alpha.4+mc26.3`; no compatibility claim is made until loader-specific
 builds and runtime comparisons pass.
 
-## Verified dependencies (2026-09-23)
+## Verified dependencies (2026-09-24)
 
 - Minecraft Java Edition 26.3 was released on 2026-09-15.
 - Fabric recommends Loom 1.17, Gradle 9.6.0 and Loader 0.19.5 for 26.3;
   Fabric API `0.161.0+26.3` is present in official Maven metadata.
 - Forge publishes 26.3 build `66.0.3` (2026-09-22).
-- NeoForge official Maven metadata lists 26.3 build `26.3.0.10-beta`.
-  Its current documentation is still versioned for 26.1, so verify 26.3
-  behavior against the actual MDK/generated sources rather than extrapolating.
+- NeoForge official Maven metadata now lists 26.3 build `26.3.0.13-beta`.
+  The official 26.3 MDK template still pinned `26.3.0.10-beta` when copied;
+  an isolated MDK build with `26.3.0.13-beta` and JDK 25.0.4 passed on
+  2026-09-24. Its patched generated game source was inspected for the two
+  `ServerChunkCache` waits, `ChunkStatusTasks.buildTerrain`, and
+  `NoiseBasedChunkGenerator.doFill`/`sampleVolume`; relevant call shapes remain,
+  but this is **not** a WorldgenAssist NeoForge build or Mixin launch.
 
 The official Forge `26.3-66.0.3` MDK archive was downloaded for inspection;
 its SHA-1 `a9446ea6c6ebf1e0cce86c6f65b642e11fa954c7` matches the Forge
 download page. Its build uses ForgeGradle `[7.0.17,8)` and Java 25. The
 official NeoForge 26.3 ModDevGradle template uses plugin `2.0.147`, Java 25
-and currently pins `26.3.0.10-beta`. Inspection copies are under ignored
+and originally pinned `26.3.0.10-beta`. Inspection copies are under ignored
 `.gradle/loader-inspect/`; these are upstream templates, **not** working
 WorldgenAssist loader projects.
+
+The isolated official Forge MDK also built successfully with JDK 25.0.4 and
+Forge `26.3-66.0.3` on 2026-09-24. Its injected source JAR is in the
+ForgeGradle Mavenizer cache. The Forge and NeoForge builds each compiled only
+the upstream example mod; neither compiled WorldgenAssist classes. Both
+loaders' patched 26.3 source retains `ChunkStatusTasks.buildTerrain`,
+`NoiseBasedChunkGenerator.doFill`'s
+`DensitySampler.Bound.sampleVolume(DensityVolume)` returning
+`ScopedDensityBuffer`, and the two `ServerChunkCache` managed waits. Actual
+Mixin application and remote semantics still require native launches.
+
+The loader network APIs differ materially: Forge `ChannelBuilder` builds a
+`PayloadChannel` with a play protocol and per-payload handlers, while NeoForge
+registers play payloads through `RegisterPayloadHandlersEvent` and
+`PayloadRegistrar`. The existing Fabric `PayloadTypeRegistry` and
+`ServerPlayNetworking` calls cannot be reused directly. The common payload
+records and codecs are candidates for sharing; registration, send/receive,
+handshake capability checks and lifecycle callbacks need loader adapters.
 
 ## Generated 26.3 source findings
 
