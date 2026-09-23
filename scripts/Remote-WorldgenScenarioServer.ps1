@@ -22,9 +22,12 @@ $ProgressPreference = 'SilentlyContinue'
 
 $resolved = [IO.Path]::GetFullPath($Root)
 $temp = [IO.Path]::GetFullPath($env:TEMP).TrimEnd([IO.Path]::DirectorySeparatorChar)
-if ([IO.Path]::GetDirectoryName($resolved) -ne $temp -or -not [IO.Path]::GetFileName($resolved).StartsWith('WorldgenAssist-')) {
-    throw 'Root must be the dedicated WorldgenAssist temp root'
+$dedicated = [IO.Path]::GetFullPath((Join-Path $temp 'WorldgenAssist-20260909'))
+if ($resolved -ne [IO.Path]::GetFullPath((Join-Path $dedicated 'port26.3'))) {
+    throw 'Root must be the dedicated WorldgenAssist 26.3 test child'
 }
+$javaExecutable = Join-Path $dedicated 'java25/bin/java.exe'
+if (-not (Test-Path -LiteralPath $javaExecutable -PathType Leaf)) { throw 'Dedicated JDK 25 is missing' }
 foreach ($target in @($resolved, (Join-Path $resolved 'mods'), (Join-Path $resolved 'logs'), (Join-Path $resolved 'evidence'))) {
     if ((Test-Path -LiteralPath $target) -and ((Get-Item -LiteralPath $target -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
         throw "Scenario target must not be a reparse point: $target"
@@ -193,7 +196,7 @@ function Warm-AssistedOwners {
             if (-not $diagnosticCaptured -and [DateTime]::UtcNow -ge $diagnosticAt) {
                 $diagnosticCaptured = $true
                 $dumpInfo = [Diagnostics.ProcessStartInfo]::new()
-                $dumpInfo.FileName = Join-Path $resolved 'java25/bin/java.exe'
+                $dumpInfo.FileName = $javaExecutable
                 $dumpInfo.Arguments = '-m jdk.jcmd/sun.tools.jcmd.JCmd ' + [string]$process.Id + ' Thread.print -l'
                 $dumpInfo.UseShellExecute = $false
                 $dumpInfo.CreateNoWindow = $true
@@ -295,9 +298,9 @@ try {
     if ((Get-Content -LiteralPath (Join-Path $resolved 'eula.txt') -Raw) -notmatch '(?m)^eula=true\s*$') { throw 'Existing EULA acceptance is required' }
     if (Get-NetTCPConnection -LocalPort 25585 -State Listen -ErrorAction SilentlyContinue) { throw 'Loopback fixture port 25585 is already occupied' }
     $viewDistance = 10
-    @('server-ip=127.0.0.1','server-port=25585','online-mode=false',("level-name=$case"),("level-seed=$Seed"),("view-distance=$viewDistance"),'simulation-distance=3',("max-players=$Players"),'gamemode=spectator','difficulty=peaceful','enable-rcon=false','enable-query=false','pause-when-empty-seconds=-1','spawn-protection=0') | Set-Content -LiteralPath (Join-Path $resolved 'server.properties')
+    @('server-ip=127.0.0.1','server-port=25585','online-mode=false','white-list=false','enforce-whitelist=false',("level-name=$case"),("level-seed=$Seed"),("view-distance=$viewDistance"),'simulation-distance=3',("max-players=$Players"),'gamemode=spectator','difficulty=peaceful','enable-rcon=false','enable-query=false','pause-when-empty-seconds=-1','spawn-protection=0') | Set-Content -LiteralPath (Join-Path $resolved 'server.properties')
     [ordered]@{dimension=$Dimension;mode=$Mode;players=$Players;purpose=$Purpose;cache_entries=$CacheEntries;prediction=$predictionEnabled;validation_cells=$ValidationCells;seed=$Seed;warmup_runs=$WarmupRuns;measured_repeats=$MeasuredRepeats;view_distance=$viewDistance;timeout_ms=30000;listener='127.0.0.1:25585'} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'scenario-config.json')
-    $start = [Diagnostics.ProcessStartInfo]::new(); $start.FileName = Join-Path $resolved 'java25/bin/java.exe'; $start.Arguments = '-Xmx3G -jar "' + (Join-Path $resolved 'fabric-server-launch.jar') + '" nogui'; $start.WorkingDirectory = $resolved
+    $start = [Diagnostics.ProcessStartInfo]::new(); $start.FileName = $javaExecutable; $start.Arguments = '-Xmx3G -jar "' + (Join-Path $resolved 'fabric-server-launch.jar') + '" nogui'; $start.WorkingDirectory = $resolved
     $start.UseShellExecute = $false; $start.CreateNoWindow = $true; $start.RedirectStandardInput = $true; $start.RedirectStandardOutput = $true; $start.RedirectStandardError = $true
     $assisted = $Mode -eq 'assisted'
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE'] = if($assisted){'true'}else{'false'}
@@ -369,7 +372,7 @@ try {
         # The dedicated Java image has jdk.jcmd, but no jcmd.exe launcher.
         # Capture this owned server's stack before the bounded cleanup kills it.
         $dumpInfo=[Diagnostics.ProcessStartInfo]::new()
-        $dumpInfo.FileName=Join-Path $resolved 'java25/bin/java.exe'
+        $dumpInfo.FileName=$javaExecutable
         $dumpInfo.Arguments='-m jdk.jcmd/sun.tools.jcmd.JCmd '+$process.Id+' Thread.print -l'
         $dumpInfo.UseShellExecute=$false;$dumpInfo.CreateNoWindow=$true
         $dumpInfo.RedirectStandardOutput=$true;$dumpInfo.RedirectStandardError=$true

@@ -1216,3 +1216,24 @@ untouched; scenario relocation is still performed by server commands.
 then enter the legacy integer-key migration and fail parsing. These generated
 profiles therefore include `version:4903`, verified from the pinned 26.2 client
 JAR's `version.json` (`world_version`); `Options.save` writes this data version.
+
+## 22. Minecraft 26.3 synchronous wait and focused runtime comparison
+
+Generated 26.3 `ServerChunkCache.getChunk` and `getChunkFuture` retain the two
+`MainThreadExecutor.managedBlock(BooleanSupplier)` calls. The first 26.3
+installed-client assisted run reached a server-issued job and client-side
+computation/encoding of 98,304 density values, then timed out after 30 seconds
+while a synchronous chunk request held the main thread. The 26.2 fixture wait
+Mixin had been excluded from the 26.3 artifact with its unported public
+transcript code, so trusted-raw admission was no longer suspended there.
+
+`ServerChunkCacheRemoteWaitMixin263` now wraps both source-verified calls and
+uses `RemoteWorldgenManager.duringSynchronousChunkWait` to cancel outstanding
+attempts into local fallback before the wait. A 2026-09-24 Overworld
+installed-client pair then completed with one required remote-applied chunk
+matching vanilla and 962/962 shared NOISE digests matching. The assisted run
+recorded 1,122 digests and the vanilla run 962; the full matrix comparator
+reports the pair PASS and overall INCOMPLETE only because this deliberately
+selected pair has no full `matrix-plan.json`. This does not verify Nether, End,
+two owners, another loader, or performance. The 26.3 fixture profile uses
+`version:5023`, read from its original client JAR `version.json`.

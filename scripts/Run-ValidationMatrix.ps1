@@ -18,6 +18,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$minecraftTarget = [regex]::Match((Get-Content -LiteralPath (Join-Path $workspace 'gradle.properties') -Raw), '(?m)^minecraft_version=([^\r\n]+)\s*$')
+if ($Execute -and ($minecraftTarget.Success -eq $false -or $minecraftTarget.Groups[1].Value.Trim() -ne '26.2')) {
+    throw 'The installed-client validation matrix is pinned to Minecraft 26.2; port its assets, loader and public-fixture cases before executing it on another version.'
+}
 $artifactsRoot = Join-Path $workspace 'test-artifacts'
 $runRoot = Join-Path $artifactsRoot ('validation-matrix-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff'))
 $runLockPath = Join-Path $artifactsRoot 'validation-matrix.lock'

@@ -5,7 +5,8 @@
 	"mixins": [
 		"ChunkAccessRemoteDensityMixin",
 		"ChunkStatusTasksMixin",
-		"NoiseBasedChunkGeneratorMixin"
+		"NoiseBasedChunkGeneratorMixin",
+		"ServerChunkCacheRemoteWaitMixin263"
 	],
 	"injectors": {
 		"defaultRequire": 1

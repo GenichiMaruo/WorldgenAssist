@@ -1,9 +1,12 @@
 # Validation matrix
 
-On the 26.3 development branch, the installed-client scenario runner still
-pins 26.2 assets and Fabric API. Its runtime capability is explicitly disabled
-in `scripts/validation-capabilities.json`. The cases and prior results below
-describe the published 26.2 line until the harness is ported and rerun.
+On the 26.3 development branch, the individual Fabric installed-client
+scenario runner has been ported and one selected Overworld assisted/vanilla
+pair passed on 2026-09-24. The batch runner still contains 26.2-only
+public-fixture cases, so `Run-ValidationMatrix.ps1 -Execute` explicitly refuses
+26.3 and its runtime capability remains disabled in
+`scripts/validation-capabilities.json`. The cases and prior full-matrix results
+below describe the published 26.2 line.
 
 For fixes, select only affected runtime cases with `-CaseId`; their opposite
 vanilla/assisted partners are included automatically. This mode rebuilds the

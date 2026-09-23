@@ -5,7 +5,8 @@
 The published line targets Minecraft Java Edition **26.2**, Fabric Loader
 **0.19.3**, Fabric API **0.156.0+26.2**, and Java **25** (verification JDK
 25.0.4). Branch `feature/mc26.3-multiloader` is an **incomplete 26.3 port**:
-do not install, tag or publish its artifacts. Its dependency versions are in
+do not offer its artifacts for normal installation, tag or publish them.
+Isolated installation inside the authorized test fixture is permitted. Its dependency versions are in
 `gradle.properties`; see `PORT_26_3.md` for source-verified breaking changes.
 Keep dependency and protocol changes explicit. Use
 `scripts/Get-WorldgenArtifact.ps1` to select exact JAR names. Published tags,

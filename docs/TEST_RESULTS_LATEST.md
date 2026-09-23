@@ -1,5 +1,19 @@
 # Test results — alpha.3, 2026-09-23
 
+The published 26.2 alpha.3 evidence below is unchanged. On the incomplete
+26.3 development branch, two focused JUnit tests and `build` passed after the
+2026-09-24 synchronous-wait Mixin fix. One installed-client Overworld
+assisted/vanilla pair passed: the required remote-applied chunk and 962/962
+shared NOISE digests matched. The deliberately partial comparator returned
+pair PASS and overall INCOMPLETE because no full matrix plan was supplied.
+See [the 26.3 port record](PORT_26_3.md) for JAR identity, evidence paths,
+earlier failed attempts and remaining gates. This is not a 26.3 release or a
+performance result.
+Two attempted Nether assisted cases then stopped during installed-client
+resource loading with native Windows exit codes `0xC0000005` and
+`0xC0000374`. They do not establish Nether correctness; their evidence is
+`test-artifacts/port26.3-fabric-nether-assisted-1/` and `-2/`.
+
 ## Alpha.3 release evidence
 
 Performance evaluation is now complete for twelve selected pairs, with matched

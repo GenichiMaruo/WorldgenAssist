@@ -80,6 +80,41 @@ decode and the exact-float apply buffer, then rejects a changed sampled
 value. These unit tests are not a
 networked assisted/vanilla world comparison.
 
+On 2026-09-24, the installed-client runner was ported to an isolated 26.3
+Fabric server child under the authorized remote test root. The first attempt
+was rejected by the fixture server's inherited whitelist; the runner now
+sets `white-list=false` while binding to `127.0.0.1:25585` only. The next
+connected attempt exposed a real 26.3 deadlock: the client computed and
+encoded a 98,304-density result, but a synchronous server chunk wait delayed
+result handling until the 30-second fallback. Generated 26.3
+`ServerChunkCache.getChunk`/`getChunkFuture` retain two
+`MainThreadExecutor.managedBlock` calls. The new
+`ServerChunkCacheRemoteWaitMixin263` suspends remote admission and cancels
+pending jobs to vanilla fallback during these waits.
+
+After that fix, one Overworld installed-client assisted case and its
+same-seed vanilla partner succeeded on JDK 25.0.4, using the exact WIP JAR
+SHA-256 `FD83DDADD74DBC1A246E9D7F069FDA615D2FB56F2ABBD11C6C35742D2291E621`.
+The required remotely applied chunk matched vanilla. All 962 shared NOISE
+digests matched; the assisted and vanilla cases recorded 1,122 and 962
+digests respectively. Both cases report `cleanup_safe=true`, and a final
+remote read found zero owned Java processes and zero port 25585 listeners.
+Evidence is under `test-artifacts/port26.3-fabric-assisted-5/`,
+`test-artifacts/port26.3-fabric-vanilla-1/`, and
+`test-artifacts/port26.3-fabric-overworld-comparison/`. The comparator's
+**pair** status is PASS; overall status is INCOMPLETE because this deliberately
+selected pair has no full-matrix plan. Offline client authentication/Realms
+errors remain; do not describe the logs as error-free. No 26.3 performance
+claim follows from this correctness pair.
+
+The first two selected Nether attempts never reached the dimension-change
+path: the installed Windows client exited during resource loading with native
+exit codes `0xC0000005` and `0xC0000374`. Both cases recorded
+`cleanup_safe=true`; neither is a Nether validation result. The client
+launcher now sets `-XX:ErrorFile` inside its isolated evidence profile, though
+the second failure produced no JVM error file. Investigate that startup fault
+or use a separately verified client environment before counting a Nether pair.
+
 The old 26.2 JUnit sources and public-seed transcript fixture remain on the
 published maintenance line. This branch compiles its new targeted tests from
 `src/portTest/java` and omits the obsolete fixture classes from the Fabric
@@ -105,10 +140,10 @@ templates alone cannot satisfy this gate.
 
 ## Remaining acceptance gates
 
-1. Confirm the candidate's owner-bound full-volume result in one 26.3
-   assisted/vanilla installed-client pair. The focused sampler checks pass;
-   networked application, cancellation and disconnect still need runtime
-   evidence. Keep raw-seed disclosure separately opt-in.
+1. Extend the first successful 26.3 Overworld owner-bound full-volume
+   assisted/vanilla pair to Nether, End and concurrent owners as affected
+   functionality requires. Cancellation and disconnect still need focused
+   runtime evidence. Keep raw-seed disclosure separately opt-in.
 2. Extract loader-neutral computation/job/validation from Fabric lifecycle and
    packet registration. Supply separate Fabric, Forge and NeoForge adapters,
    metadata and exact artifacts. Confirm every Mixin target against each

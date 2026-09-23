@@ -7,11 +7,17 @@ $resolved=[IO.Path]::GetFullPath($Root)
 $evidenceRoot=[IO.Path]::GetFullPath((Join-Path $workspace 'test-artifacts')).TrimEnd('\')+'\'
 if (-not $resolved.StartsWith($evidenceRoot,[StringComparison]::OrdinalIgnoreCase)) { throw 'Client must use a test-artifacts child' }
 $clientDir=Join-Path $resolved 'client'
-$prep=Join-Path $workspace 'test-artifacts/installed-client-prep-20260910'
+$versions=@{}
+foreach($line in Get-Content -LiteralPath (Join-Path $workspace 'gradle.properties')){
+    if($line -match '^\s*(minecraft_version|loader_version|fabric_api_version)\s*=\s*([^\s#]+)\s*$'){$versions[$Matches[1]]=$Matches[2]}
+}
+$minecraft=$versions.minecraft_version;$loader=$versions.loader_version;$apiVersion=$versions.fabric_api_version
+if("$minecraft/$loader/$apiVersion" -notin @('26.2/0.19.3/0.156.0+26.2','26.3/0.19.5/0.161.0+26.3')){throw 'Installed fixture client is not verified for these dependency versions'}
+$prep=Join-Path $workspace $(if($minecraft -eq '26.3'){'test-artifacts/installed-client-prep-26.3'}else{'test-artifacts/installed-client-prep-20260910'})
 $cache=Join-Path $env:USERPROFILE '.gradle/caches'
-$mojang=Get-Content (Join-Path $cache 'fabric-loom/26.2/mojang_minecraft_info.json') -Raw | ConvertFrom-Json -AsHashtable
+$mojang=Get-Content (Join-Path $cache "fabric-loom/$minecraft/mojang_minecraft_info.json") -Raw | ConvertFrom-Json -AsHashtable
 $fabric=Get-Content (Join-Path $prep 'fabric-profile.json') -Raw | ConvertFrom-Json -AsHashtable
-if ($mojang.id -ne '26.2' -or $fabric.id -ne 'fabric-loader-0.19.3-26.2') { throw 'Unapproved runtime version' }
+if ($mojang.id -ne $minecraft -or $fabric.id -ne "fabric-loader-$loader-$minecraft") { throw 'Unapproved runtime version' }
 New-Item -ItemType Directory -Force -Path (Join-Path $clientDir 'mods'),(Join-Path $clientDir 'natives') | Out-Null
 $classpath=[Collections.Generic.List[string]]::new()
 $provenance=[Collections.Generic.List[object]]::new()
@@ -43,25 +49,28 @@ foreach ($library in $fabric.libraries) {
     $sha=if($library.ContainsKey('sha1')){$library.sha1}else{''}
     Add-Library $library.name $sha
 }
-$gameJar=Join-Path $cache 'fabric-loom/26.2/minecraft-client.jar'
+$gameJar=Join-Path $cache "fabric-loom/$minecraft/minecraft-client.jar"
 if ((Get-FileHash -LiteralPath $gameJar -Algorithm SHA1).Hash -ne $mojang.downloads.client.sha1) { throw 'Original client JAR checksum mismatch' }
 $classpath.Add($gameJar)
-$provenance.Add([ordered]@{name='original Minecraft 26.2 client';path=$gameJar;sha256=(Get-FileHash -LiteralPath $gameJar).Hash})
+$provenance.Add([ordered]@{name="original Minecraft $minecraft client";path=$gameJar;sha256=(Get-FileHash -LiteralPath $gameJar).Hash})
 $artifact=& (Join-Path $PSScriptRoot 'Get-WorldgenArtifact.ps1') -Workspace $workspace
 $mod=$artifact.Path
-$api=Join-Path $cache 'modules-2/files-2.1/net.fabricmc.fabric-api/fabric-api/0.156.0+26.2/d96e0d9ef8ea3604fac4ca7495d7c6148f3ac816/fabric-api-0.156.0+26.2.jar'
+$apiRoot=Join-Path $cache "modules-2/files-2.1/net.fabricmc.fabric-api/fabric-api/$apiVersion"
+$apiFiles=@(Get-ChildItem -LiteralPath $apiRoot -Recurse -File -Filter "fabric-api-$apiVersion.jar")
+if($apiFiles.Count -ne 1){throw 'Exactly one exact-version Fabric API JAR is required'}
+$api=$apiFiles[0].FullName
 Copy-Item -LiteralPath $mod,$api -Destination (Join-Path $clientDir 'mods')
 Get-ChildItem -LiteralPath (Join-Path $clientDir 'mods') -File | ForEach-Object {
     [ordered]@{file=$_.Name;sha256=(Get-FileHash -LiteralPath $_.FullName).Hash}
 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $resolved 'installed-client-mods.json')
 $provenance | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $resolved 'installed-client-classpath.json')
 $assets=if ($AssetsRoot) { [IO.Path]::GetFullPath($AssetsRoot) } else { Join-Path $cache 'fabric-loom/assets' }
-if ((Get-FileHash -LiteralPath (Join-Path $assets 'indexes/26.2-32.json') -Algorithm SHA1).Hash -ne $mojang.assetIndex.sha1) { throw 'Asset index checksum mismatch' }
-$arguments=@('-Xmx2G','--enable-native-access=ALL-UNNAMED','--sun-misc-unsafe-memory-access=allow','-Dfabric.development=false',
+if ((Get-FileHash -LiteralPath (Join-Path $assets ("indexes/$minecraft-$($mojang.assetIndex.id).json")) -Algorithm SHA1).Hash -ne $mojang.assetIndex.sha1) { throw 'Asset index checksum mismatch' }
+$arguments=@('-Xmx2G',("-XX:ErrorFile=$clientDir/hs_err_pid%p.log"),'--enable-native-access=ALL-UNNAMED','--sun-misc-unsafe-memory-access=allow','-Dfabric.development=false',
     "-Djava.library.path=$clientDir/natives/java","-Djna.tmpdir=$clientDir/natives/jna","-Dorg.lwjgl.system.SharedLibraryExtractPath=$clientDir/natives/lwjgl","-Dio.netty.native.workdir=$clientDir/natives/netty")
 $arguments+=@($fabric.arguments.jvm)
 $arguments+=@('-cp',($classpath -join ';'),$fabric.mainClass,'--username','FixtureWorker','--uuid','00000000000000000000000000000001',
-    '--accessToken','0','--version',$fabric.id,'--versionType','release','--gameDir',$clientDir,'--assetsDir',$assets,'--assetIndex','26.2-32','--quickPlayMultiplayer','127.0.0.1:25585')
+    '--accessToken','0','--version',$fabric.id,'--versionType','release','--gameDir',$clientDir,'--assetsDir',$assets,'--assetIndex',("$minecraft-$($mojang.assetIndex.id)"),'--quickPlayMultiplayer','127.0.0.1:25585')
 $argFile=Join-Path $resolved 'installed-client-args.txt'
 $arguments | ForEach-Object { '"'+$_.Replace('\','/').Replace('"','\"')+'"' } | Set-Content -LiteralPath $argFile -Encoding utf8
 return @{Executable='C:\Program Files\Java\jdk-25.0.4\bin\java.exe';Arguments=@('@'+$argFile);WorkingDirectory=$clientDir}

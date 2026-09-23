@@ -2,7 +2,7 @@
   "schema": "worldgen-assist.validation-capabilities.v1",
   "runtime": {
     "available": false,
-    "reason": "26.3 port: installed-client scenario runner still pins Minecraft/Fabric API 26.2; runtime comparisons are unavailable until the harness is ported",
+    "reason": "26.3 port: individual Fabric scenario pairs can run, but the batch matrix still contains unported 26.2 public-fixture cases",
     "loopback_only": true,
     "artifact_policy": "fresh_build_exact_version",
     "public_test_seed": 8675309

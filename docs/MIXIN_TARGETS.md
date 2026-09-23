@@ -13,7 +13,20 @@ server-side aquifer/block writes. The Fabric candidate uses
 field, and a `doFill` `sampleVolume` WrapOperation to substitute a bounded
 float buffer. The field is cleared when generation completes. A default-off
 Fabric dedicated-server smoke reached 25 spawn NOISE chunks without a Mixin
-error; assisted runtime and all Forge/NeoForge transformations remain unverified.
+error. A 2026-09-24 installed-client Overworld assisted/vanilla pair now passed
+one required applied-chunk digest and 962 shared NOISE digests. Nether, End,
+multi-owner, Forge and NeoForge runtime remain unverified.
+
+Generated 26.3 `ServerChunkCache.getChunk` and `getChunkFuture` still call
+`MainThreadExecutor.managedBlock(BooleanSupplier)` at lines 163 and 216.
+The new `ServerChunkCacheRemoteWaitMixin263` wraps both calls (`require = 2`)
+and enters `RemoteWorldgenManager.duringSynchronousChunkWait`. Without this
+hook, an installed client computed and encoded a 98,304-value result, but the
+server remained in the synchronous wait until the 30-second watchdog fired.
+The 26.3 Mixin cancels pending remote work into local fallback before that
+wait, while asynchronous owner work can still complete remotely. The
+26.2-only `ServerChunkCacheFixtureWaitMixin` remains excluded because the
+public transcript fixture has not been ported.
 See `PORT_26_3.md`.
 
 ## Alpha.3 source checks (2026-09-15, runtime pending)
