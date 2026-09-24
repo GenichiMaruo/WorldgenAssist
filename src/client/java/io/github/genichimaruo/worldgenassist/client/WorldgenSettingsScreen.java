@@ -5,9 +5,9 @@ import io.github.genichimaruo.worldgenassist.server.RemoteWorldgenConfig;
 import io.github.genichimaruo.worldgenassist.server.ServerSettingsStore;
 import java.io.IOException;
 import java.time.Duration;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
-import net.fabricmc.fabric.api.client.screen.v1.Screens;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.components.Tooltip;
@@ -17,6 +17,8 @@ import net.minecraft.network.chat.Component;
 
 /** Vanilla/Fabric screen API only; no game GUI mixins. */
 public final class WorldgenSettingsScreen extends Screen {
+	private static BooleanSupplier canSendSettings = () -> false;
+	private static Consumer<SettingsPayload> sendSettings = payload -> {};
 	private final Screen parent;
 	private final SettingsRequestTracker requests = new SettingsRequestTracker();
 	private boolean participation = ClientSettings.participation();
@@ -27,16 +29,19 @@ public final class WorldgenSettingsScreen extends Screen {
 	private String status = "hint";
 	private long requestTime;
 	private WorldgenSettingsScreen(Screen parent) { super(text("title")); this.parent = parent; }
-	public static void register() {
-		ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
-			if (screen instanceof OptionsScreen) {
-				Screens.getWidgets(screen).add(Button.builder(Component.literal("WorldgenAssist"), b -> client.gui.setScreen(new WorldgenSettingsScreen(screen)))
-					.bounds(4, 4, 110, 20).build());
-			}
+	public static void installTransport(BooleanSupplier canSend, Consumer<SettingsPayload> send) {
+		canSendSettings = canSend;
+		sendSettings = send;
+	}
+	public static Button optionsButton(Screen options) {
+		return Button.builder(Component.literal("WorldgenAssist"), b ->
+			Minecraft.getInstance().gui.setScreen(new WorldgenSettingsScreen(options)))
+			.bounds(4, 4, 110, 20).build();
+	}
+	public static void receiveCurrent(Minecraft client, SettingsPayload payload) {
+		client.execute(() -> {
+			if (client.gui.screen() instanceof WorldgenSettingsScreen screen) screen.receive(payload);
 		});
-		ClientPlayNetworking.registerGlobalReceiver(SettingsPayload.TYPE, (payload, context) -> context.client().execute(() -> {
-			if (context.client().gui.screen() instanceof WorldgenSettingsScreen screen) screen.receive(payload);
-		}));
 	}
 	private static Component text(String key, Object... args) { return Component.translatable("worldgen_assist.settings." + key, args); }
 	@Override protected void init() {
@@ -50,7 +55,7 @@ public final class WorldgenSettingsScreen extends Screen {
 				rebuildWidgets();
 			});
 			Button server = button(x, 116, text("server"), this::openServer);
-			server.active = !waiting && (minecraft.getConnection() == null || ClientPlayNetworking.canSend(SettingsPayload.TYPE));
+			server.active = !waiting && (minecraft.getConnection() == null || canSendSettings.getAsBoolean());
 		} else {
 			int start = page * 4;
 			for (int i = start; i < Math.min(start + 4, 9); i++) {
@@ -76,7 +81,7 @@ public final class WorldgenSettingsScreen extends Screen {
 	private void request(int action, RemoteWorldgenConfig config) {
 		long requestId = requests.begin();
 		waiting = true; requestTime = System.nanoTime(); status = "waiting";
-		ClientPlayNetworking.send(new SettingsPayload(action, revision, requestId, config)); rebuildWidgets();
+		sendSettings.accept(new SettingsPayload(action, revision, requestId, config)); rebuildWidgets();
 	}
 	private void saveServer() {
 		if (minecraft.getConnection() != null) { request(SettingsPayload.SAVE, policy); return; }

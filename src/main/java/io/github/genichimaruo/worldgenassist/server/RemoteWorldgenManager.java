@@ -16,11 +16,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
+import java.util.function.Consumer;
 
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.GenerationChunkHolder;
@@ -67,9 +64,9 @@ public final class RemoteWorldgenManager {
 	private final AtomicLong nextOwnerGeneration = new AtomicLong();
 	private volatile MinecraftServer server;
 
-	private RemoteWorldgenManager(RemoteWorldgenConfig config) {
+	private RemoteWorldgenManager(RemoteWorldgenConfig config, RemoteJobSender sender) {
 		this.config = config;
-		this.coordinator = new RemoteJobCoordinator(config, new FabricRemoteJobSender(() -> server));
+		this.coordinator = new RemoteJobCoordinator(config, sender);
 		this.resultCache = new RemoteDensityResultCache(config.cacheEntries());
 		this.timeoutWatchdog = Executors.newSingleThreadScheduledExecutor(task -> {
 			Thread thread = new Thread(task, "CAWG-RemoteTimeout");
@@ -91,13 +88,13 @@ public final class RemoteWorldgenManager {
 		);
 	}
 
-	public static synchronized void register(RemoteWorldgenConfig config) {
+	public static synchronized void register(RemoteWorldgenConfig config, RemoteJobSender sender, Consumer<RemoteWorldgenManager> hooks) {
 		if (instance != null) {
 			throw new IllegalStateException("RemoteWorldgenManager is already registered");
 		}
-		RemoteWorldgenManager manager = new RemoteWorldgenManager(config);
+		RemoteWorldgenManager manager = new RemoteWorldgenManager(config, sender);
 		instance = manager;
-		manager.registerHandlers();
+		hooks.accept(manager);
 		manager.startTimeoutWatchdog();
 	}
 
@@ -121,23 +118,32 @@ public final class RemoteWorldgenManager {
 		manager.coordinator.duringSynchronousChunkWait(wait);
 	}
 
-	private void registerHandlers() {
-		ServerPlayNetworking.registerGlobalReceiver(WorkerHelloPayload.TYPE, (payload, context) -> {
-			WorkerAcceptedPayload response = coordinator.handleHello(context.player().getUUID(), payload);
+	public static MinecraftServer activeServer() {
+		RemoteWorldgenManager manager = instance;
+		return manager == null ? null : manager.server;
+	}
+
+	public static void onReloadStart() {
+		RemoteWorldgenManager manager = instance;
+		if (manager != null) manager.onDatapackReload();
+	}
+
+	public WorkerAcceptedPayload handleHello(UUID ownerId, WorkerHelloPayload payload) {
+			WorkerAcceptedPayload response = coordinator.handleHello(ownerId, payload);
 			if (response.accepted()) {
-				ownerGenerations.computeIfAbsent(context.player().getUUID(), ignored -> nextOwnerGeneration.incrementAndGet());
-			} else { invalidateOwner(context.player().getUUID()); }
-			context.responseSender().sendPacket(response);
+				ownerGenerations.computeIfAbsent(ownerId, ignored -> nextOwnerGeneration.incrementAndGet());
+			} else { invalidateOwner(ownerId); }
 			WorldgenAssist.LOGGER.info(
 				"[CAWG] worker.register owner={} status={} requested_parallel={} version={}",
-				context.player().getUUID(),
+				ownerId,
 				response.status(),
 				payload.maxParallelJobs(),
 				payload.implementationVersion()
 			);
-		});
-		ServerPlayNetworking.registerGlobalReceiver(TerrainJobResultPayload.TYPE, (payload, context) -> {
-			UUID ownerId = context.player().getUUID();
+			return response;
+	}
+
+	public void handleResult(UUID ownerId, TerrainJobResultPayload payload) {
 			TerrainDensityResultEnvelope envelope = payload.result();
 			PendingTerrainJobRegistry.ResponseStatus status = coordinator.beginResult(ownerId, envelope.identity());
 			if (status != PendingTerrainJobRegistry.ResponseStatus.ACCEPTED) {
@@ -165,42 +171,52 @@ public final class RemoteWorldgenManager {
 					resultDecoder.getQueue().size()
 				);
 			}
-		});
-		ServerPlayNetworking.registerGlobalReceiver(TerrainJobFailurePayload.TYPE, (payload, context) -> {
-			PendingTerrainJobRegistry.ResponseStatus status = coordinator.handleFailure(context.player().getUUID(), payload);
+	}
+
+	public boolean acceptsFragment(UUID ownerId, TerrainJobIdentity identity) {
+		return config.remoteExecutionEnabled()
+			&& coordinator.inspectResult(ownerId, identity) == PendingTerrainJobRegistry.ResponseStatus.ACCEPTED;
+	}
+
+	public void handleFailure(UUID ownerId, TerrainJobFailurePayload payload) {
+			PendingTerrainJobRegistry.ResponseStatus status = coordinator.handleFailure(ownerId, payload);
 			WorldgenAssist.LOGGER.info(
 				"[CAWG] job.client_rejected id={} owner={} reason={} status={}",
 				payload.identity().jobId(),
-				context.player().getUUID(),
+				ownerId,
 				payload.reason(),
 				status
 			);
-		});
-		ServerPlayConnectionEvents.DISCONNECT.register((listener, currentServer) -> currentServer.execute(() -> {
-			ServerPlayer connected = currentServer.getPlayerList().getPlayer(listener.player.getUUID());
-			if (connected != null && connected != listener.player) { return; }
-			invalidateOwner(listener.player.getUUID());
-			int cancelled = coordinator.disconnect(listener.player.getUUID());
-			predictor.remove(listener.player.getUUID());
+	}
+
+	public void onDisconnect(MinecraftServer currentServer, ServerPlayer disconnected) {
+			ServerPlayer connected = currentServer.getPlayerList().getPlayer(disconnected.getUUID());
+			if (connected != null && connected != disconnected) { return; }
+			invalidateOwner(disconnected.getUUID());
+			int cancelled = coordinator.disconnect(disconnected.getUUID());
+			predictor.remove(disconnected.getUUID());
 			if (cancelled > 0) {
-				WorldgenAssist.LOGGER.info("[CAWG] worker.disconnect owner={} cancelled_jobs={}", listener.player.getUUID(), cancelled);
+				WorldgenAssist.LOGGER.info("[CAWG] worker.disconnect owner={} cancelled_jobs={}", disconnected.getUUID(), cancelled);
 			}
-		}));
-		net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, origin, destination) -> {
+	}
+
+	public void onDimensionChanged(ServerPlayer player, ResourceKey<Level> origin, ResourceKey<Level> destination) {
 			invalidateOwner(player.getUUID(), true);
 			predictor.remove(player.getUUID());
 			int cancelled = coordinator.cancelForDimensionChange(player.getUUID());
 			WorldgenAssist.LOGGER.info("[CAWG] worker.dimension_changed owner={} from={} to={} cancelled_jobs={}",
-				player.getUUID(), origin.dimension().identifier(), destination.dimension().identifier(), cancelled);
-		});
-		ServerLifecycleEvents.SERVER_STARTING.register(currentServer -> {
+				player.getUUID(), origin.identifier(), destination.identifier(), cancelled);
+	}
+
+	public void onServerStarting(MinecraftServer currentServer) {
 			demands = List.of();
 			ownerGenerations.clear();
 			server = currentServer;
 			contextFingerprints.clear();
 			clearResultState("server_starting");
-		});
-		ServerLifecycleEvents.START_DATA_PACK_RELOAD.register((currentServer, resourceManager) -> {
+	}
+
+	public void onDatapackReload() {
 			demands = List.of();
 			int cancelled = coordinator.cancelAllForReload();
 			contextFingerprints.clear();
@@ -208,8 +224,9 @@ public final class RemoteWorldgenManager {
 			if (cancelled > 0) {
 				WorldgenAssist.LOGGER.info("[CAWG] datapack_reload cancelled_jobs={}", cancelled);
 			}
-		});
-		ServerLifecycleEvents.SERVER_STOPPING.register(currentServer -> {
+	}
+
+	public void onServerStopping() {
 			demands = List.of();
 			ownerGenerations.clear();
 			int cancelled = coordinator.shutdown();
@@ -218,10 +235,13 @@ public final class RemoteWorldgenManager {
 			if (cancelled > 0) {
 				WorldgenAssist.LOGGER.info("[CAWG] server.shutdown cancelled_jobs={}", cancelled);
 			}
-		});
-		ServerLifecycleEvents.SERVER_STOPPED.register(currentServer -> server = null);
-		ServerTickEvents.START_SERVER_TICK.register(this::refreshDemands);
-		ServerTickEvents.END_SERVER_TICK.register(currentServer -> {
+	}
+
+	public void onServerStopped() { server = null; }
+
+	public void onStartServerTick(MinecraftServer currentServer) { refreshDemands(currentServer); }
+
+	public void onEndServerTick(MinecraftServer currentServer) {
 			refreshDemands(currentServer);
 			int expired = coordinator.expireTimedOut();
 			// Connection replacement and physical owner-state cleanup both run on
@@ -236,7 +256,6 @@ public final class RemoteWorldgenManager {
 			if (config.predictionEnabled() && ++predictionTicks % config.predictionIntervalTicks() == 0L) {
 				for (PlayerChunkDemand demand : demands) { predictForWorker(currentServer, demand.ownerId()); }
 			}
-		});
 	}
 
 	private void refreshDemands(MinecraftServer currentServer) {

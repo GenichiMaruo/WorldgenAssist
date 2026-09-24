@@ -1,6 +1,6 @@
 # World Generation Pipeline Notes
 
-## 26.3 source finding (2026-09-23; port incomplete)
+## 26.3 source and runtime finding (2026-09-24; port incomplete)
 
 In generated 26.3 source, `NoiseSettings` has only `minY`/`height`.
 `NoiseBasedChunkGenerator.buildTerrain` makes a
@@ -16,7 +16,20 @@ test matches vanilla's caching `sampleVolume` for one chunk each in Overworld,
 Nether and End, including every value computed as an independent vertical
 column. Single-point `sampleValue` was found to differ by one bit at some
 coordinates, so optional server validation uses column `sampleVolume` instead.
-No 26.3 assisted runtime comparison is verified.
+One earlier Fabric Overworld assisted/vanilla pair matched 962 shared NOISE
+digests with a remotely applied chunk, before the loader split. A selected
+installed-client pair after the split matched 951 shared digests and one
+remotely applied chunk. The new native
+Forge and NeoForge adapters have each applied validated remote chunks in an
+isolated development client/server run (18 and 17 results respectively).
+Subsequent same-seed Overworld development comparisons matched all 812 shared
+NOISE digests per native loader, including all 17 NeoForge and 14 Forge
+remotely applied chunks. Installed-artifact and remaining loader/dimension
+equivalence are release gates. Server-side aquifer, block writes, heightmaps and later
+stages are unchanged in the three adapters.
+A subsequent NeoForge transition pair matched 2,573 shared NOISE digests and
+53 remotely applied chunks across Overworld, Nether and End. Other loaders and
+arbitrary modded dimensions remain outside that result.
 See `PORT_26_3.md` for the migration gate. The sections below document the
 published 26.2 implementation.
 

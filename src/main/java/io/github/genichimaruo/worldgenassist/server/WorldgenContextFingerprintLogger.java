@@ -1,6 +1,6 @@
 package io.github.genichimaruo.worldgenassist.server;
 
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
@@ -19,8 +19,7 @@ public final class WorldgenContextFingerprintLogger {
 		return Boolean.getBoolean(SYSTEM_PROPERTY) || "true".equalsIgnoreCase(System.getenv(ENVIRONMENT_VARIABLE));
 	}
 
-	public static void register() {
-		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+	public static void log(MinecraftServer server) {
 			for (ServerLevel level : server.getAllLevels()) {
 				ChunkGenerator generator = level.getChunkSource().getGenerator();
 				if (!(generator instanceof NoiseBasedChunkGenerator noiseGenerator)) {
@@ -52,6 +51,5 @@ public final class WorldgenContextFingerprintLogger {
 					);
 				}
 			}
-		});
 	}
 }

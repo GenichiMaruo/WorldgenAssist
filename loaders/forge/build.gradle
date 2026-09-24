@@ -1,0 +1,74 @@
+plugins {
+    id 'java'
+    id 'net.minecraftforge.gradle' version '[7.0.17,8)'
+}
+
+version = '0.1.0-alpha.4+mc26.3'
+group = 'io.github.genichimaruo'
+base.archivesName = 'worldgen-assist-forge'
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+def root = file('../..').canonicalFile
+def sharedMain = new File(root, 'src/main/java').canonicalPath
+def sharedClient = new File(root, 'src/client/java').canonicalPath
+sourceSets.main.java {
+    srcDir new File(root, 'src/main/java')
+    srcDir new File(root, 'src/client/java')
+    exclude { entry ->
+        def path = entry.file.canonicalPath
+        if (!(path.startsWith(sharedMain) || path.startsWith(sharedClient))) return false
+        def name = entry.file.name
+        return name.startsWith('Fabric') || name == 'WorldgenAssistClient.java' ||
+            name == 'SettingsScreenSmoke.java' || name.contains('SeededLeaf') ||
+            name == 'SeedDependencyAnalyzer.java' ||
+            name == 'BlendedNoiseSeedTraceMixin.java' ||
+            name == 'NormalNoiseSeedTraceMixin.java' ||
+            name == 'ServerChunkCacheFixtureWaitMixin.java'
+    }
+}
+sourceSets.main.resources.srcDir new File(root, 'src/main/resources')
+sourceSets.main.resources.exclude 'fabric.mod.json'
+sourceSets.main.resources.exclude { entry ->
+    entry.file.canonicalPath.startsWith(new File(root, 'src/main/resources').canonicalPath) &&
+        entry.file.name == 'worldgen_assist.mixins.json'
+}
+
+minecraft {
+    runs {
+        configureEach {
+            args '--mixin.config=worldgen_assist.mixins.json'
+            def runRoot = project.findProperty('fixtureRunRoot')
+            if (runRoot != null) {
+                def rootPath = project.file('../..').canonicalFile.toPath()
+                def evidencePath = rootPath.resolve('test-artifacts')
+                def runPath = project.file(runRoot).canonicalFile.toPath()
+                if (!runPath.startsWith(evidencePath) || runPath == evidencePath)
+                    throw new GradleException('fixtureRunRoot must be a child of test-artifacts')
+                workingDir = runPath.toFile()
+            } else workingDir = layout.projectDirectory.dir('run')
+        }
+        register('client') {
+            if (project.hasProperty('fixtureRunRoot')) {
+                args '--username', 'ForgeOwner', '--quickPlayMultiplayer', '127.0.0.1:25585'
+            }
+        }
+        register('server') { args '--nogui' }
+    }
+}
+repositories {
+    minecraft.mavenizer(it)
+    maven fg.forgeMaven
+    maven fg.minecraftLibsMaven
+    mavenCentral()
+}
+dependencies {
+    implementation minecraft.dependency('net.minecraftforge:forge:26.3-66.0.3')
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.0'
+}
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+tasks.test { useJUnitPlatform() }
+tasks.jar {
+    manifest.attributes 'MixinConfigs': 'worldgen_assist.mixins.json'
+}

@@ -1,8 +1,5 @@
 package io.github.genichimaruo.worldgenassist;
 
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-
 import io.github.genichimaruo.worldgenassist.server.LocalWorldgenTaskBackend;
 import io.github.genichimaruo.worldgenassist.server.NoiseStageDigest;
 import io.github.genichimaruo.worldgenassist.server.NoiseStageDigestLogger;
@@ -14,25 +11,25 @@ import io.github.genichimaruo.worldgenassist.server.ServerTickBenchmarkLogger;
 import io.github.genichimaruo.worldgenassist.server.VanillaDelegatingWorldgenTaskBackend;
 import io.github.genichimaruo.worldgenassist.server.WorldgenContextFingerprintFactory;
 import io.github.genichimaruo.worldgenassist.server.WorldgenContextFingerprintLogger;
-import io.github.genichimaruo.worldgenassist.network.WorldgenPayloadTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class WorldgenAssist implements ModInitializer {
+public final class WorldgenAssist {
 	public static final String MOD_ID = "worldgen_assist";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-	@Override
-	public void onInitialize() {
+	private WorldgenAssist() {}
+
+	public static void initialize(WorldgenLoaderHooks hooks) {
 		if (unsupportedFixtureFlag("worldgen_assist.seeded_leaf.public_fixture", "WORLDGEN_ASSIST_SEEDED_LEAF_PUBLIC_FIXTURE")
 			|| unsupportedFixtureFlag("worldgen_assist.client.seeded_leaf.public_fixture", "WORLDGEN_ASSIST_CLIENT_SEEDED_LEAF_PUBLIC_FIXTURE")) {
 			throw new IllegalStateException("The public-seed transcript fixture is not available on Minecraft 26.3");
 		}
 		LOGGER.info("[CAWG] initialized");
-		WorldgenPayloadTypes.register();
+		hooks.registerPayloads();
 		RemoteWorldgenConfig remoteConfig = RemoteWorldgenConfig.current(io.github.genichimaruo.worldgenassist.server.ServerSettingsStore.load());
-		io.github.genichimaruo.worldgenassist.server.ServerSettingsMenu.register();
-		RemoteWorldgenManager.register(remoteConfig);
+		hooks.registerSettings();
+		hooks.registerRemote(remoteConfig);
 		if (remoteConfig.remoteExecutionEnabled()) {
 			LOGGER.warn(
 				"[CAWG] remote.enabled seed_disclosure={} max_in_flight={} timeout_ms={} cache_entries={} prediction={} prediction_interval_ticks={} prediction_lead_chunks={} validation_sample_cells={} property={} environment_variable={}",
@@ -58,8 +55,7 @@ public final class WorldgenAssist implements ModInitializer {
 		NoiseStageBackendConfig backendConfig = NoiseStageBackendConfig.current();
 		if (backendConfig.mode() == NoiseStageBackendConfig.Mode.LOCAL) {
 			LocalWorldgenTaskBackend backend = LocalWorldgenTaskBackend.instance();
-			ServerLifecycleEvents.SERVER_STARTING.register(server -> backend.start());
-			ServerLifecycleEvents.SERVER_STOPPED.register(server -> backend.close());
+			hooks.registerLocalBackend(backend);
 			LOGGER.info(
 				"[CAWG] backend.enabled stage=noise mode={} scheduler={} workers={} queue_per_worker={} queue_capacity={} property={} environment_variable={} workers_property={} workers_environment_variable={} queue_property={} queue_environment_variable={}",
 				backend.id(),
@@ -103,7 +99,7 @@ public final class WorldgenAssist implements ModInitializer {
 			}
 		}
 		if (ServerTickBenchmarkLogger.isEnabled()) {
-			ServerTickBenchmarkLogger.register(backendConfig);
+			hooks.registerTickBenchmark(backendConfig);
 			LOGGER.warn(
 				"[CAWG] tick_benchmark.enabled budget_ms={} property={} environment_variable={}",
 				ServerTickBenchmarkLogger.TICK_BUDGET_NANOS / 1_000_000.0,
@@ -112,7 +108,7 @@ public final class WorldgenAssist implements ModInitializer {
 			);
 		}
 		if (WorldgenContextFingerprintLogger.isEnabled()) {
-			WorldgenContextFingerprintLogger.register();
+			hooks.registerFingerprintLogger();
 			LOGGER.warn(
 				"[CAWG] context.fingerprint_enabled format={} property={} environment_variable={}",
 				WorldgenContextFingerprintFactory.FORMAT_VERSION,

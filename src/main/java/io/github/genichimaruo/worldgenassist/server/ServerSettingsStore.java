@@ -1,17 +1,17 @@
 package io.github.genichimaruo.worldgenassist.server;
 
 import io.github.genichimaruo.worldgenassist.WorldgenAssist;
+import io.github.genichimaruo.worldgenassist.WorldgenPlatform;
 import io.github.genichimaruo.worldgenassist.common.SettingsFile;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Properties;
-import net.fabricmc.loader.api.FabricLoader;
 
 public final class ServerSettingsStore {
 	private ServerSettingsStore() {}
 	public static Path path() {
-		return FabricLoader.getInstance().getConfigDir().resolve("worldgen-assist-server.properties");
+		return WorldgenPlatform.configDir().resolve("worldgen-assist-server.properties");
 	}
 	public static RemoteWorldgenConfig load() {
 		try { return decode(SettingsFile.read(path())); }

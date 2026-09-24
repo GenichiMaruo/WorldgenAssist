@@ -6,7 +6,8 @@
 		"ChunkAccessRemoteDensityMixin",
 		"ChunkStatusTasksMixin",
 		"NoiseBasedChunkGeneratorMixin",
-		"ServerChunkCacheRemoteWaitMixin263"
+		"ServerChunkCacheRemoteWaitMixin263",
+		"MinecraftServerReloadMixin263"
 	],
 	"injectors": {
 		"defaultRequire": 1

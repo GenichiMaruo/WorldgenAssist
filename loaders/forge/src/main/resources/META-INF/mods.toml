@@ -1,0 +1,20 @@
+modLoader="javafml"
+loaderVersion="[66,)"
+license="All Rights Reserved"
+[[mods]]
+modId="worldgen_assist"
+version="0.1.0-alpha.4+mc26.3"
+displayName="Worldgen Assist"
+description='''Experimental client-assisted world generation.'''
+[[dependencies.worldgen_assist]]
+modId="forge"
+mandatory=true
+versionRange="[66,)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.worldgen_assist]]
+modId="minecraft"
+mandatory=true
+versionRange="[26.3,26.4)"
+ordering="NONE"
+side="BOTH"

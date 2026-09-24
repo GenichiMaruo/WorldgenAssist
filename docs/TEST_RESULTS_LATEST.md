@@ -1,4 +1,64 @@
-# Test results — alpha.3, 2026-09-23
+# Test results — 26.3 port checkpoint and published 26.2 alpha.3
+
+On the 26.3 development branch, the Fabric, Forge and NeoForge projects now
+build on JDK 25.0.4. Isolated native dedicated servers generated spawn NOISE
+chunks with zero generation failures. Connected native NeoForge assistance
+applied 17 remote results, and Forge assistance applied 18, each with eight
+server validation cells per job. Evidence is under
+`test-artifacts/port26.3-neo-assisted-2/` and
+`test-artifacts/port26.3-forge-assisted-5/`. These are development launches,
+not installed-JAR assisted/vanilla digest comparisons. Forge's earlier
+connected runs found and then corrected a missing worker hello and its
+32,767-byte serverbound packet limit; failed attempts remain in their own
+fixture directories. Offline authentication/Realms errors remain in the
+client logs. The 26.3 line is not published and has no measured speedup.
+Two subsequent selected Overworld development-client pairs passed exact
+same-seed comparison: Forge 812/812 shared NOISE digests and 14/14 remotely
+applied chunks; NeoForge 812/812 and 17/17. Each server recorded 841 digests.
+The independent logs and generated comparison JSON are under
+`test-artifacts/port26.3-{forge,neo}-digest-{assisted,vanilla,comparison}/`.
+Those initial Overworld results do not cover installed native JARs, Nether,
+End or performance.
+One NeoForge dimension-transition assisted/vanilla pair then matched all
+2,573 shared NOISE digests across Overworld/Nether/End (841/866/866) and all
+53 remote-applied chunks (19/19/15), with zero comparison issues. See
+`test-artifacts/port26.3-neo-dim-comparison/` and the paired server logs.
+This is a development-client comparison, not an installed-JAR or performance
+result.
+A matching Forge dimension-transition pair then passed: 2,539 shared NOISE
+digests across Overworld/Nether/End (812/861/866) and all 52 remotely
+applied chunks (17/19/16) matched. Each server recorded 2,573 digests.
+Both servers stopped normally. See
+`test-artifacts/port26.3-forge-dim-comparison/` and paired server logs.
+This is likewise development-runtime evidence, not installed-JAR or
+performance evidence.
+A selected Fabric development-runtime dimension-transition pair also passed:
+2,539 shared NOISE digests across Overworld/Nether/End (812/861/866) and all
+49 remotely applied chunks (18/18/13) matched; each server recorded 2,573
+digests. Both servers stopped normally. Evidence is under
+`test-artifacts/port26.3-fabric-dim-{assisted,vanilla,comparison}/`.
+This does not replace installed-JAR testing.
+A selected 26.3 Fabric two-PC installed-JAR two-owner Overworld pair then
+passed: both owners' required remote chunks and all 1,803 shared NOISE
+digests matched vanilla, with `COMPLETE / PASS`, zero issues and safe cleanup
+in both cases. The JAR SHA-256 was
+`2D8BEEFE180C784E9CCCC866FBD45EF2146EE02EB217A4650805AACEA14B5894`.
+See `test-artifacts/port26.3-fabric-two-owner-comparison/analysis2/` and
+the paired scenario roots. Forge/NeoForge simultaneous-owner behavior remains
+to be checked.
+The selected 26.3 Fabric installed-client performance attempt and its one
+retry both stopped during client startup with native Windows code
+`0xC0000005`. Both cleaned up safely; neither is a throughput result.
+Evidence is under `test-artifacts/port26.3-fabric-performance-assisted{,-retry}/`.
+The Fabric adapter refactor then passed a selected two-PC installed-client
+Overworld pair on the exact rebuilt JAR SHA-256
+`2D8BEEFE180C784E9CCCC866FBD45EF2146EE02EB217A4650805AACEA14B5894`:
+951/951 shared NOISE digests and the one remotely applied chunk matched.
+The selected-pair analysis reports `COMPLETE / PASS`, zero issues, at
+`test-artifacts/port26.3-fabric-refactor-comparison/analysis/`.
+The initial vanilla attempt ended during resource loading with native Windows
+code `0xC0000005`; its cleanup was safe, and a single retry succeeded. These
+are not Nether/End or performance results.
 
 The published 26.2 alpha.3 evidence below is unchanged. On the incomplete
 26.3 development branch, two focused JUnit tests and `build` passed after the

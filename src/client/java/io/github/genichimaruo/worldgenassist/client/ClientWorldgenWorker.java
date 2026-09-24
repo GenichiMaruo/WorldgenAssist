@@ -11,15 +11,13 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.registries.VanillaRegistries;
 import net.minecraft.resources.Identifier;
 
 import io.github.genichimaruo.worldgenassist.WorldgenAssist;
+import io.github.genichimaruo.worldgenassist.WorldgenPlatform;
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityJob;
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityResult;
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityResultEnvelope;
@@ -31,7 +29,7 @@ import io.github.genichimaruo.worldgenassist.network.TerrainJobResultPayload;
 import io.github.genichimaruo.worldgenassist.network.WorkerAcceptedPayload;
 import io.github.genichimaruo.worldgenassist.network.WorkerHelloPayload;
 
-final class ClientWorldgenWorker {
+public final class ClientWorldgenWorker {
 	private static final int WORKER_THREADS = 1;
 	private static final String CORRUPT_RESULT_TEST_SYSTEM_PROPERTY = "worldgen_assist.client.test_corrupt_density";
 	private static final String CORRUPT_RESULT_TEST_ENVIRONMENT_VARIABLE = "WORLDGEN_ASSIST_CLIENT_TEST_CORRUPT_DENSITY";
@@ -51,13 +49,15 @@ final class ClientWorldgenWorker {
 	);
 	private final Map<UUID, Attempt> attempts = new ConcurrentHashMap<>();
 	private final HolderLookup.Provider worldgenRegistries;
+	private final ClientWorkerTransport transport;
 	private final boolean corruptResultsForAdversarialTest;
 	private volatile boolean accepted;
 
-	ClientWorldgenWorker() {
+	public ClientWorldgenWorker(ClientWorkerTransport transport) {
+		this.transport = transport;
 		long startedNanos = System.nanoTime();
 		this.worldgenRegistries = VanillaRegistries.createWorldLookup();
-		this.corruptResultsForAdversarialTest = FabricLoader.getInstance().isDevelopmentEnvironment()
+		this.corruptResultsForAdversarialTest = WorldgenPlatform.isDevelopment()
 			&& (Boolean.getBoolean(CORRUPT_RESULT_TEST_SYSTEM_PROPERTY)
 				|| "true".equalsIgnoreCase(System.getenv(CORRUPT_RESULT_TEST_ENVIRONMENT_VARIABLE)));
 		WorldgenAssist.LOGGER.info(
@@ -73,42 +73,34 @@ final class ClientWorldgenWorker {
 		}
 	}
 
-	void register() {
-		ClientPlayNetworking.registerGlobalReceiver(WorkerAcceptedPayload.TYPE, (payload, context) -> {
+	public void onAccepted(WorkerAcceptedPayload payload) {
 			accepted = payload.accepted();
 			WorldgenAssist.LOGGER.info(
 				"[CAWG] worker.handshake status={} max_in_flight={}",
 				payload.status(),
 				payload.maxInFlightJobs()
 			);
-		});
-		ClientPlayNetworking.registerGlobalReceiver(TerrainJobRequestPayload.TYPE, (payload, context) -> {
-			handleRequest(context.client(), payload.job());
-		});
-		ClientPlayNetworking.registerGlobalReceiver(TerrainJobCancelPayload.TYPE, (payload, context) -> {
-			cancel(payload);
-		});
-		ClientPlayConnectionEvents.JOIN.register((listener, sender, client) -> {
+	}
+
+	public void onJoin() {
 			accepted = false;
-			if (!ClientSettings.participation() || !ClientPlayNetworking.canSend(WorkerHelloPayload.TYPE)) {
+			boolean participation = ClientSettings.participation();
+			boolean channelPresent = transport.canSendHello();
+			if (!participation || !channelPresent) {
+				WorldgenAssist.LOGGER.info("[CAWG] worker.hello_skipped participation={} channel_present={}", participation, channelPresent);
 				return;
 			}
-			String implementationVersion = FabricLoader.getInstance()
-				.getModContainer(WorldgenAssist.MOD_ID)
-				.orElseThrow()
-				.getMetadata()
-				.getVersion()
-				.getFriendlyString();
-			sender.sendPacket(new WorkerHelloPayload(WorldgenProtocolVersion.CURRENT, WORKER_THREADS, implementationVersion));
-		});
-		ClientPlayConnectionEvents.DISCONNECT.register((listener, client) -> {
+			WorldgenAssist.LOGGER.info("[CAWG] worker.hello_sent protocol={}", WorldgenProtocolVersion.CURRENT);
+			transport.send(new WorkerHelloPayload(WorldgenProtocolVersion.CURRENT, WORKER_THREADS, WorldgenPlatform.version()));
+	}
+
+	public void onDisconnect() {
 			accepted = false;
 			attempts.values().forEach(Attempt::cancel);
 			attempts.clear();
-		});
 	}
 
-	private void handleRequest(Minecraft client, TerrainDensityJob job) {
+	public void handleRequest(Minecraft client, TerrainDensityJob job) {
 		if (!accepted || client.getConnection() == null || client.level == null) {
 			sendFailure(client, job, TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT);
 			return;
@@ -165,7 +157,7 @@ final class ClientWorldgenWorker {
 	private void finish(Minecraft client, UUID jobId, AtomicBoolean cancelled, TerrainJobResultPayload result) {
 		attempts.remove(jobId);
 		if (!cancelled.get() && client.getConnection() != null) {
-			ClientPlayNetworking.send(result);
+			transport.send(result);
 		}
 	}
 
@@ -183,11 +175,11 @@ final class ClientWorldgenWorker {
 
 	private void sendFailure(Minecraft client, TerrainDensityJob job, TerrainJobFailurePayload.Reason reason) {
 		if (client.getConnection() != null) {
-			ClientPlayNetworking.send(new TerrainJobFailurePayload(job.identity(), reason));
+			transport.send(new TerrainJobFailurePayload(job.identity(), reason));
 		}
 	}
 
-	private void cancel(TerrainJobCancelPayload payload) {
+	public void cancel(TerrainJobCancelPayload payload) {
 		Attempt attempt = attempts.remove(payload.identity().jobId());
 		if (attempt != null) {
 			attempt.cancel();

@@ -1,15 +1,15 @@
 package io.github.genichimaruo.worldgenassist.client;
 
 import io.github.genichimaruo.worldgenassist.WorldgenAssist;
+import io.github.genichimaruo.worldgenassist.WorldgenPlatform;
 import io.github.genichimaruo.worldgenassist.common.SettingsFile;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Properties;
-import net.fabricmc.loader.api.FabricLoader;
 
 final class ClientSettings {
 	private ClientSettings() {}
-	private static Path path() { return FabricLoader.getInstance().getConfigDir().resolve("worldgen-assist-client.properties"); }
+	private static Path path() { return WorldgenPlatform.configDir().resolve("worldgen-assist-client.properties"); }
 	static boolean participation() {
 		try {
 			String value = SettingsFile.read(path()).getProperty("participation", "true");

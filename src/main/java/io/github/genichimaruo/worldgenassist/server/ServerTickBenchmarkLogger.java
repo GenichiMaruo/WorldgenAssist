@@ -5,9 +5,6 @@ import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-
 import io.github.genichimaruo.worldgenassist.WorldgenAssist;
 
 public final class ServerTickBenchmarkLogger {
@@ -42,23 +39,20 @@ public final class ServerTickBenchmarkLogger {
 		return Boolean.getBoolean(SYSTEM_PROPERTY) || "true".equalsIgnoreCase(System.getenv(ENVIRONMENT_VARIABLE));
 	}
 
-	public static void register(NoiseStageBackendConfig backendConfig) {
+	public static ServerTickBenchmarkLogger create(NoiseStageBackendConfig backendConfig) {
 		Objects.requireNonNull(backendConfig, "backendConfig");
 		Supplier<BackendSaturation> saturation = backendConfig.mode() == NoiseStageBackendConfig.Mode.LOCAL
 			? () -> BackendSaturation.from(LocalWorldgenTaskBackend.instance().sampleSaturationAndResetPeaks())
 			: BackendSaturation::unavailable;
-		ServerTickBenchmarkLogger benchmark = new ServerTickBenchmarkLogger(
+		return new ServerTickBenchmarkLogger(
 			System::nanoTime,
 			WorldgenStageMetrics.NOISE::snapshot,
 			saturation,
 			ServerTickBenchmarkLogger::log
 		);
-		ServerLifecycleEvents.SERVER_STARTING.register(server -> benchmark.reset());
-		ServerTickEvents.START_SERVER_TICK.register(server -> benchmark.onStartTick());
-		ServerTickEvents.END_SERVER_TICK.register(server -> benchmark.onEndTick());
 	}
 
-	void reset() {
+	public void reset() {
 		tick = 0L;
 		started = false;
 		startedNanos = 0L;
@@ -67,14 +61,14 @@ public final class ServerTickBenchmarkLogger {
 		backendAtPreviousEnd = null;
 	}
 
-	void onStartTick() {
+	public void onStartTick() {
 		tick++;
 		startedNanos = nanoTime.getAsLong();
 		noiseAtStart = noiseMetrics.get();
 		started = true;
 	}
 
-	void onEndTick() {
+	public void onEndTick() {
 		if (!started) {
 			return;
 		}

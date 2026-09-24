@@ -193,6 +193,10 @@ public final class RemoteJobCoordinator {
 			: status;
 	}
 
+	public synchronized PendingTerrainJobRegistry.ResponseStatus inspectResult(UUID ownerId, TerrainJobIdentity identity) {
+		return pendingJobs.inspectResponse(ownerId, identity);
+	}
+
 	public synchronized PendingTerrainJobRegistry.ResponseStatus beginResult(UUID ownerId, TerrainJobIdentity identity) {
 		PendingTerrainJobRegistry.ResponseStatus status = pendingJobs.inspectResponse(ownerId, identity);
 		if (status == PendingTerrainJobRegistry.ResponseStatus.ACCEPTED && !decodingResults.add(identity.jobId())) {

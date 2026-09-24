@@ -14,7 +14,7 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"io.github.genichimaruo.worldgenassist.WorldgenAssist"
+			"io.github.genichimaruo.worldgenassist.FabricWorldgenAssist"
 		],
 		"client": [
 			"io.github.genichimaruo.worldgenassist.client.WorldgenAssistClient"

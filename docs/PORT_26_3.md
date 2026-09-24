@@ -1,9 +1,118 @@
 # Minecraft 26.3 and Forge/NeoForge port — in progress
 
-This branch is **not a working release**. The published 26.2 alpha.3, its tag,
+This branch is **not yet a release**. The published 26.2 alpha.3, its tag,
 maintenance branch and JAR remain unchanged. The 26.3 working version is
-`0.1.0-alpha.4+mc26.3`; no compatibility claim is made until loader-specific
-builds and runtime comparisons pass.
+`0.1.0-alpha.4+mc26.3`; loader-specific builds and initial assisted launches
+now work. Selected matched output checks pass across all three vanilla
+dimensions on each loader, while native installed-JAR, lifecycle and
+performance acceptance checks remain before publication.
+
+## Current implementation checkpoint (2026-09-24)
+
+The shared 26.3 density calculation, owner coordinator, server validation,
+settings and Mixins now build in three separate projects: Fabric, Forge and
+NeoForge. Native Forge and NeoForge metadata, packet adapters, client menu
+hooks and lifecycle adapters are present. All three builds passed on JDK
+25.0.4. The public-seed transcript fixture remains unavailable on 26.3.
+
+Isolated native dedicated servers booted with the mod and generated at least
+25 spawn NOISE chunks with zero generation failures. With a development client
+connected on loopback and trusted raw-seed assistance explicitly enabled,
+NeoForge applied 17 remote results with eight server-side validation cells
+each (`test-artifacts/port26.3-neo-assisted-2/`). Forge applied 18 remote
+results under the same policy (`test-artifacts/port26.3-forge-assisted-5/`).
+Both routes retain local fallback on disconnect. Offline client
+authentication/Realms errors remain.
+
+Two further selected Overworld comparisons now establish exact output for
+these development runs. Forge matched all 812 shared NOISE digests and all
+14 remotely applied chunks; NeoForge matched all 812 shared digests and all
+17 remotely applied chunks. Each assisted and vanilla server recorded 841
+NOISE digests; the 29 nonshared coordinates per pair came from different
+randomized player spawn positions. The comparisons were read from completed
+server logs using `scripts/Compare-LocalLoaderDigests.ps1`, with results in
+`test-artifacts/port26.3-forge-digest-comparison/result.json` and
+`test-artifacts/port26.3-neo-digest-comparison/result.json`. These are
+same-seed development-client runs, not installed JAR tests, other dimension
+coverage or a performance measurement.
+
+A selected NeoForge dimension-transition pair subsequently used one connected
+owner and the same seed/teleport coordinates in Overworld, Nether and End.
+All 2,573 shared NOISE digests matched (841/866/866), including all 53
+remote-applied chunks (19/19/15). Both servers stopped normally; the
+comparison and original logs are under `test-artifacts/port26.3-neo-dim-*`.
+This verifies the vanilla dimension-transition path for NeoForge's development
+runtime, not arbitrary modded dimensions, a long session or an installed JAR.
+
+A matching Forge development-runtime dimension-transition pair also passed.
+Of 2,573 assisted and 2,573 vanilla NOISE digests, 2,539 coordinates were
+shared and all matched. All 52 remotely applied chunks matched vanilla
+(Overworld 17, Nether 19, End 16); the per-dimension shared counts were
+812/861/866. Both servers stopped normally after loopback RCON save/stop.
+The original logs and comparator JSON are under
+`test-artifacts/port26.3-forge-dim-{assisted,vanilla,comparison}/`. The
+different Overworld and Nether coordinate sets reflect player/spawn timing;
+this result does not establish installed-JAR or arbitrary modded-dimension
+coverage.
+
+The Fabric loader split was then checked with the exact rebuilt 26.3 JAR
+SHA-256 `2D8BEEFE180C784E9CCCC866FBD45EF2146EE02EB217A4650805AACEA14B5894`
+in the authorized isolated two-PC installed-client harness. The selected
+Overworld assisted and vanilla results share the same source manifest, match
+all 951 shared NOISE digests, and include one matching remotely applied chunk.
+The selected-pair analysis is `COMPLETE / PASS`, zero issues, at
+`test-artifacts/port26.3-fabric-refactor-comparison/analysis/`.
+The first vanilla attempt exited during client resource loading with native
+Windows code `0xC0000005`; its cleanup succeeded and it is retained at
+`test-artifacts/port26.3-fabric-refactor-vanilla/`. The one retry succeeded
+under `test-artifacts/port26.3-fabric-refactor-vanilla-retry/`.
+
+A separate selected Fabric development-runtime dimension-transition pair
+completed with one connected owner across Overworld, Nether and End. Each
+server recorded 2,573 NOISE digests. All 2,539 shared coordinates matched
+(812/861/866 by dimension), as did all 49 remotely applied chunks
+(18/18/13). Both servers stopped normally after loopback RCON save/stop.
+The original logs and comparison JSON are under
+`test-artifacts/port26.3-fabric-dim-{assisted,vanilla,comparison}/`. This
+resolves the selected 26.3 Fabric dimension comparison in the development
+runtime; the earlier installed-client Nether startup crashes remain separate
+and this is not installed-JAR evidence.
+
+The exact rebuilt Fabric 26.3 JAR was also used in a selected, isolated
+two-PC two-owner Overworld pair. Both owners received and completed their
+own required remote chunk. Its matched vanilla partner produced the same
+two chunk digests and all 1,803 shared NOISE digests, with zero analysis
+issues. Both scenarios report `success=true` and `cleanup_safe=true` using
+JAR SHA-256 `2D8BEEFE180C784E9CCCC866FBD45EF2146EE02EB217A4650805AACEA14B5894`.
+The paired analysis is `COMPLETE / PASS` at
+`test-artifacts/port26.3-fabric-two-owner-comparison/analysis2/`; the
+individual cases are `test-artifacts/port26.3-fabric-two-owner-{assisted,vanilla}/`.
+This verifies simultaneous owners for Fabric under the selected conditions,
+not yet the native Forge/NeoForge adapters or arbitrary server populations.
+
+The first selected 26.3 Fabric performance condition did not yield a
+measurement: the installed Windows client exited during startup with native
+code `0xC0000005` in both the initial run and its one retry. Both scenarios
+report `cleanup_safe=true`; evidence is under
+`test-artifacts/port26.3-fabric-performance-assisted{,-retry}/`.
+These failures neither measure assisted throughput nor establish a mod
+crash cause. A separately reliable client launch or controlled development
+runtime is needed before drawing a 26.3 performance conclusion.
+
+Forge's 26.3 serverbound custom payload limit is 32,767 bytes. A full
+compressed density result in the first connected run was about 184 KB and
+caused a decoder disconnect. Forge now sends results in bounded 24,000-byte
+fragments, with bounded per-owner/server reassembly and expiry before normal
+server result validation. Its login/disconnect notification uses two small
+client Mixins at generated 26.3 targets, because the first native launch did
+not deliver the Forge login event to the worker. The corrected native run
+completed 18 results with no decoder disconnect. NeoForge uses its native
+payload path without fragmentation.
+
+`MinecraftServer.reloadResources` is intercepted at entry on all loaders to
+cancel pending jobs before registry replacement; this target was checked in
+the generated 26.3 Fabric, Forge and NeoForge sources. A runtime reload test
+has not yet been counted.
 
 ## Verified dependencies (2026-09-24)
 
@@ -17,25 +126,26 @@ builds and runtime comparisons pass.
   2026-09-24. Its patched generated game source was inspected for the two
   `ServerChunkCache` waits, `ChunkStatusTasks.buildTerrain`, and
   `NoiseBasedChunkGenerator.doFill`/`sampleVolume`; relevant call shapes remain,
-  but this is **not** a WorldgenAssist NeoForge build or Mixin launch.
+  This initial template check preceded the native WorldgenAssist build and
+  Mixin launch recorded above.
 
 The official Forge `26.3-66.0.3` MDK archive was downloaded for inspection;
 its SHA-1 `a9446ea6c6ebf1e0cce86c6f65b642e11fa954c7` matches the Forge
 download page. Its build uses ForgeGradle `[7.0.17,8)` and Java 25. The
 official NeoForge 26.3 ModDevGradle template uses plugin `2.0.147`, Java 25
 and originally pinned `26.3.0.10-beta`. Inspection copies are under ignored
-`.gradle/loader-inspect/`; these are upstream templates, **not** working
-WorldgenAssist loader projects.
+`.gradle/loader-inspect/`; these are upstream templates, not the native
+WorldgenAssist loader projects now under `loaders/`.
 
 The isolated official Forge MDK also built successfully with JDK 25.0.4 and
 Forge `26.3-66.0.3` on 2026-09-24. Its injected source JAR is in the
-ForgeGradle Mavenizer cache. The Forge and NeoForge builds each compiled only
-the upstream example mod; neither compiled WorldgenAssist classes. Both
+ForgeGradle Mavenizer cache. These initial Forge and NeoForge template builds
+compiled only the upstream example mod. Both
 loaders' patched 26.3 source retains `ChunkStatusTasks.buildTerrain`,
 `NoiseBasedChunkGenerator.doFill`'s
 `DensitySampler.Bound.sampleVolume(DensityVolume)` returning
-`ScopedDensityBuffer`, and the two `ServerChunkCache` managed waits. Actual
-Mixin application and remote semantics still require native launches.
+`ScopedDensityBuffer`, and the two `ServerChunkCache` managed waits. Native
+Mixin application and remote execution were subsequently checked above.
 
 The loader network APIs differ materially: Forge `ChannelBuilder` builds a
 `PayloadChannel` with a play protocol and per-payload handlers, while NeoForge
@@ -145,36 +255,32 @@ artifact. Enabling either old public-fixture flag now fails initialization.
 its installed-client harness still pins 26.2 binaries. Port the harness before
 using it as 26.3 evidence.
 
-## Loader split to implement
+## Loader split now implemented
 
-The job identity, bounded codecs, density calculation, eligibility, result
-cache, coordinator and chunk Mixins can be shared only after compilation and
-target verification against each loader's 26.3 game source. Fabric-specific
-calls currently live in `WorldgenAssist`, `WorldgenPayloadTypes`,
-`RemoteWorldgenManager.registerHandlers`, `FabricRemoteJobSender`,
-`ServerSettingsMenu`, the two server loggers, `ServerSettingsStore`,
-`ClientWorldgenWorker`, `ClientSettings`, and `WorldgenSettingsScreen`.
-Extract lifecycle callbacks, payload registration/send, config directory,
-mod-version lookup and options-screen entry into loader adapters. Forge and
-NeoForge then need independent metadata, development builds, Mixin startup,
-dedicated-server/client launches and assisted/vanilla comparisons. The
-templates alone cannot satisfy this gate.
+`WorldgenAssist` initializes loader-neutral computation and policy through
+`WorldgenLoaderHooks`. Fabric, Forge and NeoForge supply separate payload,
+configuration, lifecycle and client-menu bindings. The coordinator, bounded
+codecs, density calculation, eligibility and chunk Mixins remain shared.
+Forge alone fragments large serverbound results to respect its native packet
+limit. The native projects have separate build metadata and output JARs;
+their artifacts are not interchangeable. Initial dedicated-server/client
+launches and selected Overworld digest comparisons passed as recorded above.
+Exact installed-artifact comparisons remain.
 
 ## Remaining acceptance gates
 
-1. Extend the first successful 26.3 Overworld owner-bound full-volume
-   assisted/vanilla pair to Nether, End and concurrent owners as affected
-   functionality requires. Cancellation and disconnect still need focused
-   runtime evidence. Keep raw-seed disclosure separately opt-in.
-2. Extract loader-neutral computation/job/validation from Fabric lifecycle and
-   packet registration. Supply separate Fabric, Forge and NeoForge adapters,
-   metadata and exact artifacts. Confirm every Mixin target against each
-   loader's 26.3 generated source and launch a client/dedicated server per
-   loader. Do not label a Fabric JAR as Forge/NeoForge compatible.
-3. Run only focused tests and affected vanilla/assisted cases until a broad
-   change warrants more. Measure performance anew; 26.2 results do not
-   predict 26.3 or another loader. Update install guides only after builds
-   and runtime evidence exist. Do not publish from this branch meanwhile.
+1. Check simultaneous owners on the native Forge and NeoForge adapters.
+   Fabric's selected installed two-PC two-owner pair passed. All three loaders have
+   matched development-runtime results across all three vanilla dimensions.
+   The two earlier Fabric installed-client Nether startups crashed before
+   the dimension transition and do not count as installed-JAR evidence.
+2. Check native cancel/disconnect, datapack reload and settings permission
+   paths. Confirm the Forge result-fragment path rejects malformed or stale
+   fragments and releases partial assemblies on disconnect.
+3. Port the installed-client validation harness to exact 26.3 artifacts,
+   package the three loaders with installation guidance, and run a small
+   matched 26.3 performance comparison. Avoid a speed claim until measured;
+   do not publish the incomplete branch meanwhile.
 
 Official references: [Minecraft 26.3](https://www.minecraft.net/en-us/article/minecraft-java-edition-26-3),
 [Fabric porting notes](https://fabricmc.net/2026/09/15/263.html),

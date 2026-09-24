@@ -1,6 +1,6 @@
 # Mixin Targets
 
-## 26.3 port finding (2026-09-23; Fabric candidate only)
+## 26.3 port finding (2026-09-24; three loader builds)
 
 Generated 26.3 `NoiseChunk` no longer owns interpolation cells or exposes
 `advanceCellX`, `selectCellYZ`, or `DensityFunction.fillArray`. The published
@@ -14,8 +14,11 @@ field, and a `doFill` `sampleVolume` WrapOperation to substitute a bounded
 float buffer. The field is cleared when generation completes. A default-off
 Fabric dedicated-server smoke reached 25 spawn NOISE chunks without a Mixin
 error. A 2026-09-24 installed-client Overworld assisted/vanilla pair now passed
-one required applied-chunk digest and 962 shared NOISE digests. Nether, End,
-multi-owner, Forge and NeoForge runtime remain unverified.
+one required applied-chunk digest and 962 shared NOISE digests. Nether, End
+and simultaneous-owner 26.3 runtime remain unverified; the native loader
+Overworld results follow below.
+After the loader split, a selected installed Fabric 26.3 Overworld pair on
+the rebuilt JAR matched 951 shared digests and one remotely applied chunk.
 
 Generated 26.3 `ServerChunkCache.getChunk` and `getChunkFuture` still call
 `MainThreadExecutor.managedBlock(BooleanSupplier)` at lines 163 and 216.
@@ -34,9 +37,31 @@ The official Forge `26.3-66.0.3` injected source and NeoForge
 builds on 2026-09-24. Forge keeps the two managed waits at lines 163/221;
 NeoForge keeps them at 169/223. Both retain
 `ChunkStatusTasks.buildTerrain` and the `doFill` `sampleVolume` call returning
-`ScopedDensityBuffer`. This confirms the source-level call shapes only.
-Neither WorldgenAssist Mixin config has been applied under those loaders, and
-their patched source may change surrounding chunk lifecycle behavior.
+`ScopedDensityBuffer`. Native dedicated-server launches applied the shared
+chunk Mixins and generated at least 25 spawn NOISE chunks on each loader.
+Subsequent client/server runs applied 17 NeoForge and 18 Forge remote results
+with eight sampled validation cells per job. Separate same-seed Overworld
+development comparisons then matched 812 shared NOISE digests per loader,
+including all 17 NeoForge and 14 Forge remotely applied chunks. See
+`PORT_26_3.md`. A further NeoForge transition run matched all 2,573 shared
+Overworld/Nether/End digests and 53 remotely applied chunks. Installed-artifact
+and Forge/Fabric other-dimension checks remain.
+
+Generated Fabric, Forge and NeoForge 26.3 `MinecraftServer.reloadResources`
+sources all expose the same reload entry method. `MinecraftServerReloadMixin263`
+invalidates pending jobs at HEAD, before datapack registry replacement. Its
+target compiled on all loaders; a live reload cancellation case remains.
+
+Forge's generated 26.3 `ClientPacketListener.handleLogin(ClientboundLoginPacket)`
+sets up the client level and player before returning. The Forge-specific
+`ForgeClientPacketListenerMixin` notifies the worker at TAIL because the native
+client event did not deliver the hello in the first connected runs.
+`Minecraft.disconnect(Screen,boolean,boolean)` is the verified teardown path;
+`ForgeMinecraftDisconnectMixin` cancels worker attempts at HEAD. These two
+Mixins are listed only in the Forge client section of its own Mixin config.
+The subsequent native Forge run sent a hello and applied 18 results without a
+packet decoder disconnect. Reconnect and disconnect lifecycle still need a
+targeted runtime check.
 
 ## Alpha.3 source checks (2026-09-15, runtime pending)
 

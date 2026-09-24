@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "minVersion": "0.8.7",
+  "package": "io.github.genichimaruo.worldgenassist.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ChunkAccessRemoteDensityMixin",
+    "ChunkStatusTasksMixin",
+    "NoiseBasedChunkGeneratorMixin",
+    "ServerChunkCacheRemoteWaitMixin263",
+    "MinecraftServerReloadMixin263"
+  ],
+  "client": [
+    "ForgeClientPacketListenerMixin",
+    "ForgeMinecraftDisconnectMixin"
+  ],
+  "injectors": { "defaultRequire": 1 }
+}

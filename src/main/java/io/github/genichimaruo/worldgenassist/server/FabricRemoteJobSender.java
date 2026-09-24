@@ -11,10 +11,10 @@ import net.minecraft.server.level.ServerPlayer;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobCancelPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobRequestPayload;
 
-final class FabricRemoteJobSender implements RemoteJobSender {
+public final class FabricRemoteJobSender implements RemoteJobSender {
 	private final Supplier<MinecraftServer> server;
 
-	FabricRemoteJobSender(Supplier<MinecraftServer> server) {
+	public FabricRemoteJobSender(Supplier<MinecraftServer> server) {
 		this.server = Objects.requireNonNull(server, "server");
 	}
 

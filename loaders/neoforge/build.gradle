@@ -1,0 +1,66 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.147'
+}
+
+version = '0.1.0-alpha.4+mc26.3'
+group = 'io.github.genichimaruo'
+base.archivesName = 'worldgen-assist-neoforge'
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+def root = file('../..').canonicalFile
+def sharedMain = new File(root, 'src/main/java').canonicalPath
+def sharedClient = new File(root, 'src/client/java').canonicalPath
+
+sourceSets.main.java {
+    srcDir new File(root, 'src/main/java')
+    srcDir new File(root, 'src/client/java')
+    exclude { entry ->
+        def path = entry.file.canonicalPath
+        if (!(path.startsWith(sharedMain) || path.startsWith(sharedClient))) return false
+        def name = entry.file.name
+        return name.startsWith('Fabric') || name == 'WorldgenAssistClient.java' ||
+            name == 'SettingsScreenSmoke.java' || name.contains('SeededLeaf') ||
+            name == 'SeedDependencyAnalyzer.java' ||
+            name == 'BlendedNoiseSeedTraceMixin.java' ||
+            name == 'NormalNoiseSeedTraceMixin.java' ||
+            name == 'ServerChunkCacheFixtureWaitMixin.java'
+    }
+}
+sourceSets.main.resources.srcDir new File(root, 'src/main/resources')
+sourceSets.main.resources.exclude 'fabric.mod.json'
+
+neoForge {
+    version = '26.3.0.13-beta'
+    runs {
+        configureEach {
+            def runRoot = project.findProperty('fixtureRunRoot')
+            if (runRoot != null) {
+                def rootPath = project.file('../..').canonicalFile.toPath()
+                def evidencePath = rootPath.resolve('test-artifacts')
+                def runPath = project.file(runRoot).canonicalFile.toPath()
+                if (!runPath.startsWith(evidencePath) || runPath == evidencePath)
+                    throw new GradleException('fixtureRunRoot must be a child of test-artifacts')
+                gameDirectory = runPath.toFile()
+            }
+        }
+        server { server(); programArgument '--nogui' }
+        client {
+            client()
+            if (project.hasProperty('fixtureRunRoot')) {
+                programArguments.addAll '--username', 'NeoOwner', '--quickPlayMultiplayer', '127.0.0.1:25585'
+            }
+        }
+    }
+    mods {
+        worldgen_assist { sourceSet(sourceSets.main) }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+// ModDevGradle 2.0.147 requests a Java 21 asset downloader even though 26.3
+// development requires Java 25. Run that tool with the verified Gradle JDK.
+tasks.named('downloadAssets') {
+    javaExecutable.set(new File(System.getProperty('java.home'),
+        'bin/' + (System.getProperty('os.name').toLowerCase(java.util.Locale.ROOT).contains('win') ? 'java.exe' : 'java')).absolutePath)
+}

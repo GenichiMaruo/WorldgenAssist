@@ -4,9 +4,9 @@ import io.github.genichimaruo.worldgenassist.network.SettingsPayload;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import java.util.function.Consumer;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 
 /** All policy access is checked on the authoritative server thread. Saves need JVM restart. */
 public final class ServerSettingsMenu {
@@ -16,19 +16,19 @@ public final class ServerSettingsMenu {
 		ServerSettingsStore::save
 	);
 	private ServerSettingsMenu() {}
-	public static void register() {
-		ServerPlayNetworking.registerGlobalReceiver(SettingsPayload.TYPE, (payload, context) -> context.server().execute(() -> {
-			var player = context.player();
-			if (context.server().getPlayerList().getPlayer(player.getUUID()) != player) return;
+	public static void handleRequest(MinecraftServer server, ServerPlayer player, SettingsPayload payload,
+		Consumer<SettingsPayload> send) {
+		server.execute(() -> {
+			if (server.getPlayerList().getPlayer(player.getUUID()) != player) return;
 			if (payload.action() != SettingsPayload.READ && payload.action() != SettingsPayload.SAVE) return;
 			SettingsPayload limited = rateLimit(player.getUUID(), System.nanoTime(), payload);
-			if (limited != null) { ServerPlayNetworking.send(player, limited); return; }
+			if (limited != null) { send.accept(limited); return; }
 			SettingsPayload response = DECISIONS.decide(player.createCommandSourceStack().permissions(), payload);
-			if (response != null) ServerPlayNetworking.send(player, response);
-		}));
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> server.execute(() -> LAST_REQUEST.remove(handler.player.getUUID())));
-		ServerLifecycleEvents.SERVER_STOPPED.register(server -> { LAST_REQUEST.clear(); DECISIONS.reset(); });
+			if (response != null) send.accept(response);
+		});
 	}
+	public static void onDisconnect(UUID owner) { LAST_REQUEST.remove(owner); }
+	public static void onServerStopped() { LAST_REQUEST.clear(); DECISIONS.reset(); }
 	static boolean mayManage(net.minecraft.server.permissions.PermissionSet permissions) {
 		return ServerSettingsDecisionService.mayManage(permissions);
 	}
