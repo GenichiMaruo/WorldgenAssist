@@ -12,7 +12,7 @@ if(-not $output.StartsWith($evidenceRoot,[StringComparison]::OrdinalIgnoreCase))
 New-Item -ItemType Directory -Force -Path $output|Out-Null
 $profile=Join-Path $output 'settings-client'
 New-Item -ItemType Directory -Force -Path $profile|Out-Null
-@('onboardAccessibility:false','skipMultiplayerWarning:true','tutorialStep:none','maxFps:30','enableVsync:false','soundCategory_master:0.0')|Set-Content -LiteralPath (Join-Path $profile 'options.txt')
+@('version:5023','onboardAccessibility:false','skipMultiplayerWarning:true','tutorialStep:none','maxFps:30','enableVsync:false','soundCategory_master:0.0')|Set-Content -LiteralPath (Join-Path $profile 'options.txt')
 try{
     $start=[Diagnostics.ProcessStartInfo]::new();$start.FileName="$env:SystemRoot\System32\cmd.exe"
     foreach($argument in @('/d','/c',(Join-Path $workspace 'gradlew.bat'),'runSettingsSmokeClient',"-PfixtureRunRoot=$output",'--no-daemon','--console=plain')){[void]$start.ArgumentList.Add($argument)}

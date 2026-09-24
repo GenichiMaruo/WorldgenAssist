@@ -12,6 +12,20 @@ connected runs found and then corrected a missing worker hello and its
 32,767-byte serverbound packet limit; failed attempts remain in their own
 fixture directories. Offline authentication/Realms errors remain in the
 client logs. The 26.3 line is not published and has no measured speedup.
+A selected 26.3 Fabric batch run on the rebuilt JAR SHA-256
+`0607E86B096CF92A0588BF2E57AA5D2789D2B5663B0F0C232F3B7D48504CBAB9`
+passed an installed-client Overworld pair: one remote-applied chunk and all
+941 shared NOISE digests matched, analysis `COMPLETE / PASS`, zero issues,
+safe cleanup (`test-artifacts/validation-matrix-20260925-000313-104/`).
+Its selected performance pair yielded three assisted measurements, but the
+vanilla client exited at startup with native Windows code `0xC0000005` in
+both the batch and one retry. Analysis remains incomplete, with no paired
+performance conclusion; see
+`test-artifacts/validation-matrix-20260925-000527-927/` and
+`test-artifacts/port26.3-performance-vanilla-retry-batch/`.
+The 26.3 Fabric settings-menu batch entry separately passed with four
+screenshots, persistence, disclosure gate and safe cleanup at
+`test-artifacts/port26.3-settings-batch-entry/`.
 Two subsequent selected Overworld development-client pairs passed exact
 same-seed comparison: Forge 812/812 shared NOISE digests and 14/14 remotely
 applied chunks; NeoForge 812/812 and 17/17. Each server recorded 841 digests.

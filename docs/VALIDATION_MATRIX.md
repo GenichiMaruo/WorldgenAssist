@@ -1,12 +1,13 @@
 # Validation matrix
 
-On the 26.3 development branch, the individual Fabric installed-client
-scenario runner has been ported and one selected Overworld assisted/vanilla
-pair passed on 2026-09-24. The batch runner still contains 26.2-only
-public-fixture cases, so `Run-ValidationMatrix.ps1 -Execute` explicitly refuses
-26.3 and its runtime capability remains disabled in
-`scripts/validation-capabilities.json`. The cases and prior full-matrix results
-below describe the published 26.2 line.
+On the 26.3 development branch, the Fabric installed-client batch runner now
+accepts the authorized isolated two-PC fixture. Its default plan contains ten
+scenarios: paired assisted/vanilla correctness in each vanilla dimension for
+one owner, an Overworld two-owner pair, and one matched Overworld performance
+profile. `-FullMatrix` explicitly selects the 60-case cross-product. A
+`-CaseId` selects only its affected pair. This is Fabric evidence; native
+Forge/NeoForge installed-JAR validation remains separate. The old 26.2
+public-seed transcript regression is always reported as `SKIPPED` on 26.3.
 
 For fixes, select only affected runtime cases with `-CaseId`; their opposite
 vanilla/assisted partners are included automatically. This mode rebuilds the
@@ -42,11 +43,17 @@ running: every child process writes its own log under one timestamped evidence
 directory, and the runner emits one completion line with `summary.json` and
 `summary.md`. Do not poll the console or use an AI loop to tail the logs.
 
-For a deliberately selected full pass, run one command from the repository root:
+For the curated 26.3 pass, run one command from the repository root:
 
 ```powershell
 .\scripts\Run-ValidationMatrix.ps1 -Execute
 ```
+
+Add `-FullMatrix` only when the complete cross-product is justified. The
+batch finishes every eligible independent case, then writes the final
+summary and comparison; do not tail each test while it runs. Native Windows
+client startup has failed intermittently with `0xC0000005`; such cases remain
+failures with their own evidence and cleanup status.
 
 The runner takes an exclusive `test-artifacts/validation-matrix.lock`. A second
 invocation refuses to start, so Gradle, server and client streams cannot race.
@@ -55,7 +62,7 @@ never deletes an earlier run.
 
 ## What the plan covers
 
-The generated `matrix-plan.json` contains the fixed test matrix:
+With `-FullMatrix`, the generated `matrix-plan.json` contains:
 
 | Area | Values |
 |---|---|
@@ -91,15 +98,8 @@ performance cases `SKIPPED` if cleanup safety is not proved. JUnit/build and
 the final aggregation are still allowed to finish. A normal scenario failure
 with an explicit cleanup proof does not prevent independent scenarios.
 
-The public Overworld transcript fixture runs by default and remains separate
-from the all-dimension trusted-raw matrix. To omit it explicitly:
-
-```powershell
-.\scripts\Run-ValidationMatrix.ps1 -Execute -SkipPublicFixtureRegression
-```
-
-It is a regression check for the committed public fixture only. It does not
-claim support for Nether or End and is never counted as their result.
+The 26.2 public Overworld transcript fixture is not ported. The 26.3 batch
+records it as `SKIPPED`; it is never counted as a trusted-raw result.
 
 Before the network matrix, `Run-SettingsSmoke.ps1` launches one isolated
 development client. It enters the settings screen from vanilla Options,
@@ -114,8 +114,8 @@ shrinking the matrix.
 
 ## Capability contract
 
-The checked-in `scripts/validation-capabilities.json` is the only switch that
-makes the all-dimension runtime/performance cases eligible. Its absence or an
+The checked-in `scripts/validation-capabilities.json` enables the selected
+26.3 Fabric runtime/performance cases. Its absence or an
 invalid declaration produces `SKIPPED` rows with the exact reason; it never
 turns unavailable dimensions into a pass. The build/test cases remain eligible.
 

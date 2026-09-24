@@ -58,10 +58,11 @@ not silently turn a historical checkpoint into a current test result.
 
 Run **only the tests affected by the change**. For a focused code edit, run its
 relevant JUnit class(es) and the build tasks needed to produce or verify the
-artifact. For a runtime/Mixin change, add the smallest affected vanilla and
-assisted scenarios with `Run-ValidationMatrix.ps1 -CaseId` **after its
-installed-client harness is ported to 26.3**; the current capability flag is
-off because the runner pins 26.2. Use the full matrix only when a
+artifact. For a Fabric runtime/Mixin change, use the smallest affected
+vanilla/assisted pair with `Run-ValidationMatrix.ps1 -Execute -CaseId`.
+Its 26.3 installed-client batch is enabled; the default is a curated
+ten-scenario plan, and `-FullMatrix` opts into the 60-case cross-product.
+Use the full matrix only when a
 broad change or unresolved evidence gap actually requires it. Documentation
 and release packaging alone do not require another Minecraft runtime matrix.
 Reuse successful evidence only with its original source, harness, and JAR

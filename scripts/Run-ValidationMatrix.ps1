@@ -2,8 +2,8 @@
 param(
     [switch] $Execute,
     [string[]] $CaseId = @(),
+    [switch] $FullMatrix,
     [string] $CapabilityManifest = (Join-Path $PSScriptRoot 'validation-capabilities.json'),
-    [switch] $SkipPublicFixtureRegression,
     [switch] $SkipPerformance,
     [ValidateRange(60, 7200)]
     [int] $BuildTimeoutSeconds = 1800,
@@ -19,8 +19,8 @@ $ErrorActionPreference = 'Stop'
 
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $minecraftTarget = [regex]::Match((Get-Content -LiteralPath (Join-Path $workspace 'gradle.properties') -Raw), '(?m)^minecraft_version=([^\r\n]+)\s*$')
-if ($Execute -and ($minecraftTarget.Success -eq $false -or $minecraftTarget.Groups[1].Value.Trim() -ne '26.2')) {
-    throw 'The installed-client validation matrix is pinned to Minecraft 26.2; port its assets, loader and public-fixture cases before executing it on another version.'
+if ($Execute -and ($minecraftTarget.Success -eq $false -or $minecraftTarget.Groups[1].Value.Trim() -ne '26.3')) {
+    throw 'This validation matrix is pinned to the Minecraft 26.3 Fabric installed-client fixture.'
 }
 $artifactsRoot = Join-Path $workspace 'test-artifacts'
 $runRoot = Join-Path $artifactsRoot ('validation-matrix-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff'))
@@ -28,7 +28,6 @@ $runLockPath = Join-Path $artifactsRoot 'validation-matrix.lock'
 $jdkPath = 'C:\Program Files\Java\jdk-25.0.4'
 $scenarioRunner = Join-Path $PSScriptRoot 'Run-WorldgenScenario.ps1'
 $settingsSmokeRunner = Join-Path $PSScriptRoot 'Run-SettingsSmoke.ps1'
-$publicFixtureRunner = Join-Path $PSScriptRoot 'Run-SeededLeafRuntimeFixture.ps1'
 $comparisonRunner = Join-Path $PSScriptRoot 'Compare-WorldgenScenarioMatrix.ps1'
 $pwshCommand = Get-Command 'pwsh.exe' -ErrorAction SilentlyContinue
 $localPwsh = if ($null -eq $pwshCommand) { $null } else { $pwshCommand.Source }
@@ -310,15 +309,28 @@ foreach ($dimension in @('overworld', 'the_nether', 'the_end')) {
 
 $selection = @($CaseId | ForEach-Object { $_ -split ',' } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique)
 $targeted = $selection.Count -gt 0
+if ($targeted -and $FullMatrix) { throw '-CaseId and -FullMatrix are mutually exclusive.' }
 if ($targeted) {
     foreach ($id in $selection) { if ($id -notin @($scenarioPlan | ForEach-Object { $_.id })) { throw "Unknown scenario CaseId: $id" } }
     # Correctness/performance claims need an independent vanilla/assisted pair.
     $selection = @($selection + @($selection | ForEach-Object { if ($_ -match '-assisted-') { $_ -replace '-assisted-', '-vanilla-' } else { $_ -replace '-vanilla-', '-assisted-' } }) | Sort-Object -Unique)
     $scenarioPlan = @($scenarioPlan | Where-Object { $_.id -in $selection })
+} elseif (-not $FullMatrix) {
+    # The default batch covers each vanilla dimension, two owners, and one
+    # measured profile without running every cross-product condition.
+    $defaultIds = @(
+        'correctness-overworld-assisted-p1-direct',
+        'correctness-the_nether-assisted-p1-direct',
+        'correctness-the_end-assisted-p1-direct',
+        'correctness-overworld-assisted-p2-cache',
+        'performance-overworld-assisted-p1-cache_prediction_validation'
+    )
+    $selected = @($defaultIds + @($defaultIds | ForEach-Object { $_ -replace '-assisted-', '-vanilla-' }))
+    $scenarioPlan = @($scenarioPlan | Where-Object { $_.id -in $selected })
 }
 $plan = [ordered]@{
     schema = 'worldgen-assist.validation-matrix-plan.v1'
-    scope = if ($targeted) { 'selected paired scenarios; not a full regression run' } else { 'full matrix' }
+    scope = if ($targeted) { 'selected paired scenarios; not a full regression run' } elseif ($FullMatrix) { 'full matrix' } else { 'curated 26.3 baseline; not a full cross-product' }
     generated_at = (Get-Date).ToString('o')
     execution_note = 'Every scenario is isolated. Runtime/performance success requires scenario-result.json; unimplemented capability remains SKIPPED.'
     build_cases = @(
@@ -330,7 +342,7 @@ $plan = [ordered]@{
 }
 
 if (-not $Execute) {
-    Write-Output 'Plan only. Re-run with -Execute after all-dimension capability and runners are available.'
+    Write-Output 'Plan only. Re-run with -Execute for the selected 26.3 cases.'
     $plan | ConvertTo-Json -Depth 12
     exit 0
 }
@@ -390,27 +402,7 @@ try {
         $results += $processResult
     }
 
-    if (-not $SkipPublicFixtureRegression -and -not $targeted) {
-        if (-not $runtimeDependenciesReady) {
-            $results += New-SkippedCase -Id 'public-fixture-regression' -Reason $runtimeDependencyReason -PlanCase $null
-        } elseif (-not $runtimeSafe) {
-            $results += New-SkippedCase -Id 'public-fixture-regression' -Reason 'A prior runtime case left cleanup/port safety unproven.' -PlanCase $null
-        } elseif ([string]::IsNullOrWhiteSpace($localPwsh)) {
-            $results += New-SkippedCase -Id 'public-fixture-regression' -Reason 'PowerShell 7 (pwsh.exe) is required for local fixture execution.' -PlanCase $null
-        } elseif (Test-Path -LiteralPath $publicFixtureRunner -PathType Leaf) {
-            foreach ($mode in @('vanilla', 'assisted', 'timeout', 'malformed', 'pending-reload', 'pending-disconnect')) {
-                if (-not $runtimeSafe) {
-                    $results += New-SkippedCase -Id "public-fixture-$mode" -Reason 'A prior runtime case left cleanup/port safety unproven.' -PlanCase $null
-                    continue
-                }
-                $fixtureResult = Invoke-OwnedProcess -CaseId "public-fixture-$mode" -FileName $localPwsh -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $publicFixtureRunner, '-Mode', $mode) -WorkingDirectory $workspace -TimeoutSeconds $ScenarioTimeoutSeconds -CaptureJunit $false
-                if ($fixtureResult.timed_out -or -not $fixtureResult.cleanup_safe) { $runtimeSafe = $false }
-                $results += $fixtureResult
-            }
-        } else { $results += New-SkippedCase -Id 'public-fixture-regression' -Reason "Runner is absent: $publicFixtureRunner" -PlanCase $null }
-    } else {
-        $results += New-SkippedCase -Id 'public-fixture-regression' -Reason 'Public fixture regression was not selected for this run.' -PlanCase $null
-    }
+    $results += New-SkippedCase -Id 'public-fixture-regression' -Reason 'The 26.2 public-seed transcript fixture is not ported to 26.3.' -PlanCase $null
 
     $aggregationReason = Test-AggregationCapability -Capabilities $capabilities
     if ($null -ne $aggregationReason) {

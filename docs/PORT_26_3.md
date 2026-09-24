@@ -274,9 +274,28 @@ The old 26.2 JUnit sources and public-seed transcript fixture remain on the
 published maintenance line. This branch compiles its new targeted tests from
 `src/portTest/java` and omits the obsolete fixture classes from the Fabric
 artifact. Enabling either old public-fixture flag now fails initialization.
-`scripts/validation-capabilities.json` disables the existing matrix because
-its installed-client harness still pins 26.2 binaries. Port the harness before
-using it as 26.3 evidence.
+The Fabric installed-client batch matrix has been ported to 26.3. Its default
+plan selects ten principal paired scenarios; `-CaseId` narrows to one affected
+pair and `-FullMatrix` opts into all 60 combinations. It writes one final
+summary after the selected work ends. The unavailable 26.2 public-seed
+transcript regression remains an explicit `SKIPPED` row. A selected one-owner
+Overworld correctness pair completed through this batch on the rebuilt Fabric
+JAR SHA-256 `0607E86B096CF92A0588BF2E57AA5D2789D2B5663B0F0C232F3B7D48504CBAB9`:
+941 shared digests and one required remote-applied chunk matched, with
+`COMPLETE / PASS`, zero issues and safe cleanup. Evidence is under
+`test-artifacts/validation-matrix-20260925-000313-104/`.
+The batch's isolated Fabric settings-menu entry also passed on 26.3 with
+four screenshots, persistence, separate seed-disclosure gate and safe cleanup
+(`test-artifacts/port26.3-settings-batch-entry/`).
+
+The selected performance pair at
+`test-artifacts/validation-matrix-20260925-000527-927/` completed three
+assisted measured repeats, but its vanilla client exited during resource
+loading with native Windows code `0xC0000005`. One isolated vanilla-only
+retry at `test-artifacts/port26.3-performance-vanilla-retry-batch/` failed
+the same way. Cleanup was safe in all three scenarios. The batch correctly
+reported failed/incomplete comparison, so no paired 26.3 performance ratio
+or speed claim is available from these runs.
 
 ## Loader split now implemented
 
