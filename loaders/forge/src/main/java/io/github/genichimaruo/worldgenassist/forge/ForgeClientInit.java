@@ -3,6 +3,7 @@ package io.github.genichimaruo.worldgenassist.forge;
 import io.github.genichimaruo.worldgenassist.client.ClientWorkerTransport;
 import io.github.genichimaruo.worldgenassist.client.ClientWorldgenWorker;
 import io.github.genichimaruo.worldgenassist.client.WorldgenSettingsScreen;
+import io.github.genichimaruo.worldgenassist.client.SettingsScreenSmoke;
 import io.github.genichimaruo.worldgenassist.network.SettingsPayload;
 import io.github.genichimaruo.worldgenassist.network.ForgeResultFragmentPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobResultPayload;
@@ -13,6 +14,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.event.TickEvent;
 
 public final class ForgeClientInit {
     private static ClientWorldgenWorker worker;
@@ -20,6 +22,8 @@ public final class ForgeClientInit {
 
     static void register() {
         WorldgenSettingsScreen.installTransport(ForgeClientInit::canSend, ForgeClientInit::send);
+        SettingsScreenSmoke smoke = SettingsScreenSmoke.createIfEnabled();
+        if (smoke != null) TickEvent.ClientTickEvent.Post.BUS.addListener(event -> smoke.tick(Minecraft.getInstance()));
         ScreenEvent.Init.Post.BUS.addListener(event -> {
             if (event.getScreen() instanceof OptionsScreen)
                 event.addListener(WorldgenSettingsScreen.optionsButton(event.getScreen()));

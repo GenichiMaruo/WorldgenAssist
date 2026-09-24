@@ -9,7 +9,8 @@ public final class WorldgenAssistClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		FabricPayloadRegistration.register();
 		FabricSettingsScreenEvents.register();
-		SettingsScreenSmoke.registerIfEnabled();
+		SettingsScreenSmoke smoke = SettingsScreenSmoke.createIfEnabled();
+		if (smoke != null) net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(smoke::tick);
 		FabricClientWorkerEvents.register();
 	}
 }

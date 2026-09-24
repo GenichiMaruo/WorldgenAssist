@@ -50,6 +50,11 @@ The selected 26.3 Fabric installed-client performance attempt and its one
 retry both stopped during client startup with native Windows code
 `0xC0000005`. Both cleaned up safely; neither is a throughput result.
 Evidence is under `test-artifacts/port26.3-fabric-performance-assisted{,-retry}/`.
+NeoForge's isolated settings-menu smoke passed with four screenshots,
+persistence and a separate seed-disclosure gate, exiting normally. The Forge
+menu-only client did not reach the title screen in two attempts, so its UI
+result remains unverified. Shared 26.3 settings permission/revision tests
+passed, as did Forge's focused fragment-reassembly/owner-cleanup tests.
 The Fabric adapter refactor then passed a selected two-PC installed-client
 Overworld pair on the exact rebuilt JAR SHA-256
 `2D8BEEFE180C784E9CCCC866FBD45EF2146EE02EB217A4650805AACEA14B5894`:

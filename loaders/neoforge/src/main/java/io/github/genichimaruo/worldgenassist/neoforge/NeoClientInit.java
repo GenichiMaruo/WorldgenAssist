@@ -3,6 +3,7 @@ package io.github.genichimaruo.worldgenassist.neoforge;
 import io.github.genichimaruo.worldgenassist.client.ClientWorkerTransport;
 import io.github.genichimaruo.worldgenassist.client.ClientWorldgenWorker;
 import io.github.genichimaruo.worldgenassist.client.WorldgenSettingsScreen;
+import io.github.genichimaruo.worldgenassist.client.SettingsScreenSmoke;
 import io.github.genichimaruo.worldgenassist.network.SettingsPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobCancelPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobRequestPayload;
@@ -13,6 +14,7 @@ import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
@@ -26,6 +28,8 @@ final class NeoClientInit {
     static void register(IEventBus modBus) {
         modBus.addListener(NeoClientInit::registerNetwork);
         WorldgenSettingsScreen.installTransport(() -> canSend(SettingsPayload.TYPE.id()), ClientPacketDistributor::sendToServer);
+        SettingsScreenSmoke smoke = SettingsScreenSmoke.createIfEnabled();
+        if (smoke != null) NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> smoke.tick(Minecraft.getInstance()));
         NeoForge.EVENT_BUS.addListener((ScreenEvent.Init.Post event) -> {
             if (event.getScreen() instanceof OptionsScreen)
                 event.addListener(WorldgenSettingsScreen.optionsButton(event.getScreen()));

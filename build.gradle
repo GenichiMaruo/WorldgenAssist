@@ -64,6 +64,14 @@ sourceSets.client.java.exclude '**/*SeededLeaf*.java'
 // The 26.2 JUnit sources exercise APIs removed in 26.3. Keep them on the
 // published maintenance branch; this branch uses a small 26.3-focused suite.
 sourceSets.test.java.setSrcDirs(['src/portTest/java'])
+// Reuse the narrow permission/revision tests from the 26.2 suite: these
+// policy APIs are shared by every 26.3 loader and did not change shape.
+sourceSets.test.java.srcDir('src/test/java')
+sourceSets.test.java.exclude { entry ->
+	def legacyRoot = file('src/test/java').canonicalPath
+	entry.file.isFile() && entry.file.canonicalPath.startsWith(legacyRoot) &&
+		!(entry.file.name in ['ServerSettingsMenuTest.java', 'ServerSettingsDecisionServiceTest.java'])
+}
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"

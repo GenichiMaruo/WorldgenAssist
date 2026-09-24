@@ -19,7 +19,7 @@ sourceSets.main.java {
         if (!(path.startsWith(sharedMain) || path.startsWith(sharedClient))) return false
         def name = entry.file.name
         return name.startsWith('Fabric') || name == 'WorldgenAssistClient.java' ||
-            name == 'SettingsScreenSmoke.java' || name.contains('SeededLeaf') ||
+            name.contains('SeededLeaf') ||
             name == 'SeedDependencyAnalyzer.java' ||
             name == 'BlendedNoiseSeedTraceMixin.java' ||
             name == 'NormalNoiseSeedTraceMixin.java' ||
@@ -49,7 +49,13 @@ minecraft {
         }
         register('client') {
             if (project.hasProperty('fixtureRunRoot')) {
-                args '--username', 'ForgeOwner', '--quickPlayMultiplayer', '127.0.0.1:25585'
+                if (project.hasProperty('fixtureSettingsSmoke')) {
+                    jvmArgs '-Dworldgen_assist.settings_smoke=true',
+                        "-Dworldgen_assist.settings_smoke_root=${new File(root, 'test-artifacts').absolutePath}"
+                    args '--username', 'SettingsSmoke'
+                } else {
+                    args '--username', 'ForgeOwner', '--quickPlayMultiplayer', '127.0.0.1:25585'
+                }
             }
         }
         register('server') { args '--nogui' }

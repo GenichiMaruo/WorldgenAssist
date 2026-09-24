@@ -1,12 +1,10 @@
 package io.github.genichimaruo.worldgenassist.client;
 
+import io.github.genichimaruo.worldgenassist.WorldgenPlatform;
 import io.github.genichimaruo.worldgenassist.server.RemoteWorldgenConfig;
 import io.github.genichimaruo.worldgenassist.server.ServerSettingsStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.screen.v1.Screens;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.components.Button;
@@ -18,17 +16,16 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 
 /** Explicit development-only smoke fixture, restricted to the isolated Gradle fixture directory. */
-final class SettingsScreenSmoke {
+public final class SettingsScreenSmoke {
 	private int step;
 	private int ticks;
 	private final long deadline = System.nanoTime() + 120_000_000_000L;
 	private SettingsScreenSmoke() {}
-	static void registerIfEnabled() {
-		if (!FabricLoader.getInstance().isDevelopmentEnvironment() || !Boolean.getBoolean("worldgen_assist.settings_smoke")) return;
-		SettingsScreenSmoke smoke = new SettingsScreenSmoke();
-		ClientTickEvents.END_CLIENT_TICK.register(smoke::tick);
+	public static SettingsScreenSmoke createIfEnabled() {
+		return WorldgenPlatform.isDevelopment() && Boolean.getBoolean("worldgen_assist.settings_smoke")
+			? new SettingsScreenSmoke() : null;
 	}
-	private void tick(Minecraft client) {
+	public void tick(Minecraft client) {
 		Path directory = client.gameDirectory.toPath().toAbsolutePath().normalize();
 		Path evidenceRoot = Path.of(System.getProperty("worldgen_assist.settings_smoke_root", "")).toAbsolutePath().normalize();
 		if (!directory.getFileName().toString().equals("settings-client")
@@ -93,7 +90,7 @@ final class SettingsScreenSmoke {
 	}
 	private static Component label(String key, Object... args) { return Component.translatable("worldgen_assist.settings." + key, args); }
 	private static void press(Screen screen, Component label) {
-		Button button = Screens.getWidgets(screen).stream().filter(w -> w instanceof Button && w.getMessage().getString().equals(label.getString()))
+		Button button = screen.children().stream().filter(w -> w instanceof Button && ((Button) w).getMessage().getString().equals(label.getString()))
 			.map(w -> (Button)w).findFirst().orElseThrow(() -> new IllegalStateException("Missing button: " + label.getString()));
 		if (!button.active) throw new IllegalStateException("Button is disabled: " + label.getString());
 		button.onPress(new KeyEvent(257, 0, 0));

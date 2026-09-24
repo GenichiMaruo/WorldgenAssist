@@ -54,6 +54,29 @@ final class ForgeResultAssemblerTest {
             ForgeResultAssembler.accept(owner, parts.getFirst()).encodedDensities());
     }
 
+    @Test void disconnectDropsOnlyThatOwnersPartialAssembly() {
+        List<ForgeResultFragmentPayload> parts = ForgeResultFragmentPayload.split(result());
+        UUID disconnected = UUID.randomUUID();
+        UUID retained = UUID.randomUUID();
+        assertNull(ForgeResultAssembler.accept(disconnected, parts.getFirst()));
+        assertNull(ForgeResultAssembler.accept(retained, parts.getFirst()));
+        ForgeResultAssembler.removeOwner(disconnected);
+
+        assertNull(ForgeResultAssembler.accept(disconnected, parts.get(1)));
+        assertArrayEquals(resultBytes(parts),
+            ForgeResultAssembler.accept(retained, parts.get(1)).encodedDensities());
+        assertArrayEquals(resultBytes(parts),
+            ForgeResultAssembler.accept(disconnected, parts.getFirst()).encodedDensities());
+    }
+
+    private static byte[] resultBytes(List<ForgeResultFragmentPayload> parts) {
+        byte[] bytes = new byte[parts.getFirst().totalBytes()];
+        for (ForgeResultFragmentPayload part : parts)
+            System.arraycopy(part.bytes(), 0, bytes, part.partIndex() * ForgeResultFragmentPayload.MAX_PART_BYTES,
+                part.bytes().length);
+        return bytes;
+    }
+
     private static TerrainDensityResultEnvelope result() {
         byte[] raw = new byte[32_000];
         for (int index = 0; index < raw.length; index++) raw[index] = (byte)(index * 31);

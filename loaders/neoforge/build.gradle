@@ -20,7 +20,7 @@ sourceSets.main.java {
         if (!(path.startsWith(sharedMain) || path.startsWith(sharedClient))) return false
         def name = entry.file.name
         return name.startsWith('Fabric') || name == 'WorldgenAssistClient.java' ||
-            name == 'SettingsScreenSmoke.java' || name.contains('SeededLeaf') ||
+            name.contains('SeededLeaf') ||
             name == 'SeedDependencyAnalyzer.java' ||
             name == 'BlendedNoiseSeedTraceMixin.java' ||
             name == 'NormalNoiseSeedTraceMixin.java' ||
@@ -48,7 +48,13 @@ neoForge {
         client {
             client()
             if (project.hasProperty('fixtureRunRoot')) {
-                programArguments.addAll '--username', 'NeoOwner', '--quickPlayMultiplayer', '127.0.0.1:25585'
+                if (project.hasProperty('fixtureSettingsSmoke')) {
+                    jvmArguments.addAll '-Dworldgen_assist.settings_smoke=true',
+                        "-Dworldgen_assist.settings_smoke_root=${new File(root, 'test-artifacts').absolutePath}"
+                    programArguments.addAll '--username', 'SettingsSmoke'
+                } else {
+                    programArguments.addAll '--username', 'NeoOwner', '--quickPlayMultiplayer', '127.0.0.1:25585'
+                }
             }
         }
     }

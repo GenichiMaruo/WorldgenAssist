@@ -15,6 +15,15 @@ NeoForge. Native Forge and NeoForge metadata, packet adapters, client menu
 hooks and lifecycle adapters are present. All three builds passed on JDK
 25.0.4. The public-seed transcript fixture remains unavailable on 26.3.
 
+After the settings-smoke refactor, the three candidate builds completed
+sequentially with the selected tests. Current uninstalled JAR SHA-256 values
+are Fabric `0607E86B096CF92A0588BF2E57AA5D2789D2B5663B0F0C232F3B7D48504CBAB9`,
+Forge `B9D3159F8D26BE7D8EDBF3F126E447BE6099CD64C85995CE0F622F9C937E4937`,
+and NeoForge `437E4CA29E6C6055AF0372F724F87D6F1CD8BCC91FBEA3F0493589390BA56FB6`.
+Each JAR excludes the unported public-seed fixture classes. The earlier
+installed-client evidence below belongs to its recorded Fabric JAR hash;
+it does not automatically validate this rebuilt artifact.
+
 Isolated native dedicated servers booted with the mod and generated at least
 25 spawn NOISE chunks with zero generation failures. With a development client
 connected on loopback and trusted raw-seed assistance explicitly enabled,
@@ -113,6 +122,20 @@ payload path without fragmentation.
 cancel pending jobs before registry replacement; this target was checked in
 the generated 26.3 Fabric, Forge and NeoForge sources. A runtime reload test
 has not yet been counted.
+
+The development-only settings-screen smoke fixture was made loader-neutral.
+NeoForge's isolated client completed the full offline menu sequence with four
+screenshots, persistence and the separate disclosure gate, then exited
+normally (`test-artifacts/port26.3-neo-settings/`). The shared fixture and
+native adapters compile on all three loaders. Forge's menu-only development
+launch did not reach the title screen after resource loading in multiple
+isolated attempts, including one with copied known-good options; the test
+flag and an initial client tick were confirmed in a diagnostic run. A later
+connected Forge client joined its loopback server, but the automated menu
+sequence still produced no result; no Forge UI pass is counted. An
+installed-artifact or manually observed UI check remains. Two shared 26.3 permission/revision JUnit
+classes were selected from the older suite and passed; Forge's fragment
+assembler JUnit checks also cover owner-specific partial cleanup.
 
 ## Verified dependencies (2026-09-24)
 
