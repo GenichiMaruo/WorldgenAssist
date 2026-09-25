@@ -9,7 +9,8 @@ do not offer its artifacts for normal installation, tag or publish them.
 Isolated installation inside the authorized test fixture is permitted. Its dependency versions are in
 `gradle.properties`; see `PORT_26_3.md` for source-verified breaking changes.
 Keep dependency and protocol changes explicit. Use
-`scripts/Get-WorldgenArtifact.ps1` to select exact JAR names. Published tags,
+`scripts/Get-WorldgenArtifact.ps1` (with `-Loader` for native builds) to select
+exact JAR names. Published tags,
 releases, and assets are immutable.
 
 For Minecraft internals, inspect the generated source for the **target version** before changing

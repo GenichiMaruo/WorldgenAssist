@@ -37,9 +37,9 @@ if((Get-FileHash -LiteralPath $assetIndex -Algorithm SHA1).Hash -ne $mojang.asse
 }
 $client=Join-Path $profile 'client'
 New-Item -ItemType Directory -Force -Path $client,(Join-Path $client 'mods'),(Join-Path $client 'natives')|Out-Null
-$modVersion=((Get-Content -LiteralPath (Join-Path $workspace 'gradle.properties')|Where-Object {$_ -match '^mod_version='}) -split '=',2)[1].Trim()
-$mod=Join-Path $workspace "loaders/$Loader/build/libs/worldgen-assist-$Loader-$modVersion.jar"
-$modCopy=Join-Path $client "mods/worldgen-assist-$Loader-$modVersion.jar"
+$artifact=& (Join-Path $PSScriptRoot 'Get-WorldgenArtifact.ps1') -Workspace $workspace -Loader $Loader
+$mod=$artifact.Path
+$modCopy=Join-Path $client ('mods/'+$artifact.FileName)
 Copy-Item -LiteralPath $mod -Destination $modCopy
 $modHash=(Get-FileHash -LiteralPath $mod -Algorithm SHA256).Hash
 if((Get-FileHash -LiteralPath $modCopy -Algorithm SHA256).Hash -ne $modHash){throw 'Copied mod JAR SHA-256 mismatch'}

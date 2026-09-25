@@ -9,6 +9,14 @@ profile. `-FullMatrix` explicitly selects the 60-case cross-product. A
 Forge/NeoForge installed-JAR validation remains separate. The old 26.2
 public-seed transcript regression is always reported as `SKIPPED` on 26.3.
 
+For a focused installed Forge/NeoForge session, use
+`scripts/Run-InstalledNativeLoaderScenario.ps1` with the exact isolated
+installer profile, verified assets root, fresh output directory, loader,
+assisted/vanilla mode, and one or two players. It checks the installed server
+and client JAR hashes against the exact build, binds the server to loopback,
+and writes `result.json` after cleanup. This is a targeted native check,
+not part of the Fabric batch or evidence of a complete native matrix.
+
 For fixes, select only affected runtime cases with `-CaseId`; their opposite
 vanilla/assisted partners are included automatically. This mode rebuilds the
 exact JAR without running JUnit, settings smoke or public-fixture regression.

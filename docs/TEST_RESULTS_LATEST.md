@@ -34,6 +34,16 @@ installed loader profiles, exact candidate JARs, server/client logs and
 comparison JSON are under `test-artifacts/port26.3-{neo,forge}-installed/`.
 This is one-owner correctness evidence, not a performance or native
 simultaneous-owner result. Offline authentication/Realms warnings remain.
+A focused installed Forge session subsequently registered two distinct owners
+and applied one remote NOISE result for each while both were connected. The
+scenario result was successful with safe cleanup and exact Forge JAR SHA-256
+`B9D3159F8D26BE7D8EDBF3F126E447BE6099CD64C85995CE0F622F9C937E4937`;
+see `test-artifacts/port26.3-forge-two-owner-console/`. It was not a paired
+vanilla digest or performance run. Three NeoForge two-owner attempts stopped
+during Windows client resource loading with native `0xC0000005` (twice before
+the first join, once before the second join); all cleaned up safely and do
+not verify its simultaneous-owner route. Installed Forge settings smoke did
+not complete its screen sequence, and its experimental code was reverted.
 Two subsequent selected Overworld development-client pairs passed exact
 same-seed comparison: Forge 812/812 shared NOISE digests and 14/14 remotely
 applied chunks; NeoForge 812/812 and 17/17. Each server recorded 841 digests.

@@ -5,8 +5,9 @@ maintenance branch and JAR remain unchanged. The 26.3 working version is
 `0.1.0-alpha.4+mc26.3`; loader-specific builds and initial assisted launches
 now work. Selected matched output checks pass across all three vanilla
 dimensions on each loader and installed-JAR Overworld pairs pass for all three
-loaders. Native simultaneous-owner, lifecycle and performance acceptance
-checks remain before publication.
+loaders. Forge also passed a two-owner installed-JAR session. NeoForge
+simultaneous-owner, lifecycle and performance acceptance checks remain before
+publication.
 
 ## Current implementation checkpoint (2026-09-25)
 
@@ -317,6 +318,31 @@ the Forge assisted client exited after disconnect and the vanilla client
 closed normally. Offline authentication/Realms warnings are present, and
 these pairs do not measure throughput or verify native simultaneous owners.
 
+A focused installed Forge two-owner session then passed with the same
+candidate JAR SHA-256 `B9D3159F8D26BE7D8EDBF3F126E447BE6099CD64C85995CE0F622F9C937E4937`.
+Both distinct owners registered and each had one remotely applied NOISE chunk
+while both clients remained connected. The server recorded 857 NOISE digests,
+zero Mixin/runtime exception matches, and stopped normally; both clients
+exited with code zero. The machine-readable result reports `success=true`,
+`cleanup_safe=true`, and loopback-only execution at
+`test-artifacts/port26.3-forge-two-owner-console/`. The selected scenario
+runner is `scripts/Run-InstalledNativeLoaderScenario.ps1`; it keeps each run
+in a fresh evidence directory. This is a two-owner application check, not a
+matched vanilla digest comparison or a measured throughput result.
+
+NeoForge's selected installed two-owner attempts did not reach a comparable
+result. The first two clients exited during resource loading with native
+Windows code `0xC0000005` before joining; a later run joined the first owner,
+then its second client exited with the same code before joining. All three
+reported safe cleanup. Their evidence is under
+`test-artifacts/port26.3-neo-two-owner-{assisted,assisted-retry,console}/`.
+These attempts do not establish a NeoForge MOD crash cause or simultaneous
+owner support. Forge's menu-only installed-client smoke remained on a
+loading/connection screen; the connected smoke joined its loopback server but
+still produced no settings result. Forge UI is therefore unverified. The
+experimental smoke code was reverted and the candidate JAR hashes above were
+restored.
+
 ## Loader split now implemented
 
 `WorldgenAssist` initializes loader-neutral computation and policy through
@@ -331,8 +357,9 @@ The selected exact installed-artifact Overworld comparisons are recorded above.
 
 ## Remaining acceptance gates
 
-1. Check simultaneous owners on the native Forge and NeoForge adapters.
-   Fabric's selected installed two-PC two-owner pair passed. All three loaders have
+1. Check simultaneous owners on the native NeoForge adapter.
+   Fabric's selected installed two-PC and Forge's local installed two-owner
+   sessions passed. All three loaders have
    matched development-runtime results across all three vanilla dimensions.
    The two earlier Fabric installed-client Nether startups crashed before
    the dimension transition and do not count as installed-JAR evidence.
