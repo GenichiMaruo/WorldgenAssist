@@ -25,6 +25,11 @@ and NeoForge `437E4CA29E6C6055AF0372F724F87D6F1CD8BCC91FBEA3F0493589390BA56FB6`.
 Each JAR excludes the unported public-seed fixture classes. The earlier
 installed-client evidence below belongs to its recorded Fabric JAR hash;
 it does not automatically validate this rebuilt artifact.
+Forge and NeoForge now also produce versioned sources JARs. Their SHA-256
+values are `E943DF1CCE785AEF0BE2449F2D4DE4066B3A22FC803BD91925387C1A335D7B73`
+and `F7F215EFFEDFF890EF2DB1A4B56952937FA925E42C6C5B968E28875E0A7DB911`
+respectively. Both source archives exclude the unported fixture sources;
+enabling `sourcesJar` left the verified distribution JAR hashes unchanged.
 
 Isolated native dedicated servers booted with the mod and generated at least
 25 spawn NOISE chunks with zero generation failures. With a development client
