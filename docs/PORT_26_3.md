@@ -348,6 +348,20 @@ still produced no settings result. Forge UI is therefore unverified. The
 experimental smoke code was reverted and the candidate JAR hashes above were
 restored.
 
+A subsequent authorized two-PC NeoForge attempt used an isolated interactive
+remote client, JDK 25.0.4, all 92 verified classpath entries, and a
+SHA-256-checked transfer archive. The server and SSH reverse tunnel were
+bound to `127.0.0.1:25585`. The first attempt lost the local client before
+join; the second lost the remote client before join, again with Windows native
+code `0xC0000005`. A focused control launch on that remote PC, with the MOD JAR
+temporarily moved into the dedicated fixture's `retired-mods`, reproduced the
+same native code during resource loading. The JAR was restored afterward.
+This shows the remote crash also occurs without WorldgenAssist in that
+environment; it does not prove the MOD can serve two NeoForge owners. Evidence
+is under `test-artifacts/port26.3-neo-two-owner-remote{,-retry}/`, including
+`remote-no-mod-result.json` and the copied client logs. The local and remote
+fixture listeners, temporary task, and owned client processes were closed.
+
 ## Loader split now implemented
 
 `WorldgenAssist` initializes loader-neutral computation and policy through

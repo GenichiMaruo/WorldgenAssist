@@ -44,6 +44,14 @@ during Windows client resource loading with native `0xC0000005` (twice before
 the first join, once before the second join); all cleaned up safely and do
 not verify its simultaneous-owner route. Installed Forge settings smoke did
 not complete its screen sequence, and its experimental code was reverted.
+An authorized two-PC NeoForge retry then stopped before both owners could
+join. A remote client control launch without WorldgenAssist reproduced
+`0xC0000005` during resource loading on the same machine. The MOD JAR was
+restored, with no owned client, temporary task or fixture listener remaining.
+The two-PC and no-MOD control results are under
+`test-artifacts/port26.3-neo-two-owner-remote{,-retry}/`; they separate a
+client-runtime failure from any proven worldgen mismatch, but cannot verify
+NeoForge simultaneous-owner behavior.
 Two subsequent selected Overworld development-client pairs passed exact
 same-seed comparison: Forge 812/812 shared NOISE digests and 14/14 remotely
 applied chunks; NeoForge 812/812 and 17/17. Each server recorded 841 digests.
