@@ -26,6 +26,14 @@ performance conclusion; see
 The 26.3 Fabric settings-menu batch entry separately passed with four
 screenshots, persistence, disclosure gate and safe cleanup at
 `test-artifacts/port26.3-settings-batch-entry/`.
+The current Forge and NeoForge installed-JAR Overworld pairs also passed.
+NeoForge matched 1,628 shared NOISE digests and 43 remotely applied chunks;
+Forge matched 816 shared digests and 18 remotely applied chunks. Each
+comparison found zero differing shared or applied results. The official
+installed loader profiles, exact candidate JARs, server/client logs and
+comparison JSON are under `test-artifacts/port26.3-{neo,forge}-installed/`.
+This is one-owner correctness evidence, not a performance or native
+simultaneous-owner result. Offline authentication/Realms warnings remain.
 Two subsequent selected Overworld development-client pairs passed exact
 same-seed comparison: Forge 812/812 shared NOISE digests and 14/14 remotely
 applied chunks; NeoForge 812/812 and 17/17. Each server recorded 841 digests.

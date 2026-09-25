@@ -4,10 +4,11 @@ This branch is **not yet a release**. The published 26.2 alpha.3, its tag,
 maintenance branch and JAR remain unchanged. The 26.3 working version is
 `0.1.0-alpha.4+mc26.3`; loader-specific builds and initial assisted launches
 now work. Selected matched output checks pass across all three vanilla
-dimensions on each loader, while native installed-JAR, lifecycle and
-performance acceptance checks remain before publication.
+dimensions on each loader and installed-JAR Overworld pairs pass for all three
+loaders. Native simultaneous-owner, lifecycle and performance acceptance
+checks remain before publication.
 
-## Current implementation checkpoint (2026-09-24)
+## Current implementation checkpoint (2026-09-25)
 
 The shared 26.3 density calculation, owner coordinator, server validation,
 settings and Mixins now build in three separate projects: Fabric, Forge and
@@ -297,6 +298,25 @@ the same way. Cleanup was safe in all three scenarios. The batch correctly
 reported failed/incomplete comparison, so no paired 26.3 performance ratio
 or speed claim is available from these runs.
 
+Official installer profiles were prepared only under `test-artifacts/` for
+Forge `26.3-66.0.3` and NeoForge `26.3.0.13-beta`. The isolated launcher helper
+`scripts/New-InstalledNativeLoaderClient.ps1` verifies the installed profile,
+JDK 25.0.4 client libraries and assets, copies the exact loader-specific JAR,
+and records classpath and artifact hashes. It does not alter a user launcher
+profile. Both installed dedicated servers booted with assistance disabled and
+generated at least 25 spawn NOISE chunks without generation failures.
+
+Installed-JAR assisted/vanilla Overworld pairs then passed with the current
+Forge and NeoForge candidate JARs. NeoForge matched all 1,628 shared NOISE
+digests and all 43 remotely applied chunks, with zero comparison issues;
+Forge matched all 816 shared digests and all 18 remotely applied chunks.
+The exact logs and comparator JSON are under
+`test-artifacts/port26.3-{neo,forge}-installed/`. Server stop completed
+normally in both pairs. NeoForge clients were terminated after capture;
+the Forge assisted client exited after disconnect and the vanilla client
+closed normally. Offline authentication/Realms warnings are present, and
+these pairs do not measure throughput or verify native simultaneous owners.
+
 ## Loader split now implemented
 
 `WorldgenAssist` initializes loader-neutral computation and policy through
@@ -307,7 +327,7 @@ Forge alone fragments large serverbound results to respect its native packet
 limit. The native projects have separate build metadata and output JARs;
 their artifacts are not interchangeable. Initial dedicated-server/client
 launches and selected Overworld digest comparisons passed as recorded above.
-Exact installed-artifact comparisons remain.
+The selected exact installed-artifact Overworld comparisons are recorded above.
 
 ## Remaining acceptance gates
 
@@ -319,8 +339,7 @@ Exact installed-artifact comparisons remain.
 2. Check native cancel/disconnect, datapack reload and settings permission
    paths. Confirm the Forge result-fragment path rejects malformed or stale
    fragments and releases partial assemblies on disconnect.
-3. Port the installed-client validation harness to exact 26.3 artifacts,
-   package the three loaders with installation guidance, and run a small
+3. Package the three loaders with installation guidance, and run a small
    matched 26.3 performance comparison. Avoid a speed claim until measured;
    do not publish the incomplete branch meanwhile.
 

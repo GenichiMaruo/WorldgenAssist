@@ -19,8 +19,9 @@ dependency. Alpha is a prerelease. Install the distribution JAR, not the
 developer `-sources.jar`.
 
 `feature/mc26.3-multiloader` currently pins development version
-`0.1.0-alpha.4+mc26.3`. Its Fabric sources compile and targeted density tests
-pass, but remote runtime and Forge/NeoForge are unverified; it does **not** provide a release yet.
+`0.1.0-alpha.4+mc26.3`. Fabric, Forge and NeoForge build and selected
+installed-JAR Overworld correctness pairs pass, but remaining native
+simultaneous-owner, lifecycle and performance checks prevent a release yet.
 26.3 Fabric/Forge/NeoForge work is tracked in `PORT_26_3.md`. The table above
 remains the latest published release, independent of this branch's properties.
 
