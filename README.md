@@ -1,5 +1,7 @@
 # Worldgen Assist
 
+![Worldgen Assist icon](src/main/resources/icon.png)
+
 [English](README.md) | [日本語](README.ja.md)
 
 Worldgen Assist is a Fabric, Forge, and NeoForge mod that lets a player's PC help the server calculate

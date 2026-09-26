@@ -1,5 +1,7 @@
 # Worldgen Assist
 
+![Worldgen Assist のアイコン](src/main/resources/icon.png)
+
 [English](README.md) | [日本語](README.ja.md)
 
 Worldgen Assist は、プレイヤーの PC がサーバーの新しい地形の計算を手伝う

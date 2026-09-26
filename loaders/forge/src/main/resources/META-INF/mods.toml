@@ -5,6 +5,7 @@ license="All Rights Reserved"
 modId="worldgen_assist"
 version="0.1.0-alpha.4+mc26.3"
 displayName="Worldgen Assist"
+logoFile="icon.png"
 description='''Experimental client-assisted world generation.'''
 [[dependencies.worldgen_assist]]
 modId="forge"

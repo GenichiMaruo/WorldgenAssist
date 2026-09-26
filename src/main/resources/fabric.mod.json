@@ -3,6 +3,7 @@
 	"id": "worldgen_assist",
 	"version": "${version}",
 	"name": "Worldgen Assist",
+	"icon": "icon.png",
 	"description": "Experimental client-assisted Minecraft world generation.",
 	"authors": [
 		"GenichiMaruo"
