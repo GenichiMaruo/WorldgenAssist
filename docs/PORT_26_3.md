@@ -1,13 +1,11 @@
-# Minecraft 26.3 and Forge/NeoForge port — in progress
+# Minecraft 26.3 and Forge/NeoForge port
 
-This branch is **not yet a release**. The published 26.2 alpha.3, its tag,
-maintenance branch and JAR remain unchanged. The 26.3 working version is
-`0.1.0-alpha.4+mc26.3`; loader-specific builds and initial assisted launches
-now work. Selected matched output checks pass across all three vanilla
-dimensions on each loader and installed-JAR Overworld pairs pass for all three
-loaders. Forge also passed a two-owner installed-JAR session. NeoForge
-simultaneous-owner, lifecycle and performance acceptance checks remain before
-publication.
+The 26.3 version is `0.1.0-alpha.4+mc26.3`. Selected matched output checks
+pass across all three vanilla dimensions on each loader and installed-JAR
+Overworld pairs pass for all three loaders. Forge and NeoForge both passed
+installed-JAR two-owner sessions. The latter sessions kept both clients
+connected but warmed their jobs in sequence; they do not prove overlapping
+in-flight native jobs. The 26.2 alpha.3 release, tag, and JAR remain separate.
 
 ## Current implementation checkpoint (2026-09-25)
 
@@ -335,7 +333,7 @@ runner is `scripts/Run-InstalledNativeLoaderScenario.ps1`; it keeps each run
 in a fresh evidence directory. This is a two-owner application check, not a
 matched vanilla digest comparison or a measured throughput result.
 
-NeoForge's selected installed two-owner attempts did not reach a comparable
+NeoForge's initial installed two-owner attempts did not reach a comparable
 result. The first two clients exited during resource loading with native
 Windows code `0xC0000005` before joining; a later run joined the first owner,
 then its second client exited with the same code before joining. All three
@@ -357,8 +355,15 @@ code `0xC0000005`. A focused control launch on that remote PC, with the MOD JAR
 temporarily moved into the dedicated fixture's `retired-mods`, reproduced the
 same native code during resource loading. The JAR was restored afterward.
 This shows the remote crash also occurs without WorldgenAssist in that
-environment; it does not prove the MOD can serve two NeoForge owners. Evidence
-is under `test-artifacts/port26.3-neo-two-owner-remote{,-retry}/`, including
+environment. The isolated launchers were missing the official 26.3 JVM option
+`-XX:StackShadowPages=32`. After that option was added, a local installed
+NeoForge session registered two owners and remotely applied results for both,
+with `success=true` and `cleanup_safe=true` under
+`test-artifacts/port26.3-neo-two-owner-handshake-fix/`. Both clients exited
+normally. A first corrected-launch attempt had also reached two registrations
+but the test harness checked the first owner's handshake twice; that race was
+fixed by waiting for each owner's offline UUID explicitly. The failed two-PC
+and no-MOD evidence is under `test-artifacts/port26.3-neo-two-owner-remote{,-retry}/`, including
 `remote-no-mod-result.json` and the copied client logs. The local and remote
 fixture listeners, temporary task, and owned client processes were closed.
 
@@ -374,20 +379,23 @@ their artifacts are not interchangeable. Initial dedicated-server/client
 launches and selected Overworld digest comparisons passed as recorded above.
 The selected exact installed-artifact Overworld comparisons are recorded above.
 
-## Remaining acceptance gates
+## Remaining verification boundaries
 
-1. Check simultaneous owners on the native NeoForge adapter.
-   Fabric's selected installed two-PC and Forge's local installed two-owner
-   sessions passed. All three loaders have
+1. Check native overlapping in-flight jobs. Fabric's selected installed
+   two-PC run passed; Forge and NeoForge local installed two-owner sessions
+   applied each owner's results while both were connected. All three loaders have
    matched development-runtime results across all three vanilla dimensions.
    The two earlier Fabric installed-client Nether startups crashed before
    the dimension transition and do not count as installed-JAR evidence.
-2. Check native cancel/disconnect, datapack reload and settings permission
-   paths. Confirm the Forge result-fragment path rejects malformed or stale
-   fragments and releases partial assemblies on disconnect.
-3. Package the three loaders with installation guidance, and run a small
-   matched 26.3 performance comparison. Avoid a speed claim until measured;
-   do not publish the incomplete branch meanwhile.
+2. Broaden native cancel/disconnect, datapack reload and settings permission
+   runtime checks. Focused coordinator/policy and Forge fragment-assembler
+   tests cover these guards, but the Forge settings screen automation did not
+   finish. The Forge menu path remains a verification gap in alpha.4.
+3. The selected Fabric 26.3 performance pair completed on the corrected
+   launcher with three measured repeats per route. Median throughput was
+   69.47 tasks/s vanilla and 67.95 tasks/s assisted; this is one descriptive
+   condition, not evidence of a speedup. See
+   `test-artifacts/validation-matrix-20260926-170015-863/`.
 
 Official references: [Minecraft 26.3](https://www.minecraft.net/en-us/article/minecraft-java-edition-26-3),
 [Fabric porting notes](https://fabricmc.net/2026/09/15/263.html),

@@ -86,6 +86,8 @@ Add-Verified 'minecraft:client:26.3' $game $mojang.downloads.client.sha1
 
 $args=[Collections.Generic.List[string]]::new()
 $args.Add('-Xmx2G')
+$args.Add('-XX:StackShadowPages=32')
+$args.Add('--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED')
 $args.Add("-XX:ErrorFile=$client/hs_err_pid%p.log")
 $args.Add('--enable-native-access=ALL-UNNAMED')
 $args.Add('--sun-misc-unsafe-memory-access=allow')

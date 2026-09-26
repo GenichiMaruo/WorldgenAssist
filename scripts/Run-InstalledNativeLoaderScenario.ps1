@@ -130,6 +130,9 @@ try {
     Wait-Log $serverLog 'Done \(' 180 $server $server.StartTime.ToUniversalTime()
 
     $ownerNames = @('NativeA','NativeB')
+    # Offline UUIDs are name-derived, not the launcher's supplied UUID. Wait
+    # for this owner's handshake; a previous owner's line is not sufficient.
+    $ownerIds = @('06b47fed-0490-3ea4-bd30-132cc3635f08','5caeb99e-d557-357d-9c19-ec1a763cd224')
     for ($index=0; $index -lt $Players; $index++) {
         $name = $ownerNames[$index]
         $uuid = if ($index -eq 0) { '000000000000000000000000000000e1' } else { '000000000000000000000000000000e2' }
@@ -147,11 +150,11 @@ try {
         $client = Start-Owned $launch.Executable $launch.Arguments $launch.WorkingDirectory @{WORLDGEN_ASSIST_REMOTE=if($Mode -eq 'assisted'){'true'}else{'false'}}
         $clients.Add([pscustomobject]@{name=$name;profile=$profile;process=$client;stdout=$client.StandardOutput.ReadToEndAsync();stderr=$client.StandardError.ReadToEndAsync();sha256=$launch.ModSha256})
         Wait-Log $serverLog ([regex]::Escape($name) + ' joined the game') 180 $client $server.StartTime.ToUniversalTime()
-        if ($Mode -eq 'assisted') { Wait-Log $serverLog 'worker.register owner=.* status=ACCEPTED' 60 $client $server.StartTime.ToUniversalTime() }
+        if ($Mode -eq 'assisted') { Wait-Log $serverLog ('worker.register owner=' + $ownerIds[$index] + ' status=ACCEPTED') 60 $client $server.StartTime.ToUniversalTime() }
     }
     Send-ServerCommand 'gamerule minecraft:spectators_generate_chunks false'
     if ($Mode -eq 'assisted') {
-        $owners = @(Select-String -LiteralPath $serverLog -Pattern 'worker.register owner=([0-9a-f-]+) status=ACCEPTED' | ForEach-Object { $_.Matches[0].Groups[1].Value } | Select-Object -Unique)
+        $owners = @($ownerIds | Select-Object -First $Players)
         if ($owners.Count -ne $Players) { throw 'Not all distinct owners registered' }
         Send-ServerCommand 'gamemode spectator @a'
         for ($index=0; $index -lt $Players; $index++) {

@@ -59,9 +59,11 @@ For the curated 26.3 pass, run one command from the repository root:
 
 Add `-FullMatrix` only when the complete cross-product is justified. The
 batch finishes every eligible independent case, then writes the final
-summary and comparison; do not tail each test while it runs. Native Windows
-client startup has failed intermittently with `0xC0000005`; such cases remain
-failures with their own evidence and cleanup status.
+summary and comparison; do not tail each test while it runs. Earlier native
+Windows client startups failed with `0xC0000005` because the isolated 26.3
+launcher omitted Minecraft's `-XX:StackShadowPages=32` JVM option. Those
+failures remain recorded separately; the corrected selected performance pair
+passed at `test-artifacts/validation-matrix-20260926-170015-863/`.
 
 The runner takes an exclusive `test-artifacts/validation-matrix.lock`. A second
 invocation refuses to start, so Gradle, server and client streams cannot race.

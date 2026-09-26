@@ -2,7 +2,7 @@
 
 [English](README.md) | [日本語](README.ja.md)
 
-Worldgen Assist is a Fabric mod that lets a player's PC help the server calculate
+Worldgen Assist is a Fabric, Forge, and NeoForge mod that lets a player's PC help the server calculate
 new terrain. Its goal is to reduce server world-generation work while keeping
 the server in control of the world. It is currently an experimental alpha;
 measured performance improvements have not yet been established.
@@ -14,6 +14,16 @@ structures, fluids, block placement, saving, and all gameplay-relevant world
 state remain server-authoritative.
 
 ## Alpha status
+
+Version **0.1.0-alpha.4+mc26.3** targets Minecraft **26.3** with separate
+Fabric, Forge, and NeoForge JARs. Use the JAR matching your loader on both the
+server and every participating client. The server remains authoritative and
+remote assistance is disabled by default. See the [26.3 installation guide](docs/INSTALL.md)
+and [26.3 verification record](docs/releases/v0.1.0-alpha.4+mc26.3-verification.md).
+The public-seed transcript fixture has not been ported to 26.3; only the
+explicit trusted raw-seed route is available there. No 26.3 speedup is claimed.
+
+The following alpha.3 results describe the earlier **Minecraft 26.2 Fabric** release.
 
 Version **0.1.0-alpha.3+mc26.2** adds player-owned assistance across vanilla
 Overworld, Nether and End, an in-game settings screen, and a one-command
@@ -37,7 +47,7 @@ fresh vanilla-compatible Overworld, Nether and End worlds, and eligible new terr
 It is not for hostile public servers, arbitrary datapacks, mod-added dimensions, or
 sharing one player's compute work with other players.
 
-Download [alpha.3 for Minecraft 26.2](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.3%2Bmc26.2)
+The older release is [alpha.3 for Minecraft 26.2](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.3%2Bmc26.2)
 (Git tag `v0.1.0-alpha.3+mc26.2`). Use the same version on the server and every
 participating client. Older releases remain available separately.
 
@@ -76,6 +86,9 @@ generation remains a research and security gate, not an option to enable for
 normal servers.
 
 ## Install safely
+
+For the current 26.3 release, use the [loader-specific installation guide](docs/INSTALL.md).
+The table below applies to the earlier 26.2 Fabric release.
 
 Use the same **mod JAR** on both the
 Fabric client and the Fabric server. Do not put the `-sources.jar` in either

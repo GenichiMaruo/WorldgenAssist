@@ -1,8 +1,15 @@
 # Advanced configuration and implementation guide
 
+For Minecraft **26.3**, use the loader-specific alpha.4 JAR and
+[installation guide](INSTALL.md). The 26.3 general trusted-raw protocol is
+version 3, and the 26.2 public-seed transcript fixture is unavailable.
+Sections below that mention Fabric-only 26.2 commands or protocol version 2
+describe the earlier alpha.3 line. For 26.3 implementation and validation
+details, see [the port record](PORT_26_3.md).
+
 ## Alpha.3 scope
 
-The current release extends the trusted raw-seed route to vanilla
+The 26.2 alpha.3 release extends the trusted raw-seed route to vanilla
 Overworld, Nether and End. Each accepted player still assists only demand in
 that player's own view. Dimension is bound into every job, fingerprint and
 cache key; a level change cancels that owner's old outstanding work, removes

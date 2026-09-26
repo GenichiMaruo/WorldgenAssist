@@ -1,6 +1,26 @@
-# 導入方法 — Minecraft 26.2
+# 導入方法 — Minecraft 26.3 / 26.2
 
 [English](INSTALL.md) | [日本語](INSTALL.ja.md) · [MOD の概要](../README.ja.md)
+
+## Minecraft 26.3 alpha.4
+
+Minecraft Java Edition **26.3** と Java **25**（検証版 25.0.4）を用意し、
+Fabric Loader **0.19.5** と Fabric API **0.161.0+26.3**、Forge **66.0.3**、
+NeoForge **26.3.0.13-beta** のいずれかを選びます。
+[alpha.4 リリース](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.4%2Bmc26.3)
+からローダーに対応する `0.1.0-alpha.4+mc26.3` の導入用 JAR を取得し、
+サーバーと参加クライアントの `mods` に同じ種類の JAR を入れます。Fabric API が
+必要なのは Fabric 版だけです。`-sources.jar` や異なるローダー／Minecraft 版の
+JAR を混在させないでください。
+
+信頼できる参加者と使い捨てのワールドで試してください。リモート支援は既定で無効で、
+有効化にはシードの開示を別途明示する必要があります。26.2 の公開シード専用
+transcript 経路は 26.3 に未移植です。対象は vanilla の Overworld・Nether・End の
+条件を満たす新規チャンクです。カスタム生成、MOD 追加ディメンション、悪意ある
+参加者、速度向上は保証しません。ゲーム内の **設定 → WorldgenAssist** から設定でき、
+参加設定は再接続後、保存したサーバー方針は再起動後に反映されます。
+
+## 旧 Minecraft 26.2 Fabric alpha.3
 
 このアルファ版は、信頼できる参加者と使い捨てのワールドで試すためのものです。
 一般の公開サーバーで常用できる段階ではありません。導入するだけではリモート

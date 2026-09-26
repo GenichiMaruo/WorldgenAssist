@@ -2,12 +2,12 @@
 
 ## Scope and sources
 
-The published line targets Minecraft Java Edition **26.2**, Fabric Loader
-**0.19.3**, Fabric API **0.156.0+26.2**, and Java **25** (verification JDK
-25.0.4). Branch `feature/mc26.3-multiloader` is an **incomplete 26.3 port**:
-do not offer its artifacts for normal installation, tag or publish them.
-Isolated installation inside the authorized test fixture is permitted. Its dependency versions are in
-`gradle.properties`; see `PORT_26_3.md` for source-verified breaking changes.
+The current alpha.4 line targets Minecraft Java Edition **26.3** with
+Fabric Loader **0.19.5** / Fabric API **0.161.0+26.3**, Forge **66.0.3**,
+and NeoForge **26.3.0.13-beta** on Java **25** (verification JDK 25.0.4).
+The earlier 26.2 Fabric alpha.3 remains on `mc/26.2` and is immutable.
+Dependencies are in `gradle.properties` and the native build files; see
+`PORT_26_3.md` for source-verified breaking changes and remaining limits.
 Keep dependency and protocol changes explicit. Use
 `scripts/Get-WorldgenArtifact.ps1` (with `-Loader` for native builds) to select
 exact JAR names. Published tags,
@@ -39,13 +39,14 @@ security boundary and `ALPHA3_PERFORMANCE.md` for measured performance.
   untrusted public server. Seed confidentiality is unresolved.
 - On the published 26.2 line, the separate transcript fixture is limited to the already public seed
   **8675309**. Its persistent disclosure budget and authority lifecycle must
-  remain intact. General protocol `CURRENT` is **2**; fixture packets use their
-  separate v3 family. It is **not ported to 26.3**. Read
+  remain intact. Its general protocol `CURRENT` is **2**; fixture packets use
+  their separate v3 family. The 26.3 general trusted-raw protocol is **3**;
+  the fixture is **not ported to 26.3**. Read
   `SEEDED_LEAF_FIXTURE_PROTOCOL.md` before changing runtime or network behavior.
-- Published 26.2 trusted raw-seed assistance supports vanilla Overworld, Nether, and End for
+- Published trusted raw-seed assistance supports vanilla Overworld, Nether, and End for
   eligible new chunks. Mod-added dimensions and custom generators are outside
-  the verified scope. Do not claim a speedup: the twelve measured alpha.3
-  conditions showed lower assisted throughput.
+  the verified scope. Do not claim a speedup: the twelve measured 26.2 alpha.3
+  conditions and the one selected 26.3 pair showed lower assisted median throughput.
 - Ordinary players may edit their own participation setting, but server policy
   changes require operator authority. Server-side revision and request identity
   checks must remain authoritative. Saved server policy needs a restart;

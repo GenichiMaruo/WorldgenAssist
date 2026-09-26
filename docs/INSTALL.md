@@ -1,6 +1,27 @@
-# Installation — Minecraft 26.2
+# Installation — Minecraft 26.3 and 26.2
 
 [English](INSTALL.md) | [日本語](INSTALL.ja.md) · [Overview](../README.md)
+
+## Minecraft 26.3 alpha.4
+
+Use Minecraft Java Edition **26.3**, Java **25** (tested with 25.0.4), and one
+loader: Fabric Loader **0.19.5** with Fabric API **0.161.0+26.3**, Forge
+**66.0.3**, or NeoForge **26.3.0.13-beta**. Download the corresponding
+`0.1.0-alpha.4+mc26.3` distribution JAR from
+[the alpha.4 release](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.4%2Bmc26.3).
+Install the same loader-specific JAR on the server and each participating
+client. Fabric API is required only for Fabric. Do not place a `-sources.jar`
+in `mods` or mix JARs for different loaders or Minecraft versions.
+
+Use a disposable world and trusted participants. Remote assistance is off by
+default; enabling it requires a separate explicit raw-seed disclosure choice.
+26.3 does not include the 26.2 public-seed transcript fixture. The supported
+terrain scope is eligible new chunks in vanilla Overworld, Nether, and End.
+Custom generators, mod-added dimensions, hostile clients, and a speedup are
+not guaranteed. The in-game menu is **Options → WorldgenAssist**; client
+participation applies after reconnect and saved server policy after restart.
+
+## Earlier Minecraft 26.2 Fabric alpha.3
 
 This alpha is for disposable test worlds with trusted participants. It is not
 ready for ordinary public servers. Installing it does not automatically enable

@@ -48,6 +48,7 @@ neoForge {
         server { server(); programArgument '--nogui' }
         client {
             client()
+            jvmArguments.addAll '-XX:StackShadowPages=32', '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
             if (project.hasProperty('fixtureRunRoot')) {
                 if (project.hasProperty('fixtureSettingsSmoke')) {
                     jvmArguments.addAll '-Dworldgen_assist.settings_smoke=true',

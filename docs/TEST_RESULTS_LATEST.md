@@ -1,5 +1,38 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+The isolated 26.3 client launcher omitted the official Minecraft JVM option
+`-XX:StackShadowPages=32`. After it was added, an installed NeoForge two-owner
+session passed with both distinct owners registered and each completing remote
+work while both clients remained connected. The server and both clients exited
+normally, with safe cleanup. Evidence:
+`test-artifacts/port26.3-neo-two-owner-handshake-fix/result.json` and its logs.
+The first corrected-launch attempt reached both handshakes but failed because
+the harness read the first owner's registration a second time; owner-specific
+waiting fixed that race. This result checks two owners, not an independent
+vanilla comparison or overlapping in-flight jobs. The earlier no-MOD crash
+control and all failed attempts remain retained as historical evidence.
+
+A selected Fabric 26.3 Overworld performance pair then completed on the
+corrected launcher, with three measured repeats per route. The final batch
+reported 5 passed, 0 failed, 3 intentionally skipped, safe cleanup, and
+analysis `COMPLETE / DESCRIPTIVE_ONLY` with zero evidence issues. Median
+throughput was 69.47 tasks/s for normal generation versus 67.95 tasks/s with
+assistance. This is one condition, not a speedup claim. Evidence:
+`test-artifacts/validation-matrix-20260926-170015-863/` and the exact Fabric
+JAR SHA-256 `0BB2B7647C473EDD94A2143CC9EBDD05EF02AD2F4402CB4407B3EDAAF5FA838A`.
+That run used temporary settings-smoke diagnostics; reverting them restored the
+earlier exact final Fabric distribution hash `0607E86B096CF92A0588BF2E57AA5D2789D2B5663B0F0C232F3B7D48504CBAB9`.
+The performance evidence belongs to its own JAR and is descriptive for the
+unchanged worldgen code, not an exact-byte benchmark of the final JAR.
+
+Forge settings-menu development and installed-client smoke attempts did not
+finish their screen sequence. The installed attempt joined a loopback server
+and gained operator status, but produced no settings result before the client
+closed; `test-artifacts/port26.3-forge-installed-settings-connected-fix/`
+records `success=false`, `cleanup_safe=true`. Temporary smoke code was
+reverted, restoring the previously verified Forge distribution hash. Forge
+settings UI remains an explicit alpha.4 runtime verification gap.
+
 On the 26.3 development branch, the Fabric, Forge and NeoForge projects now
 build on JDK 25.0.4. Isolated native dedicated servers generated spawn NOISE
 chunks with zero generation failures. Connected native NeoForge assistance

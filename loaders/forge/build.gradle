@@ -49,6 +49,7 @@ minecraft {
             } else workingDir = layout.projectDirectory.dir('run')
         }
         register('client') {
+            jvmArgs '-XX:StackShadowPages=32', '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
             if (project.hasProperty('fixtureRunRoot')) {
                 if (project.hasProperty('fixtureSettingsSmoke')) {
                     jvmArgs '-Dworldgen_assist.settings_smoke=true',

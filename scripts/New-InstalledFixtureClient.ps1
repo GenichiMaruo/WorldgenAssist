@@ -66,7 +66,7 @@ Get-ChildItem -LiteralPath (Join-Path $clientDir 'mods') -File | ForEach-Object 
 $provenance | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $resolved 'installed-client-classpath.json')
 $assets=if ($AssetsRoot) { [IO.Path]::GetFullPath($AssetsRoot) } else { Join-Path $cache 'fabric-loom/assets' }
 if ((Get-FileHash -LiteralPath (Join-Path $assets ("indexes/$minecraft-$($mojang.assetIndex.id).json")) -Algorithm SHA1).Hash -ne $mojang.assetIndex.sha1) { throw 'Asset index checksum mismatch' }
-$arguments=@('-Xmx2G',("-XX:ErrorFile=$clientDir/hs_err_pid%p.log"),'--enable-native-access=ALL-UNNAMED','--sun-misc-unsafe-memory-access=allow','-Dfabric.development=false',
+$arguments=@('-Xmx2G','-XX:StackShadowPages=32','--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED',("-XX:ErrorFile=$clientDir/hs_err_pid%p.log"),'--enable-native-access=ALL-UNNAMED','--sun-misc-unsafe-memory-access=allow','-Dfabric.development=false',
     "-Djava.library.path=$clientDir/natives/java","-Djna.tmpdir=$clientDir/natives/jna","-Dorg.lwjgl.system.SharedLibraryExtractPath=$clientDir/natives/lwjgl","-Dio.netty.native.workdir=$clientDir/natives/netty")
 $arguments+=@($fabric.arguments.jvm)
 $arguments+=@('-cp',($classpath -join ';'),$fabric.mainClass,'--username','FixtureWorker','--uuid','00000000000000000000000000000001',

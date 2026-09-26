@@ -3,7 +3,7 @@
 [English](README.md) | [日本語](README.ja.md)
 
 Worldgen Assist は、プレイヤーの PC がサーバーの新しい地形の計算を手伝う
-Fabric MOD です。探索時の地形生成の負担を分担しつつ、ワールドの管理は
+Fabric・Forge・NeoForge 対応 MOD です。探索時の地形生成の負担を分担しつつ、ワールドの管理は
 サーバーに残します。現在は実験的なアルファ版で、速度向上はまだ実証していません。
 
 対象となる Overworld・Nether・End の新規チャンクが必要になると、MOD は同じプレイヤーの
@@ -12,6 +12,16 @@ Fabric MOD です。探索時の地形生成の負担を分担しつつ、ワー
 およびゲームプレイに関わるすべてのワールド状態はサーバー権限のままです。
 
 ## アルファ版について
+
+**0.1.0-alpha.4+mc26.3** は Minecraft **26.3** 向けで、Fabric・Forge・NeoForge
+それぞれ専用の JAR を配布します。サーバーと参加クライアントで同じローダー向け JAR
+を使用してください。リモート支援は既定で無効です。
+[26.3 導入案内](docs/INSTALL.ja.md)と
+[検証記録](docs/releases/v0.1.0-alpha.4+mc26.3-verification.md)を参照してください。
+26.3 では公開シード専用 transcript 経路は未移植で、明示的にシードを開示する
+trusted raw-seed 経路のみです。26.3 での高速化は主張しません。
+
+以下の alpha.3 の結果は以前の **Minecraft 26.2 Fabric** 版のものです。
 
 **0.1.0-alpha.3+mc26.2** では、vanilla の Overworld・Nether・End における
 プレイヤー本人所有の支援、ゲーム内設定画面、正しさと性能を一括検証するコマンドを
@@ -34,7 +44,7 @@ Overworld・Nether・End、対象条件を満たす新しい地形に限定さ�
 敵対的な公開サーバー、任意のデータパック、MOD追加ディメンション、
 他プレイヤーへの計算共有には対応しません。
 
-[Minecraft 26.2 向け alpha.3 をダウンロード](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.3%2Bmc26.2)
+旧版の [Minecraft 26.2 向け alpha.3 をダウンロード](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.3%2Bmc26.2)
 できます（Git タグ `v0.1.0-alpha.3+mc26.2`）。サーバーと参加する各クライアントで
 同じ版を使用してください。旧版は別のリリースとして保持しています。
 
