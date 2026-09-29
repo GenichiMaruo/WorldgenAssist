@@ -88,7 +88,13 @@ export async function publishRelease({ repository, tag, projectId, token, github
   const versionId = (name, minecraftOnly = false) => {
     const matches = versions.filter(version => version.name.toLowerCase() === name.toLowerCase()
       && (!minecraftOnly || types.some(type => type.id === version.gameVersionTypeID && /^Minecraft(?:\s|$)/i.test(type.name) && !/bukkit/i.test(type.name))));
-    if (matches.length !== 1) throw new Error(`CurseForge version label unavailable or ambiguous: ${name}`);
+    if (matches.length !== 1) {
+      const candidates = versions.filter(version => version.name.toLowerCase() === name.toLowerCase());
+      const catalog = candidates.map(version => ({ id: version.id, name: version.name,
+        gameVersionTypeID: version.gameVersionTypeID, gameVersionTypeId: version.gameVersionTypeId,
+        type: types.find(type => type.id === (version.gameVersionTypeID ?? version.gameVersionTypeId))?.name }));
+      throw new Error(`CurseForge version label unavailable or ambiguous: ${name}; public catalog candidates=${JSON.stringify(catalog)}`);
+    }
     return matches[0].id;
   };
   const minecraftId = versionId(plan.minecraft, true);
