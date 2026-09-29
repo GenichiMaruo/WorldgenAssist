@@ -59,6 +59,14 @@ POSTは自動再試行しません。応答が失われても受理済みの可�
 GitHubの `check` 実行は実際のEnvironmentと公開添付物を確認しますが、実投稿の権限や
 CurseForgeの承認完了までは証明しません。
 
+### 設定時の確認結果（2026-09-30 JST）
+
+- ソース `fd9c669dba8f40aeacc581b5f7cc2e1a1db270f0` の対象4テストが一括で成功しました。
+- [GitHub Actionsの事前確認](https://github.com/GenichiMaruo/WorldgenAssist/actions/runs/36591014204)
+  が成功しました。対象は `v0.1.0-alpha.5+mc26.3`、`verified=3`、`uploaded=0` です。
+- 実際のEnvironment secretsを使ってカタログの取得と分類解決、公開済み3 JARの
+  ハッシュ一致を確認しました。既存alpha.5のCurseForgeへの転送は実施していません。
+
 ## English
 
 The workflow uploads exact GitHub release JARs after verifying all three loader
