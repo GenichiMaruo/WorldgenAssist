@@ -47,6 +47,10 @@ own `mc/<version>` branch after source, Mixin, dependency, and behavior checks.
    guides, verify the
    uploaded bytes against `SHA256SUMS.txt`, and publish the draft. Do not
    replace older tags or assets. Keep test worlds/logs outside release assets.
+6. For future three-loader releases, publication triggers `Publish to CurseForge`.
+   It transfers the same checksum-verified JARs using the `curseforge` Environment.
+   Follow [CurseForge publishing](CURSEFORGE_PUBLISH.md) for setup and manual checks.
+   Existing releases are not automatically backfilled; no rebuild is needed.
 
 ## 日本語
 
@@ -59,3 +63,6 @@ own `mc/<version>` branch after source, Mixin, dependency, and behavior checks.
 日英案内のハッシュを照合します。全検証の再実行を常態化せず、既存の証跡は
 元のソース・JARに紐づけて示します。コミット、保守ブランチ、新規タグを
 forceなしでpushし、添付物を検証してプレリリースを公開します。
+3ローダー版の新規公開後は、同じ配布JARをCurseForgeへ自動転送します。
+設定・既存リリースの事前確認・途中失敗からの再開は
+[CurseForge自動公開](CURSEFORGE_PUBLISH.md)を参照してください。

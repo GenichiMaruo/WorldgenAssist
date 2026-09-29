@@ -1,0 +1,57 @@
+name: Publish to CurseForge
+run-name: "CurseForge ${{ inputs.tag || github.event.release.tag_name }} (${{ inputs.mode || 'publish' }})"
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published GitHub release tag
+        required: true
+        type: string
+      mode:
+        description: Check only, or upload the verified release files
+        required: true
+        default: check
+        type: choice
+        options: [check, publish]
+      loader:
+        description: Select one loader to resume a partially completed upload
+        required: true
+        default: all
+        type: choice
+        options: [all, fabric, forge, neoforge]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: curseforge-${{ inputs.tag || github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: curseforge
+    steps:
+      - name: Check out the maintained publishing script
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Verify release and publish
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+          PUBLISH_MODE: ${{ inputs.mode || 'publish' }}
+          PUBLISH_LOADER: ${{ inputs.loader || 'all' }}
+          CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID || secrets.CURSEFORGE_PROJECT_ID }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/publish-curseforge.mjs
