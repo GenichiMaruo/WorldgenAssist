@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { publishRelease } from '../publish-curseforge.mjs';
 
-function fixture({ stage = 'alpha', corrupt = false, missingVersion = false, redirectOutsideCF = false } = {}) {
+function fixture({ stage = 'alpha', corrupt = false, missingVersion = false, redirectOutsideCF = false, typeName = '26.3' } = {}) {
   const repository = 'GenichiMaruo/WorldgenAssist';
   const version = `0.1.0${stage ? '-' + stage + '.5' : ''}+mc26.3`;
   const tag = 'v' + version;
@@ -31,10 +31,12 @@ function fixture({ stage = 'alpha', corrupt = false, missingVersion = false, red
       return new Response(value);
     }
     if (redirectOutsideCF) return new Response(null, { status: 302, headers: { location: 'https://example.com/collect-token' } });
-    if (url.endsWith('/version-types')) return json([{ id: 1, name: 'Minecraft 26.3' }, { id: 2, name: 'Bukkit' }]);
+    // Current catalog uses "26.3" without a Minecraft prefix, and also contains
+    // an identically named entry whose type is absent from version-types.
+    if (url.endsWith('/version-types')) return json([{ id: 88556, name: typeName }]);
     return json([
-      ...(!missingVersion ? [{ id: 101, name: '26.3', gameVersionTypeID: 1 }] : []),
-      { id: 999, name: '26.3', gameVersionTypeID: 2 },
+      ...(!missingVersion ? [{ id: 101, name: '26.3', gameVersionTypeID: 88556 }] : []),
+      { id: 999, name: '26.3', gameVersionTypeID: 1 },
       { id: 102, name: 'Fabric' }, { id: 103, name: 'Forge' },
       { id: 104, name: 'NeoForge' }, { id: 105, name: 'Java 25' },
     ]);
@@ -64,7 +66,7 @@ test('checksum or Minecraft metadata failure blocks all uploads, including a sin
 
 test('check mode never uploads, retains alpha/beta/release classification, and excludes secrets from its report', async () => {
   for (const stage of ['alpha', 'beta', '']) {
-    const state = fixture({ stage });
+    const state = fixture({ stage, typeName: stage === 'beta' ? 'Minecraft 26.3' : '26.3' });
     const report = await publishRelease({ ...state.options, mode: 'check' });
     assert.equal(state.posted.length, 0);
     assert.equal(report.releaseType, stage || 'release');

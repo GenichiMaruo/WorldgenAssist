@@ -25,6 +25,8 @@ Project IDはvariablesを優先し、なければsecretsを読みます。リポ
   正式版はreleaseとして登録し、GitHubのプレリリース設定と照合します。
 - 3種類の導入JARのサイズ・ハッシュとCurseForgeのMinecraft版・ローダー分類を
   すべて確認してから投稿します。対応版が未登録なら停止します。
+  Minecraft版はversion-typesと照合し、現行の `26.3` と従来の `Minecraft …` の
+  分類名に対応します。同名でも分類不明のエントリは採用しません。
   26.2のFabricのみの旧リリースは、この3ローダー用ワークフローの対象外です。
 - Fabric APIはFabric版の必須依存として登録します。Java 25の分類が存在すれば
   付与します。変更履歴はGitHubリリース本文で、性能・シード開示の制限も引き継ぎます。

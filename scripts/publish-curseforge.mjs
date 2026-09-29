@@ -86,8 +86,10 @@ export async function publishRelease({ repository, tag, projectId, token, github
   const versions = await getCF('/api/game/versions');
   const types = await getCF('/api/game/version-types');
   const versionId = (name, minecraftOnly = false) => {
+    const minecraftFamily = name.split('.').slice(0, 2).join('.').toLowerCase();
     const matches = versions.filter(version => version.name.toLowerCase() === name.toLowerCase()
-      && (!minecraftOnly || types.some(type => type.id === version.gameVersionTypeID && /^Minecraft(?:\s|$)/i.test(type.name) && !/bukkit/i.test(type.name))));
+      && (!minecraftOnly || types.some(type => type.id === version.gameVersionTypeID
+        && (type.name.toLowerCase() === minecraftFamily || /^Minecraft(?:\s|$)/i.test(type.name)) && !/bukkit/i.test(type.name))));
     if (matches.length !== 1) {
       const candidates = versions.filter(version => version.name.toLowerCase() === name.toLowerCase());
       const catalog = candidates.map(version => ({ id: version.id, name: version.name,
