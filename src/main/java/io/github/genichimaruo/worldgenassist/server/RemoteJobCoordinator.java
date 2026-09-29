@@ -43,6 +43,40 @@ public final class RemoteJobCoordinator {
 	private final Set<UUID> decodingResults = new HashSet<>();
 	private final Set<UUID> quarantinedOwners = ConcurrentHashMap.newKeySet();
 	private int synchronousWaitDepth;
+	private final ThreadLocal<List<Attempt>> dispatchBatch = new ThreadLocal<>();
+
+	/** A single scheduling pass batches approvals, without waiting for another tick. */
+	public void withJobBatch(Runnable dispatch) {
+		if (dispatchBatch.get() != null) { dispatch.run(); return; }
+		List<Attempt> registered = new ArrayList<>();
+		dispatchBatch.set(registered);
+		try { dispatch.run(); }
+		finally {
+			dispatchBatch.remove();
+			Map<UUID, List<Attempt>> byOwner = new java.util.LinkedHashMap<>();
+			synchronized (this) {
+				for (var attempt : registered) if (attempts.get(attempt.job.identity().jobId()) == attempt)
+					byOwner.computeIfAbsent(attempt.ownerId, ignored -> new ArrayList<>()).add(attempt);
+			}
+			for (var entry : byOwner.entrySet()) {
+				List<Attempt> ownerJobs = entry.getValue();
+				for (int offset = 0; offset < ownerJobs.size(); offset += io.github.genichimaruo.worldgenassist.network.TerrainJobBatchPayload.MAX_JOBS) {
+					var group = ownerJobs.subList(offset, Math.min(ownerJobs.size(), offset + io.github.genichimaruo.worldgenassist.network.TerrainJobBatchPayload.MAX_JOBS));
+					try {
+						sender.sendJobs(entry.getKey(), group.stream().map(attempt -> attempt.job).toList());
+						for (var attempt : group) logDispatched(attempt);
+					} catch (RuntimeException | Error error) {
+						for (var attempt : group) failSend(attempt, error);
+					}
+				}
+			}
+		}
+	}
+
+	private static void logDispatched(Attempt attempt) {
+		WorldgenAssist.LOGGER.info("[CAWG] job.request_dispatch id={} request_queue_ms={}",
+			attempt.job.identity().jobId(), (System.nanoTime() - attempt.registeredNanos) / 1_000_000.0);
+	}
 
 	// Cache consumers must observe watchdog quarantine without acquiring the
 	// coordinator monitor while holding the manager's result-state lock.
@@ -53,10 +87,10 @@ public final class RemoteJobCoordinator {
 	public RemoteJobCoordinator(RemoteWorldgenConfig config, RemoteJobSender sender) {
 		this(
 			config.remoteExecutionEnabled(),
-			new WorkerRegistry(1),
+			new WorkerRegistry(Math.min(4, config.maxInFlightJobs())),
 			new PendingTerrainJobRegistry(
 				config.maxInFlightJobs(),
-				1,
+				Math.min(4, config.maxInFlightJobs()),
 				config.jobTimeout(),
 				TERMINAL_RETENTION
 			),
@@ -105,6 +139,17 @@ public final class RemoteJobCoordinator {
 
 	public Set<UUID> workerOwners() { return workers.workerOwners(); }
 
+	/** Increase concurrency only after a result passed the server-side application gate. */
+	public void recordValidated(UUID ownerId) { workers.recordSuccess(ownerId); }
+	public int ownerJobLimit(UUID ownerId) { return workers.currentLimit(ownerId); }
+
+	public void cancelJob(UUID ownerId, TerrainJobIdentity identity) {
+		PendingTerrainJobRegistry.CancellationStatus status = pendingJobs.cancel(ownerId, identity.jobId());
+		List<TerrainJobIdentity> cancelled = status == PendingTerrainJobRegistry.CancellationStatus.CANCELLED
+			|| status == PendingTerrainJobRegistry.CancellationStatus.EXPIRED ? List.of(identity) : List.of();
+		cancelIdentities(ownerId, cancelled, new CancellationException("Remote demand no longer waiting"), true);
+	}
+
 	public Optional<Submission> trySubmit(
 		Identifier dimension,
 		int chunkX,
@@ -123,6 +168,23 @@ public final class RemoteJobCoordinator {
 		WorldgenContextFingerprint contextFingerprint,
 		Function<TerrainJobIdentity, TerrainDensityJob> jobFactory
 	) {
+		return trySubmitForOwner(requiredOwnerId, dimension, chunkX, chunkZ, contextFingerprint, jobFactory, false);
+	}
+
+	public Optional<Submission> trySubmitPredictionForOwner(
+		UUID requiredOwnerId, Identifier dimension, int chunkX, int chunkZ,
+		WorldgenContextFingerprint contextFingerprint,
+		Function<TerrainJobIdentity, TerrainDensityJob> jobFactory
+	) {
+		return trySubmitForOwner(requiredOwnerId, dimension, chunkX, chunkZ, contextFingerprint, jobFactory, true);
+	}
+
+	private Optional<Submission> trySubmitForOwner(
+		UUID requiredOwnerId, Identifier dimension, int chunkX, int chunkZ,
+		WorldgenContextFingerprint contextFingerprint,
+		Function<TerrainJobIdentity, TerrainDensityJob> jobFactory, boolean reserveForDemand
+	) {
+		long registrationStarted = System.nanoTime();
 		if (requiredOwnerId != null) {
 			Objects.requireNonNull(requiredOwnerId, "requiredOwnerId");
 		}
@@ -139,7 +201,7 @@ public final class RemoteJobCoordinator {
 		synchronized (this) {
 			if (synchronousWaitDepth > 0) { return Optional.empty(); }
 			Optional<WorkerRegistry.Lease> acquired = requiredOwnerId == null
-				? workers.tryAcquireSoleWorker() : workers.tryAcquireWorker(requiredOwnerId);
+				? workers.tryAcquireSoleWorker() : workers.tryAcquireWorker(requiredOwnerId, reserveForDemand);
 			if (acquired.isEmpty()) {
 				return Optional.empty();
 			}
@@ -175,9 +237,17 @@ public final class RemoteJobCoordinator {
 			attempt = new Attempt(lease.ownerId(), job);
 			attempts.put(identity.jobId(), attempt);
 		}
+		WorldgenAssist.LOGGER.info("[CAWG] job.registered id={} registration_ms={}",
+			job.identity().jobId(), (System.nanoTime() - registrationStarted) / 1_000_000.0);
+		List<Attempt> batch = dispatchBatch.get();
+		if (batch != null) {
+			batch.add(attempt);
+			return Optional.of(new Submission(attempt.ownerId, job, attempt.result));
+		}
 
 		try {
 			sender.sendJob(lease.ownerId(), new TerrainJobRequestPayload(job));
+			logDispatched(attempt);
 		} catch (RuntimeException | Error error) {
 			failSend(attempt, error);
 			return Optional.empty();
@@ -246,6 +316,7 @@ public final class RemoteJobCoordinator {
 			}
 		}
 		if (attempt != null) {
+			workers.recordFailure(ownerId);
 			attempt.result.completeExceptionally(error);
 		}
 		return status;
@@ -263,6 +334,7 @@ public final class RemoteJobCoordinator {
 			}
 		}
 		if (attempt != null) {
+			workers.recordFailure(ownerId);
 			attempt.result.completeExceptionally(new RemoteWorkerException(failure.reason()));
 		}
 		return status;
@@ -281,6 +353,7 @@ public final class RemoteJobCoordinator {
 				Attempt attempt = attempts.remove(identity.jobId());
 				if (attempt != null) {
 					workers.release(attempt.ownerId);
+					workers.recordFailure(attempt.ownerId);
 					int timeoutCount = consecutiveTimeouts.merge(attempt.ownerId, 1, Integer::sum);
 					if (timeoutCount >= MAX_CONSECUTIVE_TIMEOUTS && quarantinedOwners.add(attempt.ownerId)) {
 						workers.remove(attempt.ownerId);
@@ -448,6 +521,7 @@ public final class RemoteJobCoordinator {
 	}
 
 	private static final class Attempt {
+		private final long registeredNanos = System.nanoTime();
 		private final UUID ownerId;
 		private final TerrainDensityJob job;
 		private final CompletableFuture<TerrainDensityResult> result = new CompletableFuture<>();

@@ -17,13 +17,19 @@ state remain server-authoritative.
 
 ## Alpha status
 
-Version **0.1.0-alpha.4+mc26.3** targets Minecraft **26.3** with separate
+Version **0.1.0-alpha.5+mc26.3** targets Minecraft **26.3** with separate
 Fabric, Forge, and NeoForge JARs. Use the JAR matching your loader on both the
 server and every participating client. The server remains authoritative and
 remote assistance is disabled by default. See the [26.3 installation guide](docs/INSTALL.md)
-and [26.3 verification record](docs/releases/v0.1.0-alpha.4+mc26.3-verification.md).
+and [alpha.5 verification record](docs/releases/v0.1.0-alpha.5+mc26.3-verification.md).
 The public-seed transcript fixture has not been ported to 26.3; only the
-explicit trusted raw-seed route is available there. No 26.3 speedup is claimed.
+explicit trusted raw-seed route is available there. Alpha.5 adds float32 transport,
+context reuse, validation preparation during client computation, generation
+prefetch, adaptive waiting and Fabric network dispatch improvements. Protocol 4
+requires matching alpha.5 server/client JARs; do not mix alpha.4 with alpha.5.
+The selected two-CPU/two-client test completed the target NOISE region earlier,
+but did not reduce FULL completion or client receipt time. No end to end speedup
+is established. See [release notes](docs/releases/v0.1.0-alpha.5+mc26.3.md).
 
 The following alpha.3 results describe the earlier **Minecraft 26.2 Fabric** release.
 
@@ -39,15 +45,20 @@ disclosure is still a separate explicit choice.
 
 Each player's own client can assist concurrently. Direct work is
 assigned only within that worker's view; overlapping views choose one owner.
-The global default is eight jobs, with at most one per owner. See
+The global default is eight jobs. Alpha.5 starts at one in-flight job per owner
+and adapts up to four within the advertised client capacity; client computation
+defaults to two threads. See
 [multiplayer development and verification](docs/MULTIPLAYER_SUPPORT.md).
 
 This alpha is for controlled trials, not everyday use on public servers.
 Remote assistance is disabled by default, and no speedup is promised. The
 implemented remote paths are limited to explicitly trusted participants,
 fresh vanilla-compatible Overworld, Nether and End worlds, and eligible new terrain.
-It is not for hostile public servers, arbitrary datapacks, mod-added dimensions, or
-sharing one player's compute work with other players.
+Alpha.5 experimentally admits additional dimensions using compatible vanilla
+noise settings available on both sides, and custom wrappers explicitly exposing
+the same vanilla noise delegate. A prior Fabric custom-dimension fixture passed;
+arbitrary custom algorithms, client-unavailable noise registries, hostile public
+servers and sharing another player's compute work remain unsupported.
 
 The older release is [alpha.3 for Minecraft 26.2](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.3%2Bmc26.2)
 (Git tag `v0.1.0-alpha.3+mc26.2`). Use the same version on the server and every

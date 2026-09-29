@@ -57,6 +57,12 @@ final class NeoClientInit {
             worker = new ClientWorldgenWorker(new ClientWorkerTransport() {
                 @Override public boolean canSendHello() { return canSend(WorkerHelloPayload.TYPE.id()); }
                 @Override public void send(CustomPacketPayload payload) { ClientPacketDistributor.sendToServer(payload); }
+                @Override public java.util.function.Consumer<CustomPacketPayload> captureSender() {
+                    var connection = Minecraft.getInstance().getConnection().getConnection();
+                    return payload -> {
+                        if (connection.isConnected()) connection.send(new net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket(payload));
+                    };
+                }
             });
         }
         return worker;

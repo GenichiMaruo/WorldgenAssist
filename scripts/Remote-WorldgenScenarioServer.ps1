@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$Root,
-    [Parameter(Mandatory)][ValidateSet('overworld','the_nether','the_end')][string]$Dimension,
+    [Parameter(Mandatory)][ValidateSet('overworld','the_nether','the_end','fixture')][string]$Dimension,
     [Parameter(Mandatory)][ValidateSet('vanilla','assisted')][string]$Mode,
     [Parameter(Mandatory)][ValidateRange(1,2)][int]$Players,
     [Parameter(Mandatory)][ValidateSet('correctness','performance')][string]$Purpose,
@@ -10,7 +10,11 @@ param(
     [Parameter(Mandatory)][ValidateRange(0,64)][int]$ValidationCells,
     [Parameter(Mandatory)][long]$Seed,
     [ValidateRange(1,10)][int]$WarmupRuns = 1,
-    [ValidateRange(1,10)][int]$MeasuredRepeats = 3
+    [ValidateRange(1,10)][int]$MeasuredRepeats = 3,
+    [ValidateSet(0,2,4)][int]$ServerLogicalProcessors = 0,
+    [ValidateSet('current','prepared','prefetch')][string]$PipelineProfile = 'prefetch',
+    [ValidateSet('relocation','continuous')][string]$Movement = 'relocation',
+    [ValidateRange(5,1000)][int]$CorrectnessDemandWaitMs = 1000
 )
 
 # Remote half of the all-dimension trusted-raw scenario.  It owns only the
@@ -34,6 +38,7 @@ foreach ($target in @($resolved, (Join-Path $resolved 'mods'), (Join-Path $resol
     }
 }
 $predictionEnabled = [bool]::Parse($Prediction)
+$dimensionId = if ($Dimension -eq 'fixture') { 'worldgen_assist:fixture' } else { 'minecraft:' + $Dimension }
 if ($predictionEnabled -and $CacheEntries -eq 0) { throw 'Prediction requires CacheEntries greater than zero' }
 
 $lock = [IO.File]::Open((Join-Path $resolved 'scenario-run.lock'), 'OpenOrCreate', 'ReadWrite', 'None')
@@ -119,13 +124,13 @@ function Wait-CorrectnessComplete([int]$Offset, [bool]$Assisted) {
     while ([DateTime]::UtcNow -lt $deadline) {
         $text = Log-Text
         $tail = $text.Substring([Math]::Min($Offset, $text.Length))
-        $digests = @([regex]::Matches($tail, '(?m)^.*\[CAWG\] stage\.digest stage=noise .* dimension=minecraft:' + [regex]::Escape($Dimension) + '\b.*$'))
+        $digests = @([regex]::Matches($tail, '(?m)^.*\[CAWG\] stage\.digest stage=noise .* dimension=' + [regex]::Escape($dimensionId) + '\b.*$'))
         $centresPresent = $true
         for ($ownerIndex = 0; $ownerIndex -lt $ownerNames.Count; $ownerIndex++) {
             $x = if ($ownerIndex -eq 0) { 16000 } else { -16000 }
             $z = if ($ownerIndex -eq 0) { -32000 } else { 32000 }
             $chunk = ([int]($x / 16)).ToString() + ',' + ([int]($z / 16)).ToString()
-            if ($tail -notmatch ('stage\.digest stage=noise chunk=' + [regex]::Escape($chunk) + ' .* dimension=minecraft:' + [regex]::Escape($Dimension) + '\b')) { $centresPresent = $false }
+            if ($tail -notmatch ('stage\.digest stage=noise chunk=' + [regex]::Escape($chunk) + ' .* dimension=' + [regex]::Escape($dimensionId) + '\b')) { $centresPresent = $false }
         }
         $ownersComplete = -not $Assisted
         if ($Assisted) {
@@ -140,28 +145,38 @@ function Wait-CorrectnessComplete([int]$Offset, [bool]$Assisted) {
     }
     throw 'Timed out waiting for stable correctness digests and successful owner assistance'
 }
-function Wait-Idle([int]$Offset, [int]$Seconds, [int]$LocationIndex) {
+function Wait-Idle([int]$Offset, [int]$Seconds, [int]$LocationIndex, [Diagnostics.Stopwatch]$RunClock) {
     # A new tick containing completed worldgen proves work started; two quiet
     # seconds then delimit a bounded repeat without treating a fixed sleep as a result.
     Wait-Log 'tick\.complete .*noise_completed=[1-9]' $Seconds $Offset | Out-Null
     $deadline = [DateTime]::UtcNow.AddSeconds($Seconds); $lastCompletedTicks = -1; $quietSince = $null
     $required = @{}
+    $requiredFull = @{}
+    $fullReadyMs = $null
+    $ownerRegions = @()
+    $ownerReadyMs = New-Object object[] $ownerNames.Count
     $baseX = 1000 + $LocationIndex * 256
     $baseZ = -2000 - $LocationIndex * 256
     for($ownerIndex=0;$ownerIndex -lt $ownerNames.Count;$ownerIndex++){
+        $ownerRegion = @{}
         $cx=if($ownerIndex -eq 0){$baseX}else{-$baseX}
         $cz=if($ownerIndex -eq 0){$baseZ}else{-$baseZ}
-        for($dx=-4;$dx -le 4;$dx++){for($dz=-4;$dz -le 4;$dz++){$required[([string]($cx+$dx)+','+($cz+$dz))]=$true}}
+        for($dx=-4;$dx -le 4;$dx++){for($dz=-4;$dz -le 4;$dz++){$key=[string]($cx+$dx)+','+($cz+$dz);$required[$key]=$true;$ownerRegion[$key]=$true}}
+        $ownerRegions += $ownerRegion
     }
+    foreach($key in $required.Keys){$requiredFull[$key]=$true}
     while ([DateTime]::UtcNow -lt $deadline) {
         Start-Sleep -Milliseconds 250
         $text=Log-Text; $tail=$text.Substring([Math]::Min($Offset,$text.Length))
-        foreach($match in [regex]::Matches($tail,'stage\.complete stage=noise chunk=(?<chunk>-?\d+,-?\d+)\b')){$required.Remove($match.Groups['chunk'].Value)}
+        foreach($match in [regex]::Matches($tail,'stage\.complete stage=noise chunk=(?<chunk>-?\d+,-?\d+)\b')){$chunk=$match.Groups['chunk'].Value;[void]$required.Remove($chunk);foreach($region in $ownerRegions){[void]$region.Remove($chunk)}}
+        foreach($match in [regex]::Matches($tail,'chunk\.full_ready chunk=(?<chunk>-?\d+,-?\d+)\b')){[void]$requiredFull.Remove($match.Groups['chunk'].Value)}
+        if($null -eq $fullReadyMs -and $requiredFull.Count -eq 0){$fullReadyMs=[Math]::Round($RunClock.Elapsed.TotalMilliseconds,3)}
+        for($ownerIndex=0;$ownerIndex -lt $ownerRegions.Count;$ownerIndex++){if($null -eq $ownerReadyMs[$ownerIndex] -and $ownerRegions[$ownerIndex].Count -eq 0){$ownerReadyMs[$ownerIndex]=[Math]::Round($RunClock.Elapsed.TotalMilliseconds,3)}}
         $completedTicks=@([regex]::Matches($tail,'tick\.complete .*noise_completed=[1-9]\d*')).Count
         $lastTick=[regex]::Matches($tail,'tick\.complete .*noise_active_end=(?<active>\d+)')
         $idle=$lastTick.Count -gt 0 -and $lastTick[$lastTick.Count-1].Groups['active'].Value -eq '0'
         if($completedTicks -ne $lastCompletedTicks){$lastCompletedTicks=$completedTicks;$quietSince=[DateTime]::UtcNow}
-        elseif($idle -and $required.Count -eq 0 -and $null -ne $quietSince -and ([DateTime]::UtcNow-$quietSince).TotalSeconds -ge 2){return}
+        elseif($idle -and $required.Count -eq 0 -and $requiredFull.Count -eq 0 -and $null -ne $quietSince -and ([DateTime]::UtcNow-$quietSince).TotalSeconds -ge 2){return [ordered]@{all_ms=($ownerReadyMs|Measure-Object -Maximum).Maximum;per_owner_ms=@($ownerReadyMs);full_ms=$fullReadyMs}}
         if ($process.HasExited) { throw 'Server exited while waiting for worldgen idle' }
     }
     throw 'Timed out waiting for worldgen to become idle'
@@ -177,7 +192,7 @@ function Warm-AssistedOwners {
         $magnitude = 24000 + ($ownerIndex * 12000)
         $x = if ($ownerIndex -eq 0) { $magnitude } else { -$magnitude }
         $z = if ($ownerIndex -eq 0) { $magnitude } else { -$magnitude }
-        Send-Command ('execute in minecraft:' + $Dimension + ' run tp ' + $name + ' ' + $x + ' 150 ' + $z)
+        Send-Command ('execute in ' + $dimensionId + ' run tp ' + $name + ' ' + $x + ' 150 ' + $z)
         $deadline = [DateTime]::UtcNow.AddSeconds(60)
         $relocateAt = [DateTime]::UtcNow.AddSeconds(20)
         $relocated = $false
@@ -191,7 +206,7 @@ function Warm-AssistedOwners {
             # movement one more fresh region; success still requires application.
             if (-not $relocated -and [DateTime]::UtcNow -ge $relocateAt) {
                 $relocated = $true
-                Send-Command ('execute in minecraft:' + $Dimension + ' run tp ' + $name + ' ' + ($x + 1024) + ' 150 ' + ($z + 1024))
+                Send-Command ('execute in ' + $dimensionId + ' run tp ' + $name + ' ' + ($x + 1024) + ' 150 ' + ($z + 1024))
             }
             if (-not $diagnosticCaptured -and [DateTime]::UtcNow -ge $diagnosticAt) {
                 $diagnosticCaptured = $true
@@ -254,6 +269,19 @@ function Get-TickStatistics([string]$Text, [double]$CpuMilliseconds, [double]$Wa
         validation_mean_ms=Mean-LogValue 'job\.validation_complete .*validation_ms=(?<value>-?\d+(?:\.\d+)?)'
         apply_mean_ms=Mean-LogValue 'job\.complete .*apply_ms=(?<value>-?\d+(?:\.\d+)?)'
         remote_total_mean_ms=Mean-LogValue 'job\.complete .*total_ms=(?<value>-?\d+(?:\.\d+)?)'
+        validation_prepare_mean_ms=Mean-LogValue 'job\.validation_ready .*prepare_ms=(?<value>-?\d+(?:\.\d+)?)'
+        validation_compare_mean_ms=Mean-LogValue 'job\.validation_complete .*compare_ms=(?<value>-?\d+(?:\.\d+)?)'
+        decode_queue_mean_ms=Mean-LogValue 'job\.result_decoded .*decode_queue_ms=(?<value>-?\d+(?:\.\d+)?)'
+        registration_mean_ms=Mean-LogValue 'job\.registered .*registration_ms=(?<value>-?\d+(?:\.\d+)?)'
+        request_queue_mean_ms=Mean-LogValue 'job\.request_dispatch .*request_queue_ms=(?<value>-?\d+(?:\.\d+)?)'
+        ingress_queue_mean_ms=Mean-LogValue 'job\.result_ingress .*ingress_queue_ms=(?<value>-?\d+(?:\.\d+)?)'
+        result_claim_mean_ms=Mean-LogValue 'job\.result_ingress .*claim_ms=(?<value>-?\d+(?:\.\d+)?)'
+        network_ingress_count=@([regex]::Matches($Text,'job\.result_ingress .*path=network\b')).Count
+        request_batch_count=@([regex]::Matches($Text,'jobs\.batch_sent ')).Count
+        prefetch_sent=@([regex]::Matches($Text,'prefetch\.sent ')).Count
+        prefetch_applied=@([regex]::Matches($Text,'job\.complete .*source=prefetch\b')).Count
+        ready_cache_used=@([regex]::Matches($Text,'cache\.hit ')).Count
+        demand_wait_fallbacks=@([regex]::Matches($Text,'job\.fallback_local .*reason=TimeoutException')).Count
     }
 }
 function Start-Location([int]$Index) {
@@ -262,7 +290,17 @@ function Start-Location([int]$Index) {
     for ($index = 0; $index -lt $ownerNames.Count; $index++) {
         $x = if ($index -eq 0) { $baseX } else { -$baseX }
         $z = if ($index -eq 0) { $baseZ } else { -$baseZ }
-        Send-Command ('execute in minecraft:' + $Dimension + ' run tp ' + $ownerNames[$index] + ' ' + $x + ' 150 ' + $z)
+        $startX = if($Movement -eq 'continuous'){$x-128}else{$x}
+        Send-Command ('execute in ' + $dimensionId + ' run tp ' + $ownerNames[$index] + ' ' + $startX + ' 150 ' + $z)
+    }
+    if($Movement -eq 'continuous'){
+        for($step=1;$step -le 16;$step++){
+            Start-Sleep -Milliseconds 250
+            for($index=0;$index -lt $ownerNames.Count;$index++){
+                $targetX=if($index -eq 0){$baseX}else{-$baseX};$targetZ=if($index -eq 0){$baseZ}else{-$baseZ}
+                Send-Command ('execute in '+$dimensionId+' run tp '+$ownerNames[$index]+' '+($targetX-128+$step*8)+' 150 '+$targetZ)
+            }
+        }
     }
 }
 
@@ -275,13 +313,13 @@ function Complete-CorrectnessRegion {
         $cz = if ($ownerIndex -eq 0) { -2000 } else { 2000 }
         # Four rectangles keep each command below vanilla's 256-chunk limit.
         foreach($xs in @(@(-10,0),@(1,10))){foreach($zs in @(@(-10,0),@(1,10))){
-            Send-Command ('execute in minecraft:' + $Dimension + ' run forceload add ' + (($cx+$xs[0])*16) + ' ' + (($cz+$zs[0])*16) + ' ' + (($cx+$xs[1])*16) + ' ' + (($cz+$zs[1])*16))
+            Send-Command ('execute in ' + $dimensionId + ' run forceload add ' + (($cx+$xs[0])*16) + ' ' + (($cz+$zs[0])*16) + ' ' + (($cx+$xs[1])*16) + ' ' + (($cz+$zs[1])*16))
         }}
         for ($dx=-10; $dx -le 10; $dx++) { for ($dz=-10; $dz -le 10; $dz++) { $required[([string]($cx+$dx)+','+($cz+$dz))] = $true } }
     }
     $deadline = [DateTime]::UtcNow.AddSeconds(120)
     while ([DateTime]::UtcNow -lt $deadline) {
-        foreach ($match in [regex]::Matches((Log-Text), 'stage\.digest stage=noise chunk=(?<chunk>-?\d+,-?\d+) .* dimension=minecraft:'+[regex]::Escape($Dimension)+'\b')) {
+        foreach ($match in [regex]::Matches((Log-Text), 'stage\.digest stage=noise chunk=(?<chunk>-?\d+,-?\d+) .* dimension='+[regex]::Escape($dimensionId)+'\b')) {
             $required.Remove($match.Groups['chunk'].Value)
         }
         if ($required.Count -eq 0) { return }
@@ -299,19 +337,52 @@ try {
     if (Get-NetTCPConnection -LocalPort 25585 -State Listen -ErrorAction SilentlyContinue) { throw 'Loopback fixture port 25585 is already occupied' }
     $viewDistance = 10
     @('server-ip=127.0.0.1','server-port=25585','online-mode=false','white-list=false','enforce-whitelist=false',("level-name=$case"),("level-seed=$Seed"),("view-distance=$viewDistance"),'simulation-distance=3',("max-players=$Players"),'gamemode=spectator','difficulty=peaceful','enable-rcon=false','enable-query=false','pause-when-empty-seconds=-1','spawn-protection=0') | Set-Content -LiteralPath (Join-Path $resolved 'server.properties')
-    [ordered]@{dimension=$Dimension;mode=$Mode;players=$Players;purpose=$Purpose;cache_entries=$CacheEntries;prediction=$predictionEnabled;validation_cells=$ValidationCells;seed=$Seed;warmup_runs=$WarmupRuns;measured_repeats=$MeasuredRepeats;view_distance=$viewDistance;timeout_ms=30000;listener='127.0.0.1:25585'} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'scenario-config.json')
-    $start = [Diagnostics.ProcessStartInfo]::new(); $start.FileName = $javaExecutable; $start.Arguments = '-Xmx3G -jar "' + (Join-Path $resolved 'fabric-server-launch.jar') + '" nogui'; $start.WorkingDirectory = $resolved
+    if ($Dimension -eq 'fixture') {
+        $pack = Join-Path $resolved ($case + '/datapacks/worldgenassist-fixture')
+        $definition = Join-Path $pack 'data/worldgen_assist/dimension'
+        New-Item -ItemType Directory -Force -Path $definition | Out-Null
+        '{"pack":{"description":"Worldgen Assist custom dimension fixture","min_format":121,"max_format":121}}' |
+            Set-Content -LiteralPath (Join-Path $pack 'pack.mcmeta')
+        '{"type":"minecraft:overworld","generator":{"type":"minecraft:noise","settings":"minecraft:overworld","biome_source":{"type":"minecraft:fixed","biome":"minecraft:plains"}}}' |
+            Set-Content -LiteralPath (Join-Path $definition 'fixture.json')
+        Add-Content -LiteralPath (Join-Path $resolved 'server.properties') -Value 'initial-enabled-packs=vanilla,file/worldgenassist-fixture'
+    }
+    [ordered]@{dimension=$Dimension;mode=$Mode;players=$Players;purpose=$Purpose;cache_entries=$CacheEntries;prediction=$predictionEnabled;validation_cells=$ValidationCells;seed=$Seed;warmup_runs=$WarmupRuns;measured_repeats=$MeasuredRepeats;view_distance=$viewDistance;timeout_ms=30000;server_logical_processors=$ServerLogicalProcessors;pipeline_profile=$PipelineProfile;movement=$Movement;listener='127.0.0.1:25585'} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'scenario-config.json')
+    [ordered]@{base_ms=if($Purpose -eq 'correctness'){$CorrectnessDemandWaitMs}else{100};adaptive=($PipelineProfile -ne 'current');maximum_ms=if($PipelineProfile -eq 'current'){30000}elseif($Purpose -eq 'correctness'){[Math]::Min(1000,$CorrectnessDemandWaitMs*2)}else{200}} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'demand-wait-config.json')
+    $start = [Diagnostics.ProcessStartInfo]::new(); $start.FileName = $javaExecutable; $start.Arguments = '-Xmx3G -Dworldgen_assist.remote.diagnostics=true -jar "' + (Join-Path $resolved 'fabric-server-launch.jar') + '" nogui'; $start.WorkingDirectory = $resolved
     $start.UseShellExecute = $false; $start.CreateNoWindow = $true; $start.RedirectStandardInput = $true; $start.RedirectStandardOutput = $true; $start.RedirectStandardError = $true
     $assisted = $Mode -eq 'assisted'
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE'] = if($assisted){'true'}else{'false'}
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_SEED_DISCLOSURE'] = if($assisted){'trusted_raw'}else{'deny'}
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_TIMEOUT_MS'] = '30000'; $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT'] = '8'
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_CACHE_ENTRIES'] = [string]$CacheEntries; $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREDICTION'] = $predictionEnabled.ToString().ToLowerInvariant(); $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_VALIDATION_SAMPLE_CELLS'] = [string]$ValidationCells
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREFETCH'] = ($PipelineProfile -eq 'prefetch').ToString().ToLowerInvariant()
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREPARE_VALIDATION'] = ($PipelineProfile -ne 'current').ToString().ToLowerInvariant()
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_ADAPTIVE_DEMAND_WAIT'] = ($PipelineProfile -ne 'current').ToString().ToLowerInvariant()
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_DEMAND_WAIT_MS'] = if($Purpose -eq 'correctness'){[string]$CorrectnessDemandWaitMs}else{'100'}
     $start.EnvironmentVariables['WORLDGEN_ASSIST_NOISE_DIGEST'] = if($Purpose -eq 'correctness'){'true'}else{'false'}
     $start.EnvironmentVariables['WORLDGEN_ASSIST_TICK_BENCHMARK'] = if($Purpose -eq 'performance'){'true'}else{'false'}
     $process = [Diagnostics.Process]::new(); $process.StartInfo = $start
     if (-not $process.Start()) { throw 'Server did not start' }
     $processHandle = $process.Handle # Hold immediately: Windows PowerShell 5 can lose it after an early exit.
+    $availableMask = $process.ProcessorAffinity.ToInt64()
+    $appliedMask = $availableMask
+    if ($ServerLogicalProcessors -gt 0) {
+        $appliedMask = [long]0
+        $selected = 0
+        $availableCount = 0
+        for ($bit = 0; $bit -lt 63 -and $selected -lt $ServerLogicalProcessors; $bit++) {
+            $candidate = [long]1 -shl $bit
+            if (($availableMask -band $candidate) -ne 0) { $appliedMask = $appliedMask -bor $candidate; $selected++ }
+        }
+        if ($selected -ne $ServerLogicalProcessors) { throw "Only $selected eligible logical processors are available" }
+        for ($bit = 0; $bit -lt 63; $bit++) { if (($availableMask -band ([long]1 -shl $bit)) -ne 0) { $availableCount++ } }
+        if ($availableCount -le $ServerLogicalProcessors) { throw 'CPU affinity would not reduce available logical processors' }
+        $process.ProcessorAffinity = [IntPtr]::new($appliedMask)
+        $process.Refresh()
+        if ($process.ProcessorAffinity.ToInt64() -ne $appliedMask) { throw 'Server CPU affinity was not applied' }
+    }
+    [ordered]@{requested_logical_processors=$ServerLogicalProcessors;available_affinity_mask=$availableMask;applied_affinity_mask=$process.ProcessorAffinity.ToInt64();java_pid=$process.Id} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'server-cpu-limit.json')
     $stdout = $process.StandardOutput.ReadToEndAsync(); $stderr = $process.StandardError.ReadToEndAsync()
     "java_pid=$($process.Id); java_handle=$processHandle; controller_pid=$PID" | Set-Content -LiteralPath (Join-Path $evidence 'process-ownership.txt')
     $freshDeadline=[DateTime]::UtcNow.AddSeconds(60)
@@ -351,7 +422,7 @@ try {
         Complete-CorrectnessRegion
         $text=Log-Text
         $digestMap=@{}
-        foreach($match in [regex]::Matches($text,'(?m)^.*\[CAWG\] stage\.digest stage=noise chunk=(?<chunk>-?\d+,-?\d+) .* digest=(?<digest>[0-9a-fA-F]+).* dimension=minecraft:'+([regex]::Escape($Dimension))+'\b')) {
+        foreach($match in [regex]::Matches($text,'(?m)^.*\[CAWG\] stage\.digest stage=noise chunk=(?<chunk>-?\d+,-?\d+) .* digest=(?<digest>[0-9a-fA-F]+).* dimension='+([regex]::Escape($dimensionId))+'\b')) {
             $digestMap[$match.Groups['chunk'].Value]=$match.Groups['digest'].Value.ToUpperInvariant()
         }
         $digests=@($digestMap.Keys | Sort-Object | ForEach-Object {[ordered]@{dimension=$Dimension;chunk=$_;digest=$digestMap[$_]}})
@@ -362,7 +433,7 @@ try {
         $warm=@();$measured=@();$total=$WarmupRuns+$MeasuredRepeats
         for($run=1;$run -le $total;$run++){
             $offset=(Log-Text).Length; $cpuBefore=$process.TotalProcessorTime.TotalMilliseconds; $wall=[Diagnostics.Stopwatch]::StartNew(); $phase=if($run -le $WarmupRuns){'warmup'}else{'measured'}; $number=if($phase -eq 'warmup'){$run}else{$run-$WarmupRuns}
-            Send-Command ('say CAWG_SCENARIO_'+$phase.ToUpperInvariant()+'_BEGIN_'+$number); Start-Location $run; if($run -eq 1){Send-Command 'gamemode creative @a'}; Wait-Idle $offset 120 $run; Send-Command ('say CAWG_SCENARIO_'+$phase.ToUpperInvariant()+'_END_'+$number); $wall.Stop(); $slice=(Log-Text).Substring($offset); $record=Get-TickStatistics $slice ($process.TotalProcessorTime.TotalMilliseconds-$cpuBefore) $wall.Elapsed.TotalMilliseconds; $record.repeat=$number
+            Send-Command ('say CAWG_SCENARIO_'+$phase.ToUpperInvariant()+'_BEGIN_'+$number); Start-Location $run; if($run -eq 1){Send-Command 'gamemode creative @a'}; $regionReady=Wait-Idle $offset 120 $run $wall; Send-Command ('say CAWG_SCENARIO_'+$phase.ToUpperInvariant()+'_END_'+$number); $wall.Stop(); $slice=(Log-Text).Substring($offset); $record=Get-TickStatistics $slice ($process.TotalProcessorTime.TotalMilliseconds-$cpuBefore) $wall.Elapsed.TotalMilliseconds; $record.server_region_ready_ms=$regionReady.all_ms; $record.server_full_region_ready_ms=$regionReady.full_ms; $record.server_owner_region_ready_ms=$regionReady.per_owner_ms; $record.repeat=$number
             if($phase -eq 'warmup'){$warm += $record}else{$measured += $record}
         }
         [ordered]@{warmup_runs=$WarmupRuns;measured_repeats=$MeasuredRepeats;warmup=@($warm);measured=@($measured)} | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $evidence 'performance.json')

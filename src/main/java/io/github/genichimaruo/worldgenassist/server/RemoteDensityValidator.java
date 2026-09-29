@@ -32,15 +32,17 @@ final class RemoteDensityValidator {
 		NoiseSettings noiseSettings,
 		RandomGenerator random
 	) {
+		return prepare(job, sampleGroups, randomState, settings, noiseSettings, random).compare(result);
+	}
+
+	static Prepared prepare(TerrainDensityJob job, int sampleGroups, RandomState randomState,
+		NoiseGeneratorSettings settings, NoiseSettings noiseSettings, RandomGenerator random) {
+		long start = System.nanoTime();
 		Objects.requireNonNull(job, "job");
-		Objects.requireNonNull(result, "result");
 		Objects.requireNonNull(randomState, "randomState");
 		Objects.requireNonNull(settings, "settings");
 		Objects.requireNonNull(noiseSettings, "noiseSettings");
 		Objects.requireNonNull(random, "random");
-		if (!job.identity().equals(result.identity()) || result.densityCount() != job.sampleCount()) {
-			throw new RemoteDensityValidationException("Result identity or volume size does not match its job");
-		}
 		if (job.cellWidth() != 1 || job.cellHeight() != 1
 			|| job.minY() != noiseSettings.minY() || job.height() != noiseSettings.height()) {
 			throw new RemoteDensityValidationException("Result geometry does not match the authoritative 26.3 volume");
@@ -48,7 +50,7 @@ final class RemoteDensityValidator {
 		if (sampleGroups < 0 || sampleGroups > RemoteWorldgenConfig.MAX_VALIDATION_SAMPLE_CELLS) {
 			throw new IllegalArgumentException("Invalid validation group count: " + sampleGroups);
 		}
-		if (sampleGroups == 0) { return ValidationMetrics.NONE; }
+		if (sampleGroups == 0) { return new Prepared(job, 0, new int[0], new float[0], 0L); }
 
 		int totalValues = job.sampleCount();
 		int totalGroups = Math.floorDiv(totalValues + VALUES_PER_GROUP - 1, VALUES_PER_GROUP);
@@ -58,7 +60,8 @@ final class RemoteDensityValidator {
 		Map<Integer, float[]> sampledColumns = new HashMap<>();
 		int chunkMinX = Math.multiplyExact(job.identity().chunkX(), TerrainDensityJob.CHUNK_SIDE);
 		int chunkMinZ = Math.multiplyExact(job.identity().chunkZ(), TerrainDensityJob.CHUNK_SIDE);
-		long start = System.nanoTime();
+		int[] indices = new int[Math.min(sampleGroups, totalGroups) * VALUES_PER_GROUP];
+		float[] expectedValues = new float[indices.length];
 		int validated = 0;
 		for (int group : groups) {
 			int begin = group * VALUES_PER_GROUP;
@@ -83,12 +86,39 @@ final class RemoteDensityValidator {
 					}
 					sampledColumns.put(columnKey, column);
 				}
-				float expected = column[y];
-				requireExact(expected, result.densityAt(index), index);
+				indices[validated] = index;
+				expectedValues[validated] = column[y];
 				validated++;
 			}
 		}
-		return new ValidationMetrics(groups.length, validated, System.nanoTime() - start);
+		return new Prepared(job, groups.length, java.util.Arrays.copyOf(indices, validated),
+			java.util.Arrays.copyOf(expectedValues, validated), System.nanoTime() - start);
+	}
+
+	/** Immutable server-owned sample; positions are never sent to the worker. */
+	static final class Prepared {
+		private final TerrainDensityJob job;
+		private final int groups;
+		private final int[] indices;
+		private final float[] expected;
+		private final long prepareNanos;
+
+		private Prepared(TerrainDensityJob job, int groups, int[] indices, float[] expected, long prepareNanos) {
+			this.job = job; this.groups = groups; this.indices = indices; this.expected = expected;
+			this.prepareNanos = prepareNanos;
+		}
+
+		long prepareNanos() { return prepareNanos; }
+		ValidationMetrics compare(TerrainDensityResult result) {
+			long started = System.nanoTime();
+			if (!job.identity().equals(result.identity()) || result.densityCount() != job.sampleCount()) {
+				throw new RemoteDensityValidationException("Result identity or volume size does not match its job");
+			}
+			for (int index = 0; index < indices.length; index++) {
+				requireExact(expected[index], result.densityAt(indices[index]), indices[index]);
+			}
+			return new ValidationMetrics(groups, indices.length, prepareNanos + System.nanoTime() - started);
+		}
 	}
 
 	static int[] selectCells(int totalCells, int sampleCells, RandomGenerator random) {

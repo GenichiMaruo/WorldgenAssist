@@ -59,6 +59,15 @@ public final class ForgeClientInit {
             worker = new ClientWorldgenWorker(new ClientWorkerTransport() {
                 @Override public boolean canSendHello() { return canSend(); }
                 @Override public void send(CustomPacketPayload payload) { ForgeClientInit.send(payload); }
+                @Override public java.util.function.Consumer<CustomPacketPayload> captureSender() {
+                    var connection = Minecraft.getInstance().getConnection().getConnection();
+                    return payload -> {
+                        if (!connection.isConnected()) return;
+                        if (payload instanceof TerrainJobResultPayload result) {
+                            for (var fragment : ForgeResultFragmentPayload.split(result.result())) ForgeNetwork.send(fragment, connection);
+                        } else ForgeNetwork.send(payload, connection);
+                    };
+                }
             });
         }
         return worker;

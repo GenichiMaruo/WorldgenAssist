@@ -10,6 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 import io.github.genichimaruo.worldgenassist.network.TerrainJobCancelPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobRequestPayload;
+import io.github.genichimaruo.worldgenassist.network.TerrainJobBatchPayload;
 
 public final class FabricRemoteJobSender implements RemoteJobSender {
 	private final Supplier<MinecraftServer> server;
@@ -31,6 +32,15 @@ public final class FabricRemoteJobSender implements RemoteJobSender {
 			throw new IllegalStateException("Remote worker cannot receive terrain jobs: " + ownerId);
 		}
 		ServerPlayNetworking.send(player, payload);
+	}
+
+	@Override
+	public void sendJobs(UUID ownerId, java.util.List<io.github.genichimaruo.worldgenassist.common.TerrainDensityJob> jobs) {
+		ServerPlayer player = requirePlayer(ownerId);
+		if (jobs.size() > 1 && ServerPlayNetworking.canSend(player, TerrainJobBatchPayload.TYPE)) {
+			ServerPlayNetworking.send(player, new TerrainJobBatchPayload(jobs));
+			io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info("[CAWG] jobs.batch_sent owner={} count={}", ownerId, jobs.size());
+		} else RemoteJobSender.super.sendJobs(ownerId, jobs);
 	}
 
 	@Override

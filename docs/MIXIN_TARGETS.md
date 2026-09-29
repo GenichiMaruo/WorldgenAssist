@@ -1,5 +1,90 @@
 # Mixin Targets
 
+## Alpha.5 packaging
+
+The verified candidate targets below are included in alpha.5. Final JARs
+match the latest saved candidates except version metadata; no Mixin descriptor
+or implementation changed during packaging. Latest runtime evidence is Fabric
+Overworld; latest native hooks were built but not rerun in Minecraft. See
+`releases/v0.1.0-alpha.5+mc26.3-verification.md` for exact hashes and limits.
+
+## Fabric result ingress candidate (2026-09-29)
+
+Generated 26.3 `Connection.channelRead0(ChannelHandlerContext, Packet): void`
+checks channel openness and `PacketListener.shouldHandleMessage` before calling
+private static `genericsFtw(Packet, PacketListener): void`. The Fabric-only
+`FabricRemoteResultConnectionMixin263` intercepts that invocation for fully
+decoded `ServerboundCustomPayloadPacket(TerrainJobResultPayload)` only and
+preserves the received-packet counter. Cached Fabric networking 6.3.8
+`ConnectionMixin` installs `FabricPacketMerger` after `decoder`; its merger
+decodes the complete custom packet before `Connection.channelRead0` sees it.
+The existing splitting/size checks are therefore retained.
+
+HEAD hooks on `Connection.channelInactive(ChannelHandlerContext): void` and
+`setupInboundProtocol(ProtocolInfo, PacketListener): void` revoke the captured
+connection. Only `fabric.mod.json` loads `worldgen_assist.fabric.mixins.json`;
+native loaders retain their original result ingress. No world-generation
+Mixin descriptor changes. The focused gate
+`network-dispatch-gate-20260929-215751-919` verified actual Fabric network
+ingress, ten batch packets and both owners' matching applied chunks; all 1,802
+shared NOISE digests matched. Native transport builds passed; native ingress
+runtime is outside this gate.
+
+## Adaptive wait candidate (2026-09-29)
+
+No Mixin target or descriptor changes. The existing structure-start observer
+now requests a coalesced server task. Generated `MinecraftServer.wrapRunnable`
+is public and returns a `TickTask`; inherited `BlockableEventLoop.schedule`
+queues it and unparks the server thread. Generated `execute` can run inline,
+so the candidate uses explicit scheduling. `shouldRun` still applies. See
+`WORLDGEN_PIPELINE.md` for lifecycle checks and focused verification scope.
+The final focused Fabric gate passed the two-owner Overworld pair with
+overlapping successful assistance and 1,822 shared NOISE digests equal to
+vanilla. The following two-logical-CPU performance pair found slower assisted
+region completion and client receipt; native-loader runtime remains unverified.
+
+## Pipelined 26.3 candidate targets (2026-09-29)
+
+Generated `ChunkStatusTasks.java` and `ChunkPyramid.java` verify two new hooks
+in the existing `ChunkStatusTasksMixin`:
+
+- HEAD of static `generateStructureStarts(WorldGenContext, ChunkStep,
+  StaticCache2D, ChunkAccess): CompletableFuture`: queue metadata for already
+  scheduled generation; do not alter its future or advance stages. Loading
+  uses the separate `loadStructureStarts` method.
+- Wrap static `full` with the same parameters/return type: add a diagnostic
+  completion observer only when diagnostics are enabled. Keep vanilla's
+  main-thread conversion and exceptional result.
+
+Existing `buildTerrain` and `doFill` density replacement targets are unchanged.
+26.3 surface and carvers execute inside `buildTerrain`. Source verification
+does not establish runtime injection or speedup. The 2026-09-29 local gate
+passed all three loader builds. The subsequent installed Fabric two-owner
+correctness pair completed with both required applied chunks and all 1,814
+shared NOISE digests equal. This verifies the selected Overworld runtime;
+new-hook runtime verification on Forge/NeoForge remains outside this gate.
+
+The deadline investigation additionally verified generated `MinecraftServer`:
+its `PacketProcessor` runs on `serverThread` and is drained before `tickServer`.
+No Mixin target changed. The TERRAIN wait watchdog is independent of that
+packet queue; see `WORLDGEN_PIPELINE.md` for the handler-timestamp limitation.
+
+## 26.3 development candidate: unchanged injection target
+
+The generated 26.3 `ChunkStatusTasks.buildTerrain` still calls the selected
+generator's `buildTerrain`. The generated
+`NoiseBasedChunkGenerator.buildTerrain` creates the scoped noise chunk, and
+private `doFill(NoiseChunk, ChunkAccess)` calls
+`DensitySampler.Bound.sampleVolume(DensityVolume)` for `finalDensity`.
+Dimension ID is not part of either call target. The candidate changes only
+admission and result encoding; it retains the existing `ChunkStatusTasks`
+WrapMethod and `doFill` WrapOperation descriptors. Custom generator wrappers
+must enter the same vanilla delegate `doFill`; unrelated density pipelines
+have no application hook and remain local. No new Mixin is introduced. The
+selected Fabric protocol-4 custom-dimension and Overworld pairs each applied
+one remote result with matching vanilla NOISE digests (841 and 941 shared);
+native Forge/NeoForge custom-dimension Mixin application remains unchecked.
+
 ## 26.3 port finding (2026-09-24; three loader builds)
 
 Generated 26.3 `NoiseChunk` no longer owns interpolation cells or exposes

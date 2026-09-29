@@ -1,5 +1,71 @@
 # Player-owned concurrent assistance
 
+## Alpha.5 release scope
+
+Alpha.5 includes the adaptive per-owner pipeline and connection-scoped dispatch
+described below. Latest Fabric Overworld two-owner runtime matched 1,802 shared
+NOISE digests; latest native-loader runtime was not rerun. All three final JARs
+match saved candidates except version metadata. This does not establish faster
+chunk completion or client arrival. Historical checkpoints remain separate;
+see `releases/v0.1.0-alpha.5+mc26.3-verification.md`.
+
+## Connection-scoped dispatch candidate (2026-09-29)
+
+The current candidate batches approvals per owner (at most four) within a
+single scheduling pass and refills while a small amount of server work remains
+queued. It keeps the existing global/per-owner reservations and fair candidate
+ordering. Every result completes independently. Client sends capture a single
+connection; Fabric result ingress captures a hello-approved owner and rejects
+revoked/replaced sessions before decoding. A delayed disconnect from the old
+connection cannot revoke its replacement or another owner. The smallest
+two-owner Overworld correctness pair is selected in `Run-NetworkDispatchGate`;
+native ingress and multi-PC speedup are outside that correctness gate.
+The focused gate `network-dispatch-gate-20260929-215751-919` passed both owners'
+overlapping assistance and matching required chunks, with all 1,802 shared
+NOISE digests equal. It observed ten per-owner batch packets and 276 accepted
+network receipts; disconnect/replacement isolation is also covered by the
+focused unit tests. No new multiplayer performance claim.
+
+The adaptive wait candidate keeps latency learning per owner and clears it
+when that owner's context is invalidated. It uses a maximum 200ms default
+demand wait, skips unlikely direct work while the owner has active ahead work,
+and wakes the existing owner-interleaved
+prefetch dispatcher with a coalesced server/context task. Ownership, admission
+limits and validation remain unchanged. No active ahead work permits bounded
+direct admission even for a slow owner. A saturated candidate queue displaces
+overrepresented entries to admit other owners without increasing capacity.
+Its focused gate passed seven affected tests, Fabric build and installed
+two-owner Overworld correctness on two logical server CPUs: both required
+applications and all 1,822 shared digests matched vanilla, with successful
+overlapping owner jobs. Evidence is `demand-wait-gate-20260929-200658-043`.
+The subsequent matched two-logical-CPU benchmark was slower with assistance;
+see `TEST_RESULTS_LATEST.md` for its measurements. Older performance results
+below belong to the JARs named in their respective sections.
+
+The 2026-09-29 unpublished pipeline adds actual-generation prefetch within
+current player demand. The server chooses ownership and interleaves owners;
+clients do not choose arbitrary coordinates. Existing adaptive client limits
+also bound remote wait plus authoritative preparation, globally and per owner.
+Pending and unused results are removed on owner/context invalidation and expire.
+Preparation reuse and early validation do not change the trust/seed boundary.
+The selected installed Fabric Overworld two-owner correctness pair passed:
+both required applied chunks and all 1,814 shared digests matched vanilla,
+with overlapping owner jobs. `Run-PipelinedAssistGate.ps1` also completed eight
+matched two-logical-CPU performance scenarios, with complete receipt coverage.
+Continuous prefetch improved versus the current-style control but did not beat
+vanilla; relocation regressed. See `TEST_RESULTS_LATEST.md` for the measurements.
+
+## 26.3 unpublished scheduler update
+
+The current development candidate can run 1–4 client computation threads per
+owner (default two) and up to four in-flight jobs per owner under the existing
+global bound. Admission grows after successful work and backs off on failures.
+Prediction leaves one owner slot for direct demand. Jobs remain tied to the
+selected player's own view and connection; disconnect, dimension change,
+timeout and stale-result rules are unchanged. The published alpha.4 behavior
+and historical evidence below remain unchanged. See `REMOTE_PROTOCOL.md` for
+configuration and `TEST_RESULTS_LATEST.md` for verification status.
+
 ## Decision — 2026-09-12
 
 The user authorizes extending the single-player alpha so multiple players can

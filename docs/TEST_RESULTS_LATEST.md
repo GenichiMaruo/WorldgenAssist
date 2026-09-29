@@ -1,5 +1,425 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## Alpha.5 packaging checkpoint (2026-09-29)
+
+Version `0.1.0-alpha.5+mc26.3` packages the protocol-4 candidate below.
+All three loader distribution/source builds passed in one sequential batch.
+Comparing every decompressed distribution archive entry with the saved candidate
+found only the loader's version metadata changed; all classes and other entries
+were identical. No new runtime/performance matrix was run for this packaging.
+Original evidence remains attached to its original JAR identities. Exact final
+hashes and scope are in [alpha.5 verification](releases/v0.1.0-alpha.5+mc26.3-verification.md).
+
+## Network dispatch candidate — constrained-server performance (2026-09-29)
+
+The requested paired speed test completed for the exact network-dispatch
+candidate:
+
+- Evidence: `test-artifacts/csb-20260929-220931-467/summary.json`; paired
+  analysis: `test-artifacts/csb-20260929-220931-467/c2/analysis/scenario-matrix-analysis.json`.
+- Fabric JAR SHA-256:
+  `922F27B8B3427D16DAA23AD1ABB5FD15DABF00FBC0264619D71D6E4FFC0F3BF0`.
+- Two logical server CPUs (applied affinity mask 3), two clients, Overworld,
+  seed 8675309, prediction, cache 128 and eight validation cells. Each mode
+  used one excluded warm-up and three measured repeats, with the same measured
+  coordinates and 1,682 NOISE tasks per repeat (5,046 per mode). The source
+  manifest matched before and after both modes. All six client regions had
+  81/81 chunk receipt; both scenarios cleaned up safely. The paired summary
+  recorded no failed tasks or timeout/fallback events in its separate counters.
+  Raw assisted measurements additionally recorded 10, 2 and 8 demand-wait
+  fallbacks (20 total); these short-wait expirations trigger local generation
+  and are not included in those summary counters.
+- Median server 9-by-9 NOISE-region completion was 11,264ms vanilla and
+  7,454ms assisted (**33.8% faster on this server-side proxy**).
+- Median server 9-by-9 FULL completion was 14,576ms vanilla and 14,844ms
+  assisted (**1.8% slower**, descriptive). The NOISE improvement did not
+  persist through server-side chunk completion.
+- Median time until both clients loaded all 81 chunks was 17,436ms vanilla and
+  17,801ms assisted (**2.1% slower assisted**). Median throughput was 29.44 vs
+  29.56 NOISE tasks/s (**0.4% higher assisted**).
+- Median server CPU was 103,328ms vs 102,297ms (1.0% lower assisted). Median
+  tick p95 was 16.96ms vs 18.97ms (11.8% higher assisted); tick mean was
+  12.40ms vs 10.79ms. These metrics move in different directions.
+- In assisted measured runs, mean request RTT was 91.46ms, decode 11.32ms,
+  validation 16.28ms, and client density computation 5.80ms. RTT now ends when
+  the complete payload reaches the Fabric network ingress, before decoder
+  queueing. It is not directly comparable to RTT from the earlier handler-entry
+  timestamp. The separate correctness run observed 33.33ms mean decoder
+  ingress queue, but that is a whole-run diagnostic, not a measurement paired
+  to these three performance repeats.
+
+Assessment: server-side chunk work completed earlier in this constrained
+region test, but players did **not** receive the full region sooner. The end to
+end client receipt metric was slightly slower and throughput was effectively
+unchanged. Three repeats are descriptive evidence, not a broad performance
+claim. The comparator reports `DESCRIPTIVE_ONLY`; no speedup in player-visible
+generation time is established for this setup.
+
+## Network dispatch candidate — focused gate complete (2026-09-29)
+
+All implementation preceded one `Run-NetworkDispatchGate.ps1 -Execute` batch:
+
+- Evidence: `test-artifacts/network-dispatch-gate-20260929-215751-919/summary.json`.
+- Fabric JAR SHA-256:
+  `922F27B8B3427D16DAA23AD1ABB5FD15DABF00FBC0264619D71D6E4FFC0F3BF0`.
+- Six affected tests across three classes: zero failures/errors/skips.
+  Fabric build and the affected Forge/NeoForge transport builds passed;
+  native loader tests/runtime were not selected.
+- Installed Fabric Overworld vanilla/assisted correctness pair: two owners,
+  separate dedicated server with two logical CPUs, eight validation cells,
+  cache 128, prefetch and 100ms demand base. Both required applied chunks and
+  all 1,802 shared NOISE digests matched; owner jobs overlapped, comparison
+  `COMPLETE` with zero issues. Both cases reported safe cleanup and unchanged
+  source manifests through their execution.
+- `transport-paths.json`: 276 accepted network-ingress receipts, zero main-route
+  receipts, ten 2..4-job batch packets. Both clients used direct worker send
+  (141/154 submissions); mean local send handoff was 0.0536/0.0560ms.
+- Whole correctness-log diagnostics (including warm-up): mean registration
+  0.1434ms, request submission queue 6.3640ms, decoder ingress queue 33.3321ms
+  and result identity claim 0.4969ms. The decoder queue remains a material wait;
+  these are not performance samples or synchronized client/server timelines.
+- No ingress-capacity rejection, decode failure/rejection, density mismatch
+  or job-timeout log. Twenty cancelled replies were rejected. Server overload
+  and scripted movement warnings remained. Client logs retain offline test
+  account/Realms HTTP errors and OS performance-counter warnings; no worker
+  computation failure was found.
+
+The candidate removes client main-thread reply scheduling, adds Fabric
+connection-scoped result ingress before the server packet queue, batches
+observed-generation approvals and permits bounded early refill. The subsequent
+performance pair above found an earlier server-region proxy but slightly slower
+client receipt. Fabric RTT ends at full payload arrival on the network thread,
+so it must not be compared directly with old handler-entry RTT.
+
+## Adaptive demand wait: constrained-server performance — 2026-09-29
+
+The requested performance comparison completed for the same Fabric candidate:
+
+- Evidence: `test-artifacts/csb-20260929-201939-871/summary.json`; paired
+  analysis: `test-artifacts/csb-20260929-201939-871/c2/analysis/scenario-matrix-analysis.json`.
+- Fabric JAR SHA-256:
+  `2BEC7A498A1F1ECFC9F00CE9292D3E23BEAD98157D176144EFEC0C96DE87CC5D`.
+- Two logical server CPUs, two clients, Overworld, seed 8675309, prediction,
+  cache 128 and eight validation cells. Vanilla and assisted each used one
+  excluded warm-up and three measured repeats. They completed the same 1,682
+  NOISE tasks per repeat (5,046 total per mode) on identical coordinates. All six client regions had
+  full 81/81 chunk receipt coverage; no failures or timeouts were recorded.
+- Median server 9-by-9 NOISE-region completion was 7,276ms vanilla and
+  8,257ms assisted (**13.5% slower assisted**). Median completion at both
+  clients was 15,697ms and 17,365ms (**10.6% slower assisted**).
+- Median NOISE throughput was 30.03 tasks/s vanilla and 29.19 assisted
+  (**2.8% lower assisted**). Median server CPU use increased from 100,750ms
+  to 102,938ms; median server tick p95 increased from 20.06ms to 21.40ms.
+- Assisted logs show 130ms mean request RTT, 5.76ms mean client density
+  computation and 16.50ms mean authoritative validation. This suggests network
+  and queue delay can outweigh the small density calculation in this setup.
+
+This result does **not** show a speedup on a two-logical-CPU server; all three
+primary time/throughput measures were worse with assistance. The three repeats
+are descriptive, and execution order was vanilla followed by assisted. This
+does not establish results for other server hardware, networks or movement.
+Performance scripts were the only work run for this request; no tests or builds
+were repeated. The benchmark lock now opens the existing shared lock file
+exclusively and removes it after releasing it, so prior batch lock files do not
+prevent the measurement from starting.
+
+## Adaptive demand wait: minimum affected gate — 2026-09-29
+
+All implementation and each necessary correction preceded its batch execution.
+The final `Run-DemandWaitGate.ps1 -Execute` passed:
+
+- Evidence: `test-artifacts/demand-wait-gate-20260929-200658-043/summary.json`.
+- Fabric JAR SHA-256:
+  `2BEC7A498A1F1ECFC9F00CE9292D3E23BEAD98157D176144EFEC0C96DE87CC5D`.
+- Three affected JUnit classes, seven tests, zero failures/errors/skips:
+  five virtual-time adaptive wait tests, one consumed-cache identity/isolation
+  test and the existing candidate-queue test extended for saturated admission.
+  Coverage includes delayed timer execution, the absolute wait ceiling and
+  bounded admission for a slow owner when no ahead work is active.
+- Fabric build passed. No unrelated JUnit suite or native-loader build ran.
+- Installed Fabric Overworld vanilla/assisted correctness pair, two owners,
+  server CPU affinity mask 3 (two logical processors), actual 100ms base wait,
+  prefetch, cache 128, prediction disabled and eight validation cells.
+- Both required remotely applied chunks matched vanilla, successful owner
+  jobs overlapped, all 1,822 shared NOISE digests matched, and final comparison
+  was `COMPLETE` with zero issues. Both scenarios reported safe cleanup.
+- Runtime logs contained 170 demand waits with configured budgets from 100
+  through 200ms, 279 successful applications, 131 cache hits and 133 slow-direct
+  skips. These are whole correctness-scenario counts, including warm-up;
+  they are not performance samples or throughput measurements.
+
+No performance scenario ran for this artifact. Bounded waiting and two-owner
+participation are verified within this selected scope; faster player
+receipt/rendering or general speedup remains unproven. Forge/NeoForge runtime,
+other dimensions and arbitrary custom generators are outside this gate.
+
+Retained intermediate checkpoints (never substituted for the final result):
+
+- `demand-wait-gate-20260929-170441-607`: five tests/build passed; assisted
+  warm-up failed to trace cached applications because cache consumption used
+  a fresh request ID. Logs had 171 cache applications, but this was not a
+  successful owner correctness proof. Cache now retains the original immutable
+  result/ID and checks insertion coordinate/context identity.
+- `demand-wait-gate-20260929-171752-574`: the added cache test failed because
+  Minecraft registries were not bootstrapped. Its setup was corrected.
+- `demand-wait-gate-20260929-172058-597`: six tests/build and vanilla runtime
+  passed, but assisted correctness timed out. After relocation one owner had
+  118 applied results while the other had no sent jobs. Unconditional slow
+  direct suppression exposed uneven ahead admission; the correction preserves
+  bounded direct admission when that owner has no active ahead work and admits
+  underrepresented owners to a saturated candidate queue. Those failed runtime
+  cases reported safe cleanup. Their JARs are not final-candidate evidence.
+- `demand-wait-gate-20260929-200515-629`: build tasks were up to date, so the
+  gate correctly rejected the older JUnit timestamps instead of reporting
+  them as a fresh run. The script now uses Gradle `--rerun-tasks`; the next gate
+  executed all selected tests and completed successfully.
+
+## Pipelined candidate: complete selected gate — 2026-09-29
+
+All implementation preceded testing. The successful local-only gate below was
+reused with its exact JAR SHA-256 after the user explicitly authorized transfer
+and batch execution on the dedicated other PC. The runtime gate completed:
+
+- Evidence: `test-artifacts/pipelined-assist-gate-20260929-154717-022/summary.json`.
+- Same Fabric JAR: `D0B937582352C03D3D75F9C703BD56E6FF91295C572EA0CB4C7C28E29FC11B1F`.
+- Installed Fabric two-owner Overworld correctness: both required remotely
+  applied chunks and all 1,814 shared NOISE digests matched; overlapping owner
+  jobs; zero issues.
+- Eight performance scenarios completed, each with one excluded warm-up and
+  three measured repeats. The dedicated server applied CPU affinity mask 3
+  (two logical processors); both clients ran on the initiating PC.
+- Read-only final aggregation created six paired reports, all `COMPLETE`,
+  under `comparisons/`, indexed by `performance-comparisons.json`. Every pair
+  had equal runtime/client conditions, exact measured coordinates, 1,682
+  completed NOISE tasks per repeat, zero failed tasks, matching JAR/source
+  identity, safe cleanup, and full 81/81 receipt coverage for both owners.
+
+Medians, in milliseconds (CPU is whole measured server CPU consumption):
+
+| Movement | Variant | Client receipt | Server FULL | Server NOISE region | Server CPU |
+|---|---|---:|---:|---:|---:|
+| Relocation | Vanilla | 15,399 | 12,359 | 7,549 | 98,203 |
+| Relocation | Current-style control | 16,636 | 13,003 | 6,859 | 97,469 |
+| Relocation | Prepared | 16,841 | 13,617 | 6,983 | 101,500 |
+| Relocation | Prefetch | 17,429 | 14,334 | 7,873 | 101,844 |
+| Continuous | Vanilla | 17,640 | 14,954 | 11,873 | 101,984 |
+| Continuous | Current-style control | 20,184 | 17,822 | 13,045 | 100,641 |
+| Continuous | Prepared | 18,872 | 16,564 | 12,114 | 98,188 |
+| Continuous | Prefetch | 18,133 | 15,885 | 11,714 | 98,563 |
+
+The current-style control uses the same candidate with context reuse and both
+server pipeline switches disabled; it is not an older artifact. Prepared also
+shortens demand waiting, so this comparison cannot isolate validation overlap.
+Prefetch improved continuous client receipt by 10.2% versus that control, but
+remained 2.8% slower than vanilla. Relocation was 13.2% slower than vanilla.
+**The player's wait-time speedup goal remains unproven.** Three repeats with
+overlapping ranges, fixed variant order, shared client hardware, and logical
+CPU affinity limit generalization. Receipt excludes rendering, and server/client
+clock origins differ.
+
+Mechanism evidence and remaining causes:
+
+- Client preparation median fell from about 2.64/2.68ms to 0.035/0.034ms in
+  relocation/continuous prefetch. Reuse is working.
+- Prefetch sent a median 113/80 jobs and used 103/59 ready cache entries.
+  The `prefetch_applied` summary counter only counts joined completions with
+  `source=prefetch`; cached completions are logged with `source=cache` and must
+  be counted separately. Its zero median does not mean no early result applied.
+- `density-use-analysis.json` counts successful remote/cache/prefetch density
+  applications against all NOISE completions in the same measured windows.
+  Prefetch applied 130–174 / 1,682 in relocation and 72–140 / 1,682 in continuous
+  movement: 7.73–10.34% and 4.28–8.32%, respectively. This is a task fraction,
+  not a fraction of CPU saved; block placement, surface, carvers, features,
+  lighting, full conversion and sending still execute on the server.
+- Prepared-only demand timed out a median 98/114 times; prefetch reduced this
+  to 42/57. The fixed 100ms budget often discards direct work, causing local
+  recomputation after remote preparation/transfer costs. Successful prefetch
+  result RTT means were about 112–140ms; failed requests are excluded from that
+  RTT metric, so it is not the latency distribution of all requests.
+- Early validation makes final comparison very short, but sample preparation
+  still consumes the constrained server CPU. These measurements support low
+  useful coverage and deadline waste as further investigation targets; they
+  do not identify an exact CPU attribution or a measured send-only duration.
+
+The selected gate verifies Fabric Overworld with two owners, plus local sampler
+equivalence for three vanilla dimensions and all three loader builds. It does
+not verify new-hook runtime on native loaders or performance of arbitrary
+custom generators. No additional runtime tests were part of that completed gate.
+
+## Pipelined candidate: local gate only — 2026-09-29
+
+After context reuse, early authoritative validation, generation-candidate
+prefetch, demand wait bounds and the batch harness were all implemented,
+`Run-PipelinedAssistGate.ps1 -Execute -LocalOnly` completed:
+
+- Evidence: `test-artifacts/pipelined-assist-gate-20260929-154212-051/summary.json`.
+- Four selected JUnit suites, 7 tests, 0 failures/errors/skips. Coverage includes
+  reusable context equality/reset/mismatch, all three vanilla density volumes,
+  prepared-sample mismatch, two-input comparison, queued/running cancellation
+  capacity, bounded/deduplicated owner-interleaved candidate selection.
+- Fabric test/build, Forge build and NeoForge build passed sequentially.
+- Fabric JAR SHA-256:
+  `D0B937582352C03D3D75F9C703BD56E6FF91295C572EA0CB4C7C28E29FC11B1F`.
+- Installed Minecraft runtime injection, two-owner output equality and
+  performance were **not run**. No speedup claim is made.
+
+The first full gate (`pipelined-assist-gate-20260929-153944-440`) stopped before
+compilation: the sandbox denied Gradle networking. Its retained old JAR hash is
+not evidence of the new candidate. An escalated full-gate request was then
+rejected by automatic approval review because SSH artifact/configuration
+transfer to the dedicated other PC lacked explicit destination authorization.
+Local-only execution was separately approved. The user subsequently explicitly
+authorized transfer and batch execution in the dedicated remote fixture.
+Runtime resumed from the successful local evidence with the exact SHA-256,
+without repeating builds or unit tests, under
+`test-artifacts/pipelined-assist-gate-20260929-154717-022/`.
+Its two-owner correctness pair matched both required remotely applied chunks
+and all 1,814 shared NOISE digests, with zero issues. The subsequent eight
+performance scenarios and their final comparisons completed as recorded above.
+Historical results below are unchanged.
+
+## Parallel-worker candidate and client receipt — 2026-09-27
+
+The unpublished scheduler now admits up to four jobs per owner after
+successful work, capped by the client's configured 1–4 workers and the
+existing global limit. It reserves one owner slot for direct demand, uses
+two bounded server decoder threads, avoids duplicate direct-result cache
+retention, and can report aggregated fallback reasons. Protocol `CURRENT=4`
+and the trusted-raw opt-in gate did not change. The initial sequential gate
+`test-artifacts/parallel-assist-gate-20260927-214041-171/summary.json`
+passed the focused `WorkerRegistry263Test`, the Fabric installed-client
+two-owner performance pair, and Forge/NeoForge builds. Its JAR hash was
+`5711AA77C81DD8AF09BADF5B996A18A82581D30E5E00641725DD49EA6A39FC05`.
+
+The six-scenario constrained-server batch for that hash is
+`test-artifacts/csb-20260927-214639-537/summary.json`: all modes and CPU
+tiers completed, with equal coordinates/tasks, zero comparison issues, and
+safe cleanup. Its medians were:
+
+| Server CPU affinity | Server 9×9 ready, vanilla / assisted | NOISE throughput, vanilla / assisted |
+|---|---:|---:|
+| Unrestricted | 1,513 / 1,663 ms | 96.23 / 83.50 tasks/s |
+| Four logical processors | 4,511 / 4,108 ms | 53.52 / 50.36 tasks/s |
+| Two logical processors | 8,966 / 8,615 ms | 30.43 / 28.36 tasks/s |
+
+The constrained server-side region metric improved in the four- and
+two-logical tiers, but overall NOISE throughput remained lower with assistance.
+These runs predated client receipt instrumentation and cannot establish a
+player-visible improvement.
+
+The benchmark now timestamps the measured BEGIN message and each client chunk
+load on the same monotonic client clock. The first instrumentation attempt
+`validation-matrix-20260927-221327-360/` passed builds and both runtime
+scenarios but its aggregate was `INCOMPLETE`: no receipt markers were captured.
+After registering both Fabric chat and game-message callbacks, the selected
+pair `validation-matrix-20260927-222019-262/` passed with complete 81/81
+chunk coverage for both owners in all three repeats. At unrestricted server
+CPU, median client receipt was 3,808 ms vanilla versus 4,476 ms assisted;
+server region-ready was 1,569 versus 1,817 ms. Its JAR SHA-256 was
+`58D83F28F7E496000DF37D604D7F98239A1BD2AB526A6F74AE430A7A51CE1474`.
+
+The exact same final JAR passed the targeted two-logical-server pair
+`test-artifacts/csb-20260927-222555-696/summary.json`, with full client
+coverage and no comparison issues. Median server 9×9 readiness improved from
+7,803 to 7,044 ms, but **median client receipt worsened from 15,403 to
+16,571 ms**. Throughput was 30.15 versus 29.14 NOISE tasks/s. The client
+receipt clock begins when each client receives the benchmark BEGIN message;
+it includes chunk delivery and client processing but not the earlier server
+command-to-message delay. Both clients still share one PC, and CPU affinity
+does not reproduce all limits of a weak physical server. The player's wait
+time goal has therefore not been demonstrated by this candidate.
+
+The selected two-owner direct correctness pair at
+`test-artifacts/validation-matrix-20260927-223824-411/` passed with this
+same JAR: both required remotely applied chunks matched their independent
+vanilla digests, all 1,803 shared NOISE digests matched, the owners' jobs
+overlapped, and aggregation reported zero issues. This verifies the selected
+Overworld path under concurrent owners; it is not a correctness matrix for
+all dimensions or custom generators.
+
+## Two-owner constrained-server experiment — 2026-09-27
+
+The unpublished protocol-4 Fabric JAR SHA-256
+`DEFF86143B2F59915AAE17B54FF3628485466348DB009924BD01B8BE4B746E4C`
+completed six installed-client performance scenarios: vanilla and assisted
+under unrestricted, four-logical-processor, and two-logical-processor server
+Java affinity. The dedicated server ran on the second PC; both clients ran
+on the first. Each scenario excluded one warm-up and measured three fresh
+regions. Every measured repeat completed 1,682 NOISE tasks; all six scenarios
+had the same measured coordinate sets, the same source/JAR identity, zero
+timeouts/fallbacks, and safe cleanup. The CPU affinity masks recorded on both
+routes were `68719476735`, `15`, and `3`, respectively.
+
+| Server Java affinity | Both owners' 9x9 NOISE region ready, vanilla / assisted | Throughput, vanilla / assisted |
+|---|---:|---:|
+| Unrestricted | 1,595 / 1,551 ms | 98.49 / 87.49 tasks/s |
+| Four logical processors | 3,889 / 4,487 ms | 51.50 / 51.12 tasks/s |
+| Two logical processors | 7,937 / 9,088 ms | 29.29 / 28.38 tasks/s |
+
+These are medians of three repeats. The region-ready measure runs from the
+scripted relocation until both owners' 9-by-9 NOISE regions complete on the
+server; it does **not** measure client chunk receipt or visible waiting.
+Assistance did not improve median throughput in any CPU condition. At the
+two constrained settings, its median server region-ready time was also
+longer. CPU affinity to logical processors approximates a constrained server
+but does not reproduce a weaker CPU, memory, disk, or separate client PCs.
+This is descriptive evidence for the selected configuration, not a general
+performance conclusion.
+
+The assisted measured windows sent 211 jobs unrestricted, 187 with four
+logical processors, and 232 with two, versus 5,046 completed NOISE tasks
+per tier. Prediction and cross-window completion mean those counts cannot be
+treated as an exact offloaded-work percentage. The recorded median RTTs were
+116, 129, and 142 ms, while client density calculation was about 6 ms in
+each tier. Median total remote-job time increased from 131 to 195 to 329 ms
+as the server was constrained. The current trusted-raw coordinator admits
+one in-flight job per owner (`RemoteJobCoordinator` constructs
+`PendingTerrainJobRegistry` with a per-owner limit of 1). These observations
+motivate instrumenting why eligible NOISE work remains local and where the
+remote lifecycle waits before changing concurrency or transport policy; they
+do not by themselves establish a causal bottleneck.
+
+The preserved six-scenario run is `test-artifacts/csb-20260927-180639-953/`.
+Its original `summary.json` reports `INCOMPLETE` because the comparator's new
+CPU-condition expression had a PowerShell syntax error. The error was fixed
+without rerunning Minecraft; all three read-only comparisons then reported
+`COMPLETE`, zero issues, under each tier's `analysis-fixed/`. The verified
+cross-tier audit is `summary-reanalysis.json`. Two prior attempts remain
+separate: `constrained-server-benchmark-20260927-175901-862/` stopped at
+sandbox-denied SSH preparation, and
+`constrained-server-benchmark-20260927-175950-892/` failed client startup
+because Windows rejected an overlong native-library path. Neither attempt
+provides performance measurements.
+
+## Unpublished 26.3 protocol-4 follow-up — 2026-09-27
+
+The focused Fabric matrix at
+`test-artifacts/validation-matrix-20260927-165014-519/` completed with ten
+passes, zero failures and two intentional skips. Four selected JUnit suites
+ran six tests. The custom `worldgen_assist:fixture` dimension pair matched
+841/841 shared NOISE digests and its one remotely applied chunk; the
+Overworld pair matched 941/941 and its one applied chunk. Analysis was
+`COMPLETE`, zero issues; both scenarios in each pair reported safe cleanup.
+The exact tested Fabric JAR SHA-256 was
+`DEFF86143B2F59915AAE17B54FF3628485466348DB009924BD01B8BE4B746E4C`.
+
+The selected Overworld performance pair completed three repeats per route:
+median throughput was 70.32 tasks/s vanilla and 70.08 assisted. This is
+still a lower assisted median and does not prove a speedup. The v4 result
+uses four bytes per raw density instead of eight; 78 logged remote results
+had median encoded payload 180,401 bytes and RTT 126.24 ms. Their median
+client encode and server decode times were 4.85 and 1.71 ms. The earlier
+alpha.4 event sample had different jobs, so cross-run latency differences
+are descriptive rather than a controlled causal performance result.
+
+Forge's selected fragment-assembler suite passed three tests, and its native
+build passed. NeoForge's native build passed. The completed sequential gate
+is `test-artifacts/focused-worldgen-gate-20260927-171829-732/summary.json`;
+it reuses the exact finished Fabric matrix after a wrapper-only process-output
+fix. Native custom-dimension runtime, independent custom density algorithms,
+and client-unavailable custom noise registries are not verified by this run.
+The published alpha.4 evidence and hashes below remain separate.
+
 The isolated 26.3 client launcher omitted the official Minecraft JVM option
 `-XX:StackShadowPages=32`. After it was added, an installed NeoForge two-owner
 session passed with both distinct owners registered and each completing remote

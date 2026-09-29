@@ -2,7 +2,7 @@
 
 ## Scope and sources
 
-The current alpha.4 line targets Minecraft Java Edition **26.3** with
+The current alpha.5 line targets Minecraft Java Edition **26.3** with
 Fabric Loader **0.19.5** / Fabric API **0.161.0+26.3**, Forge **66.0.3**,
 and NeoForge **26.3.0.13-beta** on Java **25** (verification JDK 25.0.4).
 The earlier 26.2 Fabric alpha.3 remains on `mc/26.2` and is immutable.
@@ -40,13 +40,18 @@ security boundary and `ALPHA3_PERFORMANCE.md` for measured performance.
 - On the published 26.2 line, the separate transcript fixture is limited to the already public seed
   **8675309**. Its persistent disclosure budget and authority lifecycle must
   remain intact. Its general protocol `CURRENT` is **2**; fixture packets use
-  their separate v3 family. The 26.3 general trusted-raw protocol is **3**;
-  the fixture is **not ported to 26.3**. Read
+  their separate v3 family. The fixture is **not ported to 26.3**. The
+  immutable alpha.4 general trusted-raw protocol is **3**; alpha.5 uses **4**
+  for exact float32 density transport. Server and clients must match. Read
   `SEEDED_LEAF_FIXTURE_PROTOCOL.md` before changing runtime or network behavior.
-- Published trusted raw-seed assistance supports vanilla Overworld, Nether, and End for
-  eligible new chunks. Mod-added dimensions and custom generators are outside
-  the verified scope. Do not claim a speedup: the twelve measured 26.2 alpha.3
-  conditions and the one selected 26.3 pair showed lower assisted median throughput.
+- Trusted raw-seed assistance supports eligible new vanilla noise terrain.
+  Alpha.5 also admits compatible additional dimensions and explicit vanilla
+  noise delegates, with only a prior Fabric custom-dimension fixture verified.
+  Arbitrary custom generators and client-unavailable noise registries remain
+  unsupported. Latest runtime evidence is Fabric Overworld with two owners;
+  native builds passed but changed native paths were not rerun. Do not claim
+  end to end speedup: the latest constrained-server test improved NOISE-region
+  readiness but did not improve FULL completion or client receipt.
 - Ordinary players may edit their own participation setting, but server policy
   changes require operator authority. Server-side revision and request identity
   checks must remain authoritative. Saved server policy needs a restart;

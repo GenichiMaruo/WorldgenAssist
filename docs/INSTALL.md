@@ -2,23 +2,41 @@
 
 [English](INSTALL.md) | [日本語](INSTALL.ja.md) · [Overview](../README.md)
 
-## Minecraft 26.3 alpha.4
+## Minecraft 26.3 alpha.5
 
 Use Minecraft Java Edition **26.3**, Java **25** (tested with 25.0.4), and one
 loader: Fabric Loader **0.19.5** with Fabric API **0.161.0+26.3**, Forge
 **66.0.3**, or NeoForge **26.3.0.13-beta**. Download the corresponding
-`0.1.0-alpha.4+mc26.3` distribution JAR from
-[the alpha.4 release](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.4%2Bmc26.3).
+`0.1.0-alpha.5+mc26.3` distribution JAR from
+[the alpha.5 release](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.5%2Bmc26.3).
 Install the same loader-specific JAR on the server and each participating
 client. Fabric API is required only for Fabric. Do not place a `-sources.jar`
 in `mods` or mix JARs for different loaders or Minecraft versions.
+
+Remove the previous Worldgen Assist JAR from each `mods` folder. Alpha.5 uses
+protocol 4 and cannot share assistance with alpha.4 (protocol 3); upgrade the
+server and all participating clients together. Choose exactly one:
+
+| Loader | Installable JAR |
+| --- | --- |
+| Fabric | `worldgen-assist-0.1.0-alpha.5+mc26.3.jar` |
+| Forge | `worldgen-assist-forge-0.1.0-alpha.5+mc26.3.jar` |
+| NeoForge | `worldgen-assist-neoforge-0.1.0-alpha.5+mc26.3.jar` |
+
+The latest installed runtime/correctness and performance checks cover Fabric
+Overworld with two clients. The latest Forge/NeoForge candidates were built,
+but their changed runtime paths were not rerun. Earlier vanilla-dimension and
+compatible custom-dimension results retain their original candidate identities.
+See the attached verification record for exact scope.
 
 Use a disposable world and trusted participants. Remote assistance is off by
 default; enabling it requires a separate explicit raw-seed disclosure choice.
 26.3 does not include the 26.2 public-seed transcript fixture. The supported
 terrain scope is eligible new chunks in vanilla Overworld, Nether, and End.
-Custom generators, mod-added dimensions, hostile clients, and a speedup are
-not guaranteed. The in-game menu is **Options → WorldgenAssist**; client
+Compatible additional dimensions and explicit vanilla-noise wrappers are
+experimental; arbitrary custom generators and server-only noise definitions
+are unsupported. Hostile clients and a speedup are not supported claims.
+The in-game menu is **Options → WorldgenAssist**; client
 participation applies after reconnect and saved server policy after restart.
 
 ## Earlier Minecraft 26.2 Fabric alpha.3
@@ -61,7 +79,7 @@ guaranteed.
 Compare the SHA-256 with the matching filename in the release's `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash -Algorithm SHA256 -LiteralPath '.\worldgen-assist-0.1.0-alpha.3+mc26.2.jar'
+Get-FileHash -Algorithm SHA256 -LiteralPath '.\worldgen-assist-0.1.0-alpha.5+mc26.3.jar'
 ```
 
 The checksums detect mismatched files; they are not a separate publisher signature.

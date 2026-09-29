@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('overworld','the_nether','the_end')][string]$Dimension,
+    [Parameter(Mandatory)][ValidateSet('overworld','the_nether','the_end','fixture')][string]$Dimension,
     [Parameter(Mandatory)][ValidateSet('vanilla','assisted')][string]$Mode,
     [Parameter(Mandatory)][ValidateRange(1,2)][int]$Players,
     [Parameter(Mandatory)][ValidateSet('correctness','performance')][string]$Purpose,
@@ -9,6 +9,10 @@ param(
     [Parameter(Mandatory)][ValidateRange(0,64)][int]$ValidationCells,
     [Parameter(Mandatory)][long]$Seed,
     [Parameter(Mandatory)][string]$OutputRoot,
+    [ValidateSet(0,2,4)][int]$ServerLogicalProcessors = 0,
+    [ValidateSet('current','prepared','prefetch')][string]$PipelineProfile = 'prefetch',
+    [ValidateSet('relocation','continuous')][string]$Movement = 'relocation',
+    [ValidateRange(5,1000)][int]$CorrectnessDemandWaitMs = 1000,
     [string]$RemoteHost = 'gen1c@100.117.255.71',
     [string]$RemoteRoot = 'C:/Users/gen1c/AppData/Local/Temp/WorldgenAssist-20260909/port26.3'
 )
@@ -80,7 +84,8 @@ function Start-Client([string]$Name,[string]$Uuid,[int]$Index,[string]$AssetsRoo
     @('forward','back','left','right','jump','sneak','sprint','attack','use') |
         ForEach-Object { 'key_key.' + $_ + ':key.keyboard.unknown' } |
         Add-Content -LiteralPath (Join-Path $profile 'client/options.txt')
-    $environment=@{JAVA_HOME=$jdk;Path="$jdk\bin;$env:Path";WORLDGEN_ASSIST_REMOTE=if($Mode -eq 'assisted'){'true'}else{'false'};WORLDGEN_ASSIST_CLIENT_SEEDED_LEAF_PUBLIC_FIXTURE='false';WORLDGEN_ASSIST_CLIENT_SEEDED_LEAF_FIXTURE_FAULT='none'}
+    $environment=@{JAVA_HOME=$jdk;Path="$jdk\bin;$env:Path";WORLDGEN_ASSIST_REMOTE=if($Mode -eq 'assisted'){'true'}else{'false'};WORLDGEN_ASSIST_CLIENT_SEEDED_LEAF_PUBLIC_FIXTURE='false';WORLDGEN_ASSIST_CLIENT_SEEDED_LEAF_FIXTURE_FAULT='none';WORLDGEN_ASSIST_CLIENT_MEASURE_RECEIPT=if($Purpose -eq 'performance'){'true'}else{'false'}}
+    $environment['WORLDGEN_ASSIST_CLIENT_REUSE_CONTEXT'] = if($PipelineProfile -eq 'current'){'false'}else{'true'}
     $process=Start-Owned $launch.Executable $launch.Arguments $environment $launch.WorkingDirectory
     [pscustomobject]@{name=$Name;profile=$profile;process=$process;stdout=$process.StandardOutput.ReadToEndAsync();stderr=$process.StandardError.ReadToEndAsync();launch=$launch}
 }
@@ -112,14 +117,15 @@ try {
     if($artifact.Minecraft -ne '26.3' -or -not(Test-Path -LiteralPath $artifact.Path -PathType Leaf)){throw "Exact 26.3 artifact is missing: $($artifact.Path)"}
     $artifactHash=(Get-FileHash -LiteralPath $artifact.Path -Algorithm SHA256).Hash.ToUpperInvariant()
     if(-not(Test-Path -LiteralPath "$jdk\bin\java.exe")){throw 'Pinned JDK 25.0.4 is missing'};if(-not(Test-Path -LiteralPath $api)){throw 'Pinned Fabric API cache entry is missing'}
-    Write-Json (Join-Path $output 'scenario-input.json') ([ordered]@{schema='worldgen-assist.scenario-input.v1';dimension=$Dimension;mode=$Mode;players=$Players;purpose=$Purpose;cache_entries=$CacheEntries;prediction=$predictionEnabled;validation_cells=$ValidationCells;seed=$Seed;artifact_path=$artifact.Path;artifact_sha256=$artifactHash;remote_host=$RemoteHost;remote_root=$RemoteRoot;loopback_listener='127.0.0.1:25585'})
+    Write-Json (Join-Path $output 'scenario-input.json') ([ordered]@{schema='worldgen-assist.scenario-input.v1';dimension=$Dimension;mode=$Mode;players=$Players;purpose=$Purpose;cache_entries=$CacheEntries;prediction=$predictionEnabled;validation_cells=$ValidationCells;seed=$Seed;server_logical_processors=$ServerLogicalProcessors;pipeline_profile=$PipelineProfile;movement=$Movement;artifact_path=$artifact.Path;artifact_sha256=$artifactHash;remote_host=$RemoteHost;remote_root=$RemoteRoot;loopback_listener='127.0.0.1:25585'})
     $assets=& (Join-Path $PSScriptRoot 'Prepare-InstalledFixtureAssets.ps1');if([string]::IsNullOrWhiteSpace([string]$assets) -or -not(Test-Path -LiteralPath $assets -PathType Container)){throw 'Installed asset preparation did not return a verified root'};[IO.Path]::GetFullPath($assets)|Set-Content -LiteralPath (Join-Path $output 'assets-root.txt')
     Invoke-Remote ('New-Item -ItemType Directory -Force -Path "'+$RemoteRoot+'/mods","'+$RemoteRoot+'/retired-mods","'+$RemoteRoot+'/scenario-staging" | Out-Null')
     & scp.exe -q $artifact.Path $api $launcher (Join-Path $workspace 'run/eula.txt') (Join-Path $PSScriptRoot 'Remote-WorldgenScenarioServer.ps1') ($RemoteHost + ':' + $RemoteRoot + '/scenario-staging/')
     if($LASTEXITCODE -ne 0){throw 'Remote scenario file transfer failed'}
     Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherHash="'+$launcherHash+'";$name="'+$artifact.FileName+'";$stage=Join-Path $root ("scenario-staging/"+$name);if((Get-FileHash -LiteralPath $stage -Algorithm SHA256).Hash -ne $expected){throw "Staged artifact SHA-256 mismatch"};$stamp=Get-Date -Format "yyyyMMdd-HHmmss-fff";foreach($old in @(Get-ChildItem -LiteralPath (Join-Path $root "mods") -Filter "worldgen-assist-*.jar" -File)){if($old.Name -ne $name -or (Get-FileHash -LiteralPath $old.FullName -Algorithm SHA256).Hash -ne $expected){Move-Item -LiteralPath $old.FullName -Destination (Join-Path $root ("retired-mods/"+$stamp+"-"+$old.Name))}};Copy-Item -LiteralPath $stage -Destination (Join-Path $root ("mods/"+$name)) -Force;Copy-Item -LiteralPath (Join-Path $root "scenario-staging/fabric-api-0.161.0+26.3.jar") -Destination (Join-Path $root "mods/fabric-api-0.161.0+26.3.jar") -Force;Copy-Item -LiteralPath (Join-Path $root "scenario-staging/fabric-server-mc.26.3-loader.0.19.5-launcher.1.1.2.jar") -Destination (Join-Path $root "fabric-server-launch.jar") -Force;Copy-Item -LiteralPath (Join-Path $root "scenario-staging/eula.txt") -Destination (Join-Path $root "eula.txt") -Force;Copy-Item -LiteralPath (Join-Path $root "scenario-staging/Remote-WorldgenScenarioServer.ps1") -Destination (Join-Path $root "Remote-WorldgenScenarioServer.ps1") -Force;if((Get-FileHash -LiteralPath (Join-Path $root ("mods/"+$name)) -Algorithm SHA256).Hash -ne $expected -or (Get-FileHash -LiteralPath (Join-Path $root "fabric-server-launch.jar") -Algorithm SHA256).Hash -ne $launcherHash){throw "Installed artifact or launcher SHA-256 mismatch"}')
     $tunnel=Start-Owned 'ssh.exe' @('-N','-o','BatchMode=yes','-o','ExitOnForwardFailure=yes','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=2','-L','127.0.0.1:25585:127.0.0.1:25585',$RemoteHost);$tunnelOut=$tunnel.StandardOutput.ReadToEndAsync();$tunnelErr=$tunnel.StandardError.ReadToEndAsync()
-    $remoteCommand='& "'+$RemoteRoot+'/Remote-WorldgenScenarioServer.ps1" -Root "'+$RemoteRoot+'" -Dimension '+$Dimension+' -Mode '+$Mode+' -Players '+$Players+' -Purpose '+$Purpose+' -CacheEntries '+$CacheEntries+' -Prediction '+$predictionEnabled.ToString().ToLowerInvariant()+' -ValidationCells '+$ValidationCells+' -Seed '+$Seed
+    $remoteCommand='& "'+$RemoteRoot+'/Remote-WorldgenScenarioServer.ps1" -Root "'+$RemoteRoot+'" -Dimension '+$Dimension+' -Mode '+$Mode+' -Players '+$Players+' -Purpose '+$Purpose+' -CacheEntries '+$CacheEntries+' -Prediction '+$predictionEnabled.ToString().ToLowerInvariant()+' -ValidationCells '+$ValidationCells+' -Seed '+$Seed+' -ServerLogicalProcessors '+$ServerLogicalProcessors+' -PipelineProfile '+$PipelineProfile+' -Movement '+$Movement
+    $remoteCommand += ' -CorrectnessDemandWaitMs '+$CorrectnessDemandWaitMs
     $encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($remoteCommand));$server=Start-Owned 'ssh.exe' @('-o','BatchMode=yes','-o','ConnectTimeout=15',$RemoteHost,"powershell -NoProfile -NonInteractive -OutputFormat Text -EncodedCommand $encoded");$serverErr=$server.StandardError.ReadToEndAsync()
     $ready=[DateTime]::UtcNow.AddSeconds(240)
     $serverReady=$false
@@ -171,7 +177,8 @@ try {
     $remoteResultPath=Join-Path $output 'remote-evidence/remote-result.json';if(Test-Path -LiteralPath $remoteResultPath){try{$remoteResult=Get-Content -LiteralPath $remoteResultPath -Raw|ConvertFrom-Json;$cleanupSafe=$cleanupSafe -and [bool]$remoteResult.cleanup_safe}catch{$cleanupSafe=$false}}else{$cleanupSafe=$false}
     $beforePath=Join-Path $output 'source-manifest-before.sha256';$afterPath=Join-Path $output 'source-manifest-after.sha256';if(-not(Test-Path -LiteralPath $afterPath)){try{$manifestAfter=Save-Manifest 'source-manifest-after.sha256'}catch{$cleanupSafe=$false}}
     if(Test-Path -LiteralPath $beforePath){$manifestBefore=([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes((Get-Content -LiteralPath $beforePath -Raw).TrimEnd("`r","`n")))|ForEach-Object{$_.ToString('x2')})-join''};if(Test-Path -LiteralPath $afterPath){$manifestAfter=([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes((Get-Content -LiteralPath $afterPath -Raw).TrimEnd("`r","`n")))|ForEach-Object{$_.ToString('x2')})-join''}
-    $result=[ordered]@{schema='worldgen-assist.scenario-result.v1';success=$success;cleanup_safe=$cleanupSafe;loopback_only=$true;artifact_sha256=if($null -ne $artifactHash){$artifactHash}else{$null};dimension=$Dimension;mode=$Mode;players=$Players;purpose=$Purpose;cache_entries=$CacheEntries;prediction=$predictionEnabled;validation_cells=$ValidationCells;source_manifest_sha256=$manifestBefore;source_manifest_before_sha256=$manifestBefore;source_manifest_after_sha256=$manifestAfter;failure=$failure}
+    $result=[ordered]@{schema='worldgen-assist.scenario-result.v1';success=$success;cleanup_safe=$cleanupSafe;loopback_only=$true;artifact_sha256=if($null -ne $artifactHash){$artifactHash}else{$null};dimension=$Dimension;mode=$Mode;players=$Players;purpose=$Purpose;cache_entries=$CacheEntries;prediction=$predictionEnabled;validation_cells=$ValidationCells;server_logical_processors=$ServerLogicalProcessors;pipeline_profile=$PipelineProfile;movement=$Movement;source_manifest_sha256=$manifestBefore;source_manifest_before_sha256=$manifestBefore;source_manifest_after_sha256=$manifestAfter;failure=$failure}
+    $result.demand_wait_ms = if($Purpose -eq 'correctness'){$CorrectnessDemandWaitMs}else{100}
     if($Purpose -eq 'correctness'){$path=Join-Path $output 'remote-evidence/correctness.json';$result.correctness=if(Test-Path -LiteralPath $path){Get-Content -LiteralPath $path -Raw|ConvertFrom-Json}else{[ordered]@{required_applied_chunks=@();noise_digests=@()}}}else{$path=Join-Path $output 'remote-evidence/performance.json';$result.performance=if(Test-Path -LiteralPath $path){Get-Content -LiteralPath $path -Raw|ConvertFrom-Json}else{[ordered]@{warmup_runs=1;measured_repeats=3;measured=@()}}}
     $result.scenario_client_load=$clientLoad
     Write-Json (Join-Path $output 'scenario-result.json') $result

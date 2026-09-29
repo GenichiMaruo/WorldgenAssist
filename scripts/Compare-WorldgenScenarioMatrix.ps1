@@ -41,7 +41,7 @@ function DigestMap([object]$Result,[Collections.Generic.List[object]]$Issues,[st
     $map=@{}; $correctness=Value $Result 'correctness'
     foreach($row in @(Value $correctness 'noise_digests')) {
         $dimension=[string](Value $row 'dimension'); $chunk=[string](Value $row 'chunk'); $digest=[string](Value $row 'digest')
-        if($dimension -notin @('overworld','the_nether','the_end') -or $chunk -notmatch '^-?\d+,-?\d+$' -or $digest -notmatch '^[A-Fa-f0-9]{64}$'){ Issue $Issues 'INVALID_DIGEST' 'A digest row is malformed.' $Path; continue }
+        if($dimension -notin @('overworld','the_nether','the_end','fixture') -or $chunk -notmatch '^-?\d+,-?\d+$' -or $digest -notmatch '^[A-Fa-f0-9]{64}$'){ Issue $Issues 'INVALID_DIGEST' 'A digest row is malformed.' $Path; continue }
         $key="$dimension|$chunk"; $digest=$digest.ToLowerInvariant()
         if($map.ContainsKey($key) -and $map[$key] -ne $digest){Issue $Issues 'CONFLICTING_DIGEST' "Conflicting digest values for $key." $Path;continue};$map[$key]=$digest
     };return $map
@@ -50,7 +50,7 @@ function AppliedChunks([object]$Result,[Collections.Generic.List[object]]$Issues
     $chunks=@();$correctness=Value $Result 'correctness'
     foreach($row in @(Value $correctness 'required_applied_chunks')){
         $dimension=[string](Value $row 'dimension');$chunk=[string](Value $row 'chunk')
-        if($dimension -notin @('overworld','the_nether','the_end') -or $chunk -notmatch '^-?\d+,-?\d+$'){Issue $Issues 'INVALID_APPLIED_CHUNK' 'An applied chunk row is malformed.' $Path;continue};$chunks+="$dimension|$chunk"
+        if($dimension -notin @('overworld','the_nether','the_end','fixture') -or $chunk -notmatch '^-?\d+,-?\d+$'){Issue $Issues 'INVALID_APPLIED_CHUNK' 'An applied chunk row is malformed.' $Path;continue};$chunks+="$dimension|$chunk"
     };return @($chunks|Sort-Object -Unique)
 }
 function Samples([object]$Result,[Collections.Generic.List[object]]$Issues,[string]$Path) {
@@ -63,6 +63,41 @@ function Samples([object]$Result,[Collections.Generic.List[object]]$Issues,[stri
     return $samples
 }
 
+function ClientReceiptSamples([object]$Record) {
+    $directory=Split-Path -Parent $Record.path
+    $repeatCount=[int](Value (Value $Record.result 'performance') 'measured_repeats')
+    $warmupCount=[int](Value (Value $Record.result 'performance') 'warmup_runs')
+    $playerCount=[int](Value $Record.result 'players')
+    $ready=@();$coverage=@()
+    for($repeat=1;$repeat -le $repeatCount;$repeat++){
+        $ownerReady=@();$ownerCoverage=@()
+        $location=$warmupCount+$repeat
+        $baseX=1000+$location*256;$baseZ=-2000-$location*256
+        for($owner=0;$owner -lt $playerCount;$owner++){
+            $log=Get-Content -LiteralPath (Join-Path $directory "clients/owner-$owner/client/logs/latest.log") -Raw
+            $begin=[regex]::Match($log,"benchmark\.client_marker phase=BEGIN repeat=$repeat nanos=(?<nanos>\d+)")
+            $centreX=if($owner -eq 0){$baseX}else{-$baseX}
+            $centreZ=if($owner -eq 0){$baseZ}else{-$baseZ}
+            $chunks=@{};$latest=0L
+            if($begin.Success){
+                $started=[long]$begin.Groups['nanos'].Value
+                foreach($match in [regex]::Matches($log,"benchmark\.chunk_received repeat=$repeat chunk=(?<x>-?\d+),(?<z>-?\d+) nanos=(?<nanos>\d+)")){
+                    $x=[int]$match.Groups['x'].Value;$z=[int]$match.Groups['z'].Value;$nanos=[long]$match.Groups['nanos'].Value
+                    if([Math]::Abs($x-$centreX) -le 4 -and [Math]::Abs($z-$centreZ) -le 4 -and $nanos -ge $started -and -not $chunks.ContainsKey("$x,$z")){
+                        $chunks["$x,$z"]=$true
+                        if($nanos -gt $latest){$latest=$nanos}
+                    }
+                }
+            }
+            $ownerCoverage+=$chunks.Count
+            if($chunks.Count -eq 81){$ownerReady+=($latest-$started)/1000000.0}
+        }
+        $coverage+=,[ordered]@{repeat=$repeat;owner_chunk_counts=$ownerCoverage}
+        if($ownerReady.Count -eq $playerCount){$ready+=($ownerReady|Measure-Object -Maximum).Maximum}
+    }
+    return [pscustomobject]@{complete=($ready.Count -eq $repeatCount);samples=[double[]]$ready;coverage=$coverage}
+}
+
 function MeasurementConditions([object]$Record) {
     $directory=Split-Path -Parent $Record.path
     $config=Get-Content -LiteralPath (Join-Path $directory 'remote-evidence/scenario-config.json') -Raw | ConvertFrom-Json
@@ -72,6 +107,9 @@ function MeasurementConditions([object]$Record) {
         if($null -eq $value){throw "Missing scenario condition: $key"}
         $signature+="$key=$value"
     }
+    $logicalProcessors=Value $config 'server_logical_processors'
+    $logicalProcessors=if($null -eq $logicalProcessors){0}else{[int]$logicalProcessors}
+    $signature+='server_logical_processors='+$logicalProcessors
     for($owner=0;$owner -lt [int](Value $Record.result 'players');$owner++){
         $options=@{}
         foreach($line in Get-Content -LiteralPath (Join-Path $directory "clients/owner-$owner/client/options.txt")){
@@ -117,7 +155,7 @@ foreach($file in $files){
         $before=[string](Value $result 'source_manifest_before_sha256');$after=[string](Value $result 'source_manifest_after_sha256')
         if($before -notmatch '^[A-Fa-f0-9]{64}$' -or $after -notmatch '^[A-Fa-f0-9]{64}$' -or $before -ne $after){Issue $issues 'SOURCE_SNAPSHOT_CHANGED' 'Source/build/script manifest hashes are missing or differ.' $file.FullName}
         if([string](Value $result 'artifact_sha256') -notmatch '^[A-Fa-f0-9]{64}$'){Issue $issues 'INVALID_ARTIFACT_HASH' 'Exact JAR SHA-256 is absent.' $file.FullName}
-        if([string](Value $result 'dimension') -notin @('overworld','the_nether','the_end') -or [string](Value $result 'mode') -notin @('vanilla','assisted') -or [string](Value $result 'purpose') -notin @('correctness','performance')){Issue $issues 'INVALID_IDENTITY' 'Dimension, mode, or purpose is invalid.' $file.FullName}
+        if([string](Value $result 'dimension') -notin @('overworld','the_nether','the_end','fixture') -or [string](Value $result 'mode') -notin @('vanilla','assisted') -or [string](Value $result 'purpose') -notin @('correctness','performance')){Issue $issues 'INVALID_IDENTITY' 'Dimension, mode, or purpose is invalid.' $file.FullName}
         $records+=[pscustomobject]@{path=$file.FullName;result=$result;key=(Key $result)}
     }catch{Issue $issues 'INVALID_SCENARIO_RESULT' $_.Exception.Message $file.FullName}
 }
@@ -157,9 +195,20 @@ foreach($identity in @($byKey.Keys|Sort-Object)){
         $summary.equal_completed_work=$sameWork
         $sameWork=$sameWork -and $conditionsMatch -and (Value $vanilla.result 'artifact_sha256') -eq (Value $assisted.result 'artifact_sha256') -and (Value $vanilla.result 'source_manifest_after_sha256') -eq (Value $assisted.result 'source_manifest_after_sha256')
         if(-not $sameWork){$summary.status='INCOMPLETE'}
-        foreach($metric in @('server_cpu_ms','tick_mean_ms','tick_p95_ms','throughput_tasks_per_second')){
+        $comparedMetrics=@('server_cpu_ms','tick_mean_ms','tick_p95_ms','throughput_tasks_per_second')
+        if(@($left|Where-Object{$null -eq (Value $_ 'server_region_ready_ms')}).Count -eq 0 -and @($right|Where-Object{$null -eq (Value $_ 'server_region_ready_ms')}).Count -eq 0){$comparedMetrics+='server_region_ready_ms'}
+        foreach($metric in $comparedMetrics){
             $leftValues=[double[]]@($left|ForEach-Object{$value=Number (Value $_ $metric);if($null -ne $value){$value}});$rightValues=[double[]]@($right|ForEach-Object{$value=Number (Value $_ $metric);if($null -ne $value){$value}})
             if($null -eq $left -or $null -eq $right -or $leftValues.Count -ne $left.Count -or $rightValues.Count -ne $right.Count){Issue $issues 'MISSING_PERFORMANCE_METRIC' "Metric '$metric' is missing/non-finite for $identity." $root;$summary.status='INCOMPLETE';$summary.metrics[$metric]=$null}else{$leftStats=Stats $leftValues;$rightStats=Stats $rightValues;$summary.metrics[$metric]=[ordered]@{vanilla=$leftStats;assisted=$rightStats;median_delta=if($sameWork){$rightStats.median-$leftStats.median}else{$null};median_ratio=if(-not $sameWork -or $leftStats.median -eq 0){$null}else{$rightStats.median/$leftStats.median}}}
+        }
+        $leftReceipt=ClientReceiptSamples $vanilla;$rightReceipt=ClientReceiptSamples $assisted
+        $summary.client_receipt_coverage=[ordered]@{vanilla=$leftReceipt.coverage;assisted=$rightReceipt.coverage}
+        if($leftReceipt.complete -and $rightReceipt.complete){
+            $leftStats=Stats $leftReceipt.samples;$rightStats=Stats $rightReceipt.samples
+            $summary.metrics.client_region_receipt_ms=[ordered]@{vanilla=$leftStats;assisted=$rightStats;median_delta=if($sameWork){$rightStats.median-$leftStats.median}else{$null};median_ratio=if($sameWork -and $leftStats.median -gt 0){$rightStats.median/$leftStats.median}else{$null}}
+        }else{
+            Issue $issues 'INCOMPLETE_CLIENT_RECEIPT' "Client 9x9 receipt coverage is incomplete for $identity." $root
+            $summary.status='INCOMPLETE'
         }
         foreach($metric in @('client_compute_mean_ms','client_encode_mean_ms','rtt_mean_ms','server_decode_mean_ms','encoded_bytes_mean','apply_mean_ms','remote_total_mean_ms')){
             $values=[double[]]@($right|ForEach-Object{$value=Number (Value $_ $metric);if($null -ne $value){$value}})

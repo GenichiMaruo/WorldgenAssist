@@ -20,7 +20,21 @@ final class ClientSettings {
 			return false;
 		}
 	}
+	static int workerThreads() {
+		String override = System.getProperty("worldgen_assist.client.worker_threads");
+		try {
+			String value = override == null ? SettingsFile.read(path()).getProperty("worker_threads", "2") : override;
+			int threads = Integer.parseInt(value.trim());
+			if (threads < 1 || threads > 4) throw new IllegalArgumentException("worker_threads must be 1..4");
+			return threads;
+		} catch (IOException | IllegalArgumentException exception) {
+			WorldgenAssist.LOGGER.warn("[CAWG] Invalid worker_threads; using one client worker", exception);
+			return 1;
+		}
+	}
 	static void save(boolean enabled) throws IOException {
-		Properties p = new Properties(); p.setProperty("participation", Boolean.toString(enabled)); SettingsFile.write(path(), p);
+		Properties p = SettingsFile.read(path());
+		p.setProperty("participation", Boolean.toString(enabled));
+		SettingsFile.write(path(), p);
 	}
 }

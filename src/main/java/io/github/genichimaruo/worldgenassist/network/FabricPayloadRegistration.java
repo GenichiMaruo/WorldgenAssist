@@ -15,6 +15,7 @@ public final class FabricPayloadRegistration {
 		PayloadTypeRegistry.clientboundPlay().register(SettingsPayload.TYPE, SettingsPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(WorkerAcceptedPayload.TYPE, WorkerAcceptedPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(TerrainJobRequestPayload.TYPE, TerrainJobRequestPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(TerrainJobBatchPayload.TYPE, TerrainJobBatchPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().registerLarge(TerrainJobResultPayload.TYPE,
 			TerrainJobResultPayload.CODEC, WorldgenPayloadTypes.MAX_DENSITY_RESULT_PAYLOAD_BYTES);
 		PayloadTypeRegistry.serverboundPlay().register(TerrainJobFailurePayload.TYPE, TerrainJobFailurePayload.CODEC);

@@ -62,7 +62,7 @@ public final class WorkerRegistry {
 			return Optional.empty();
 		}
 		WorkerState state = entry.getValue();
-		if (state.inFlight >= state.maxInFlight) {
+		if (state.inFlight >= state.currentLimit) {
 			return Optional.empty();
 		}
 		state.inFlight++;
@@ -74,9 +74,13 @@ public final class WorkerRegistry {
 	}
 
 	public synchronized Optional<Lease> tryAcquireWorker(UUID ownerId) {
+		return tryAcquireWorker(ownerId, false);
+	}
+
+	public synchronized Optional<Lease> tryAcquireWorker(UUID ownerId, boolean reserveForDemand) {
 		requireOwner(ownerId);
 		WorkerState state = workers.get(ownerId);
-		if (state == null || state.inFlight >= state.maxInFlight) { return Optional.empty(); }
+		if (state == null || state.inFlight >= state.currentLimit - (reserveForDemand ? 1 : 0)) { return Optional.empty(); }
 		state.inFlight++;
 		return Optional.of(new Lease(ownerId, state.implementationVersion));
 	}
@@ -110,6 +114,27 @@ public final class WorkerRegistry {
 		return state == null ? 0 : state.inFlight;
 	}
 
+	public synchronized int currentLimit(UUID ownerId) {
+		WorkerState state = workers.get(ownerId);
+		return state == null ? 0 : state.currentLimit;
+	}
+
+	public synchronized void recordSuccess(UUID ownerId) {
+		WorkerState state = workers.get(ownerId);
+		if (state == null) return;
+		if (++state.successes >= 2 && state.currentLimit < state.maxInFlight) {
+			state.currentLimit++;
+			state.successes = 0;
+		}
+	}
+
+	public synchronized void recordFailure(UUID ownerId) {
+		WorkerState state = workers.get(ownerId);
+		if (state == null) return;
+		state.currentLimit = Math.max(1, state.currentLimit / 2);
+		state.successes = 0;
+	}
+
 	private static WorkerAcceptedPayload rejected(WorkerAcceptedPayload.Status status) {
 		return new WorkerAcceptedPayload(WorldgenProtocolVersion.CURRENT, status, 0);
 	}
@@ -132,6 +157,8 @@ public final class WorkerRegistry {
 		private final int maxInFlight;
 		private final String implementationVersion;
 		private int inFlight;
+		private int currentLimit = 1;
+		private int successes;
 
 		private WorkerState(int maxInFlight, String implementationVersion, int inFlight) {
 			this.maxInFlight = maxInFlight;

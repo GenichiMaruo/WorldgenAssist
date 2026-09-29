@@ -1,11 +1,21 @@
 package io.github.genichimaruo.worldgenassist.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.util.UUID;
+
+import io.github.genichimaruo.worldgenassist.common.TerrainDensityJob;
+import io.github.genichimaruo.worldgenassist.common.TerrainJobIdentity;
+import io.github.genichimaruo.worldgenassist.common.WorldgenProtocolVersion;
+import io.github.genichimaruo.worldgenassist.network.TerrainJobFailurePayload;
+import io.github.genichimaruo.worldgenassist.server.WorldgenContextFingerprintFactory;
 
 import net.minecraft.SharedConstants;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.registries.VanillaRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.util.context.ContextMap;
 import net.minecraft.world.level.levelgen.Beardifier;
@@ -35,6 +45,26 @@ class ClientDensitySampler263Test {
 		check(lookup, NoiseGeneratorSettings.OVERWORLD, 8675309L, 0, 0);
 		check(lookup, NoiseGeneratorSettings.NETHER, -987654321L, -11, 7);
 		check(lookup, NoiseGeneratorSettings.END, 123456789L, 23, -19);
+	}
+
+	@Test
+	void acceptsARegisteredNoiseContextInACustomDimensionButRejectsTheWrongActiveDimension() {
+		HolderLookup.Provider lookup = VanillaRegistries.createWorldLookup();
+		var settings = lookup.lookupOrThrow(Registries.NOISE_SETTINGS).getOrThrow(NoiseGeneratorSettings.OVERWORLD);
+		NoiseSettings noise = settings.value().noiseSettings();
+		Identifier dimension = Identifier.parse("example:skylands");
+		long seed = 8675309L;
+		TerrainJobIdentity identity = new TerrainJobIdentity(WorldgenProtocolVersion.CURRENT,
+			UUID.fromString("0de5600a-df5a-47df-8cf1-ff27a2d3f92c"), dimension, 3, -5,
+			WorldgenContextFingerprintFactory.create(lookup, dimension, seed, true,
+				noise.minY(), noise.height(), settings));
+		TerrainDensityJob job = new TerrainDensityJob(identity, seed, true,
+			NoiseGeneratorSettings.OVERWORLD.identifier(), noise.minY(), noise.height(), 1, 1);
+		var computed = ClientTerrainDensityComputer.compute(lookup, dimension, job);
+		assertEquals(job.sampleCount(), computed.densityCount());
+		var rejected = assertThrows(ClientTerrainDensityComputer.RejectedJobException.class,
+			() -> ClientTerrainDensityComputer.compute(lookup, Identifier.parse("minecraft:overworld"), job));
+		assertEquals(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT, rejected.reason());
 	}
 
 	private static void check(HolderLookup.Provider lookup,

@@ -1,5 +1,242 @@
 # World Generation Pipeline Notes
 
+## Alpha.5 release scope
+
+Alpha.5 packages the candidate pipeline below. Final JAR contents match saved
+candidates except version metadata; runtime records retain their original JAR
+identities. Latest Fabric Overworld correctness passed; latest native hooks
+were built but not rerun. The NOISE-region improvement did not persist through
+FULL completion or client receipt. See
+`releases/v0.1.0-alpha.5+mc26.3-verification.md`.
+
+## Result dispatch candidate (2026-09-29)
+
+Client computation/encoding now sends on its worker through a captured
+connection instead of queuing `client.execute`. A revocable reply session
+serializes cancellation/connection replacement with packet submission. Client
+world/dimension inspection and request admission still happen on the client
+main thread; server identity/context checks remain authoritative.
+
+Fabric fully decoded results enter a bounded decoder queue before vanilla's
+main-thread packet dispatch. The network thread uses immutable connection/owner
+attribution and offers work only; registry claiming, density decoding and
+validation remain off the network event thread. Connection replacement,
+disconnect and protocol changes revoke queued results. Ownership, deadlines,
+context epochs, validation and local fallback are retained. Forge/NeoForge
+use captured worker senders but retain their original server receive path.
+
+A single observed-generation scheduling pass groups approvals by owner and
+sends at most four jobs per optional batch packet; individual results return
+immediately. No tick/batch-fill delay is introduced. Existing adaptive owner
+limits (initial one, maximum four/advertised threads), global reservations,
+fair candidate order and demand-slot reservation are unchanged. Refill is
+requested at decoded-result completion as well as validation completion.
+The dispatcher permits a small bounded server queue (watermark at most two)
+instead of requiring completely empty decoder/validation queues.
+
+New logs separate `job.registered.registration_ms`,
+`job.request_dispatch.request_queue_ms`, `job.result_ingress.ingress_queue_ms`
+and `claim_ms`. On Fabric, RTT ends at full payload availability on the network
+thread, excluding the later decoder queue; on native loaders it still ends at
+their main-thread receiver. `send_wait_ms path=worker_direct` measures local
+worker submission/handoff, not actual wire completion. The former
+`estimated_transfer_ms` becomes `unattributed_ms`: request elapsed time minus
+client compute/encode, including unseparated queues and transport. Server decode
+occurs after the RTT endpoint and is no longer incorrectly subtracted.
+Cross-clock absolute timing and pure network latency are not established.
+
+Focused gate `network-dispatch-gate-20260929-215751-919` passed six tests,
+all affected builds and the installed Fabric two-owner correctness pair.
+Both applied chunks and 1,802 shared NOISE digests matched. It exercised 276
+accepted network receipts, zero main-route receipts and ten batches. The
+clients' mean local send handoff was 0.0536/0.0560ms. Whole correctness logs
+still show a mean 33.33ms decoder ingress queue; main-thread bypass does not
+eliminate CPU/executor contention. These include warm-up and do not establish
+whole generation speedup. See `TEST_RESULTS_LATEST.md` for hash and warnings.
+
+The subsequent constrained-server performance pair used the same JAR, two
+logical server CPUs and two clients (`csb-20260929-220931-467`). Three measured
+repeats per mode showed server 9-by-9 NOISE completion at 11.26s vanilla versus
+7.45s assisted, FULL completion at 14.58s versus 14.84s, and client receipt
+of all 81 chunks at 17.44s versus 17.80s. Assisted measured repeats recorded
+20 demand-wait fallbacks, which the separate paired-summary counters omit.
+Throughput was 29.44 versus 29.56 tasks/s. This measures faster completion of
+the server-side proxy while FULL and end-to-end receipt did not improve; the
+small sample is descriptive. The changed Fabric RTT endpoint is not comparable
+to the previous handler-entry endpoint. Full details are in
+`TEST_RESULTS_LATEST.md`.
+
+## Adaptive waiting and earlier dispatch (2026-09-29, focused gate complete)
+
+Generated `MinecraftServer.wrapRunnable` and inherited
+`BlockableEventLoop.schedule` allow an explicitly queued server task, including
+from the server thread itself. Unlike `execute`, this does not run inline.
+Generation observation and preparation/fingerprint completion request one
+coalesced task per server/context to refill prefetch slots without waiting for
+the next START_SERVER_TICK. Task execution still obeys vanilla `shouldRun`
+and available server time; it cannot bypass a busy server thread. Reload and
+server identity checks reject obsolete tasks. No additional chunk is loaded.
+
+Actual TERRAIN demand now waits using the owner's observed validated
+turnaround, elapsed prefetch time and a bounded decoded-response grace. Default
+waiting is 100–200ms, including a single grace of at most 25ms. Learning is
+cleared on owner/context changes. Slow estimated direct work is skipped only
+while that owner already has active ahead work; otherwise bounded direct
+admission remains available. A full candidate queue admits an underrepresented
+owner by displacing a candidate of an owner with at least two more entries.
+Prefetch can still use the owner's slots. Validation and all vanilla downstream
+stages are unchanged. Completion checks the absolute ceiling even if the timer
+executor runs late. Cached application now retains the original server-issued
+request ID and immutable result, allowing the fixture to track early results
+through actual application. The focused gate is the wait-policy JUnit class,
+one cache provenance test, the affected candidate-queue test and one two-owner
+Overworld correctness pair; no new performance matrix.
+
+The final focused gate passed seven affected tests and Fabric build. Installed
+Overworld with two owners and two logical server CPUs confirmed successful
+overlapping assistance, both required applied digests and 1,822 shared NOISE
+digests equal to vanilla. Logs exercised wait budgets from 100 through 200ms.
+Evidence: `test-artifacts/demand-wait-gate-20260929-200658-043/summary.json`.
+This verifies the selected lifecycle/application changes. The matched
+two-logical-CPU performance pair was slower with assistance; this gate does not
+verify native-loader or custom-generator runtime. See `TEST_RESULTS_LATEST.md`.
+
+## Pipelined 26.3 candidate (2026-09-29, selected gate complete)
+
+Generated `ChunkPyramid.GENERATION_PYRAMID` orders STRUCTURE_STARTS,
+STRUCTURE_REFERENCES, BIOMES, TERRAIN, FEATURES, INITIALIZE_LIGHT, LIGHT, SPAWN,
+FULL. TERRAIN depends on BIOMES at radius 1 and structure starts at radius 8.
+The HEAD observer on `ChunkStatusTasks.generateStructureStarts` records an
+already scheduled new generation coordinate. Loading separately calls
+`loadStructureStarts`. Only bounded coordinate/owner/epoch/deadline metadata
+is retained; no observer requests additional generation.
+
+```text
+server-approved generation coordinate
+  |-- vanilla structure references and biomes ----------------------|
+  |-- client context reuse -> density -> encode -> return -> decode -|-|
+  |-- server secret validation sample preparation -------------------|-compare
+                                                                    |
+                       actual-demand checks + both prerequisites ready
+                                                                    |
+                          vanilla block placement -> surface -> carvers
+                                                                    |
+                               features -> light -> spawn -> full
+                                                                    |
+                                       vanilla send queue -> client
+```
+
+Generated `NoiseBasedChunkGenerator.buildTerrain` calls `doFill`,
+`buildSurface`, and `generateCarvers` in one async task. Surface and carvers
+are part of the stage historically logged as NOISE on this branch. Only
+final-density `sampleVolume` is replaced. Dependent block work stays local.
+Custom generator delegates keep direct demand; early scheduling is limited
+to the exact vanilla noise generator until actual eligibility is known.
+
+Generated `RandomState`/`DensityFunctionCompiler` confirm lazy sampler creation
+and compiler locking. Clients reuse a state per worker/context with
+`SamplerContext.EMPTY_UNCACHED`, never the mutable live chunk context.
+Server validation uses a separate uncached context. It now prepares expected
+values on one bounded worker before the response, then compares when both
+inputs exist. Cancellation retains admission until real preparation exits.
+Actual demand uses a default 100ms wait budget before the original continuation.
+
+Generated `ChunkStatusTasks.full` converts on the main-thread executor.
+The diagnostic wrapper observes its future completion. Generated
+`PlayerChunkSender.sendNextChunks` subsequently enforces batch quota and
+acknowledgement limits, so full completion and client receipt remain separate
+measurements. The candidate gate measures both over the fixed 9x9 target;
+neither is rendering completion. Historical timings below retain their
+original artifacts and definitions.
+
+The selected Fabric Overworld two-owner gate matched both applied chunks and
+all 1,814 shared digests. Eight matched two-logical-CPU performance scenarios
+completed. Prefetch improved continuous receipt versus the current-style
+control, but did not beat vanilla; relocation regressed. Useful remote density
+applications covered only about 4–10% of the 1,682 NOISE tasks per measured run,
+and direct demand frequently exceeded the fixed 100ms wait. Early comparison
+shortens a continuation, while preparation still consumes server CPU and all
+dependent generation stays local. See `TEST_RESULTS_LATEST.md` for exact
+artifacts, timings, coverage and limitations; no general speedup is established.
+
+### Deadline investigation (2026-09-29, existing evidence only)
+
+Generated `MinecraftServer` constructs `PacketProcessor` with `serverThread`;
+`processPacketsAndTick` drains queued packets before `tickServer`. Cached Fabric
+networking 6.3.8 sources deliver play handlers on that processor. Consequently
+the manager's `receivedNanos` timestamp is handler entry on the server thread,
+not socket arrival; `rtt_ms` includes waiting for server packet processing.
+The client explicitly queues a successful response through `client.execute`.
+In the selected prefetch runs, client worker-total medians were about 11ms,
+send-wait medians about 22ms, and successful per-run RTT means 112–140ms.
+These differently aggregated measurements must not be summed or subtracted as
+an exact critical path. Request delivery/client dispatch and server packet
+queue waiting remain unseparated from actual transfer latency.
+
+`awaitDemand` starts a separate fixed 100ms budget when TERRAIN needs the
+validated density result. Direct requests need the whole return path within
+that budget; prefetch needs only its remaining work. The watchdog runs on its
+own executor and can expire a request while an already received packet is
+still awaiting server-thread handling. Validation preparation runs on one
+bounded worker and comparison needs both preparation and decoded response;
+its queue/CPU contention can also prevent readiness. These are concrete paths
+to expiry, not measured per-expiry attribution. No new tests were run for this
+investigation.
+
+### Deadline investigation (2026-09-29, existing evidence only)
+
+Generated `MinecraftServer` constructs `PacketProcessor` with `serverThread`;
+`processPacketsAndTick` drains queued packets before `tickServer`. Cached Fabric
+networking 6.3.8 sources deliver play handlers on that processor. Consequently
+the manager's `receivedNanos` timestamp is handler entry on the server thread,
+not socket arrival; `rtt_ms` includes waiting for server packet processing.
+The client explicitly queues a successful response through `client.execute`.
+In the selected prefetch runs, client worker-total medians were about 11ms,
+send-wait medians about 22ms, and successful per-run RTT means 112–140ms.
+These differently aggregated measurements must not be summed or subtracted as
+an exact critical path. Request delivery/client dispatch and server packet
+queue waiting remain unseparated from actual transfer latency.
+
+`awaitDemand` starts a separate fixed 100ms budget when TERRAIN needs the
+validated density result. Direct requests need the whole return path within
+that budget; prefetch needs only its remaining work. The watchdog runs on its
+own executor and can expire a request while an already received packet is
+still awaiting server-thread handling. Validation preparation runs on one
+bounded worker and comparison needs both preparation and decoded response;
+its queue/CPU contention can also prevent readiness. These are concrete paths
+to expiry, not measured per-expiry attribution. No new tests were run for this
+investigation.
+
+## 26.3 development candidate: custom dimension and float32 result
+
+Generated 26.3 `NoiseBasedChunkGenerator.buildTerrain` constructs a scoped
+`NoiseChunk`, then private `doFill` obtains `finalDensity` with
+`DensitySampler.Bound.sampleVolume`. The existing `doFill` Mixin consumes a
+chunk-scoped result regardless of the dimension ID; the previous three-ID
+allowlist was an admission policy, not a requirement of that source target.
+The new candidate permits a custom dimension with that exact density path
+and bounded registry-backed noise settings. A custom generator may opt in only
+when it delegates to this path; other generators use local generation.
+Generated `RegistryDataLoader.SYNCHRONIZED_REGISTRIES` does not synchronize
+noise settings/density/noise registries, so an unmatched datapack context is
+still rejected by the client fingerprint check. The result wire format is
+now exact float32 bits under general protocol 4. A selected Fabric
+custom-dimension pair matched 841 shared NOISE digests and the one remote-
+applied chunk; a selected Overworld pair matched 941 and one. Native loaders
+built but were not run in custom dimensions for this candidate. The published
+alpha.4 scope and earlier observations below remain historical.
+
+The 2026-09-27 two-owner constrained-server Fabric experiment still uses
+this same density-only handoff and authoritative server continuation. The
+trusted-raw coordinator constructs `PendingTerrainJobRegistry` with one
+in-flight job per owner. Across its measured windows, assisted runs sent
+211, 187, and 232 jobs at unrestricted, four-logical-processor, and
+two-logical-processor server affinity while each tier completed 5,046 NOISE
+tasks. Prediction and cross-window completions prevent treating those counts
+as an exact offload ratio. Median assisted throughput did not exceed vanilla
+in any tier. The test's 9-by-9 region-ready metric is observed on the server,
+not at client chunk receipt; see `TEST_RESULTS_LATEST.md`.
+
 ## 26.3 source and runtime finding (2026-09-24; port incomplete)
 
 In generated 26.3 source, `NoiseSettings` has only `minY`/`height`.
@@ -1258,3 +1495,20 @@ server chunk caches still synchronously `managedBlock` in the two retrieval
 routes. Forge and NeoForge include other chunk patches around these calls;
 the Fabric runtime comparison does not validate either loader's scheduling,
 injection, networking, or final chunk output.
+# 26.3 development scheduler note (2026-09-27)
+
+No Minecraft internals or Mixin target changed in the parallel-worker update.
+Generated 26.3 `RandomState` uses concurrent maps for noise/sampler lookup and
+a lock for density-buffer pool access; `DensityFunctionCompiler` serializes
+sampler compilation with `compileLock`. `SamplerContext.EMPTY_UNCACHED` has no
+mutable cache cells and its global arena supplies per-call scoped buffers.
+At the existing NOISE interception, direct player demand can use additional
+owner-bound client slots after successful results, while prediction keeps one
+slot free for direct demand. The global limit, server density installation,
+vanilla completion, and local fallback path remain the same. The server result
+decoder uses at most two bounded workers. See `REMOTE_PROTOCOL.md` for the
+admission rule and `TEST_RESULTS_LATEST.md` for measured evidence.
+Fabric's 26.3 `ClientChunkEvents.CHUNK_LOAD` reports a chunk already present in
+`ClientLevel`; the benchmark-only listener records that receipt on the client
+clock after a measured BEGIN chat message. It is an observation of delivery,
+not a change to the server's NOISE stage or chunk installation.

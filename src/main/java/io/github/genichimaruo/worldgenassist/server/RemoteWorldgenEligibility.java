@@ -12,6 +12,7 @@ import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.status.ChunkStep;
 import net.minecraft.world.level.chunk.status.WorldGenContext;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.Beardifier;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
@@ -19,7 +20,6 @@ import net.minecraft.world.level.levelgen.NoiseSettings;
 import net.minecraft.world.level.levelgen.blending.Blender;
 
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityJob;
-import io.github.genichimaruo.worldgenassist.common.SupportedDimensions;
 
 final class RemoteWorldgenEligibility {
 	private RemoteWorldgenEligibility() {
@@ -31,11 +31,12 @@ final class RemoteWorldgenEligibility {
 		StaticCache2D<GenerationChunkHolder> chunks,
 		ChunkAccess chunk
 	) {
-		if (!(context.generator() instanceof NoiseBasedChunkGenerator generator)) {
+		NoiseBasedChunkGenerator generator = noiseDelegate(context.generator());
+		if (generator == null) {
 			return Optional.empty();
 		}
 		ServerLevel level = context.level();
-		if (!SupportedDimensions.contains(level.dimension().identifier()) || chunk.isOldNoiseGeneration() || chunk.getBelowZeroRetrogen() != null) {
+		if (chunk.isOldNoiseGeneration() || chunk.getBelowZeroRetrogen() != null) {
 			return Optional.empty();
 		}
 
@@ -61,10 +62,12 @@ final class RemoteWorldgenEligibility {
 	}
 
 	static Optional<SpeculativeContext> evaluatePrediction(ServerLevel level) {
-		if (!SupportedDimensions.contains(level.dimension().identifier())
-			|| !(level.getChunkSource().getGenerator() instanceof NoiseBasedChunkGenerator generator)) {
+		// A custom adapter may have its own demand rules. Wait for real chunk demand
+		// rather than speculating before the wrapper enters its delegate path.
+		if (level.getChunkSource().getGenerator().getClass() != NoiseBasedChunkGenerator.class) {
 			return Optional.empty();
 		}
+		NoiseBasedChunkGenerator generator = (NoiseBasedChunkGenerator) level.getChunkSource().getGenerator();
 		Holder<NoiseGeneratorSettings> settings = generator.generatorSettings();
 		if (settings.unwrapKey().isEmpty()) {
 			return Optional.empty();
@@ -74,6 +77,20 @@ final class RemoteWorldgenEligibility {
 			return Optional.empty();
 		}
 		return Optional.of(new SpeculativeContext(level, generator, settings, noise));
+	}
+
+	static NoiseBasedChunkGenerator noiseDelegate(ChunkGenerator generator) {
+		if (generator.getClass() == NoiseBasedChunkGenerator.class) {
+			return (NoiseBasedChunkGenerator) generator;
+		}
+		if (generator instanceof RemoteDensityCompatibleGenerator compatible) {
+			try {
+				return compatible.worldgenAssist$noiseDelegate();
+			} catch (RuntimeException exception) {
+				return null;
+			}
+		}
+		return null;
 	}
 
 	static boolean hasProtocolGeometry(NoiseSettings noise, int minY, int height) {

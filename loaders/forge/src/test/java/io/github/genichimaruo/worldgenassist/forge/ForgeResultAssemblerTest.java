@@ -83,7 +83,7 @@ final class ForgeResultAssemblerTest {
         TerrainJobIdentity identity = new TerrainJobIdentity(WorldgenProtocolVersion.CURRENT, UUID.randomUUID(),
             Identifier.fromNamespaceAndPath("minecraft", "overworld"), 5, -7,
             WorldgenContextFingerprint.fromBytes(new byte[32]));
-        return new TerrainDensityResultEnvelope(identity, 4_000, TerrainDensityResultEnvelope.Encoding.RAW,
+        return new TerrainDensityResultEnvelope(identity, 8_000, TerrainDensityResultEnvelope.Encoding.RAW,
             raw, 100, 200);
     }
 }

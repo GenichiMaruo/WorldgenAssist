@@ -1,5 +1,9 @@
 package io.github.genichimaruo.worldgenassist.client;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
@@ -12,23 +16,28 @@ import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityJob;
-import io.github.genichimaruo.worldgenassist.common.SupportedDimensions;
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityResult;
 import io.github.genichimaruo.worldgenassist.common.WorldgenContextFingerprint;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobFailurePayload;
 import io.github.genichimaruo.worldgenassist.server.WorldgenContextFingerprintFactory;
+import io.github.genichimaruo.worldgenassist.WorldgenAssist;
 
 final class ClientTerrainDensityComputer {
 	private ClientTerrainDensityComputer() {
 	}
 
 	static TerrainDensityResult compute(HolderLookup.Provider worldgenRegistries, Identifier currentDimension, TerrainDensityJob job) {
-		if (!SupportedDimensions.contains(job.identity().dimension()) || !currentDimension.equals(job.identity().dimension())) {
+		return compute(new Session(worldgenRegistries), currentDimension, job);
+	}
+
+	static TerrainDensityResult compute(Session session, Identifier currentDimension, TerrainDensityJob job) {
+		long prepareStarted = System.nanoTime();
+		if (!currentDimension.equals(job.identity().dimension())) {
 			throw new RejectedJobException(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT);
 		}
 
 		ResourceKey<NoiseGeneratorSettings> settingsKey = ResourceKey.create(Registries.NOISE_SETTINGS, job.noiseSettings());
-		Holder.Reference<NoiseGeneratorSettings> settings = worldgenRegistries
+		Holder.Reference<NoiseGeneratorSettings> settings = session.registries
 			.lookupOrThrow(Registries.NOISE_SETTINGS)
 			.get(settingsKey)
 			.orElseThrow(() -> new RejectedJobException(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT));
@@ -39,21 +48,14 @@ final class ClientTerrainDensityComputer {
 			throw new RejectedJobException(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT);
 		}
 
-		WorldgenContextFingerprint fingerprint = WorldgenContextFingerprintFactory.create(
-			worldgenRegistries,
-			job.identity().dimension(),
-			job.worldSeed(),
-			job.generateStructures(),
-			job.minY(),
-			job.height(),
-			settings
-		);
-		if (!fingerprint.equals(job.identity().contextFingerprint())) {
+		Prepared prepared = session.prepare(job, settings);
+		if (!prepared.fingerprint().equals(job.identity().contextFingerprint())) {
 			throw new RejectedJobException(TerrainJobFailurePayload.Reason.CONTEXT_MISMATCH);
 		}
 
-		HolderLookup.RegistryLookup<NormalNoise> noiseRegistry = worldgenRegistries.lookupOrThrow(Registries.NOISE);
-		RandomState randomState = RandomState.create(noiseRegistry, job.worldSeed(), settings.value());
+		WorldgenAssist.LOGGER.info("[CAWG] job.client_prepared id={} preparation_ms={} contexts={}",
+			job.identity().jobId(), (System.nanoTime() - prepareStarted) / 1_000_000.0, session.size());
+		RandomState randomState = prepared.state();
 		ClientDensitySampler.Sample sample = new ClientDensitySampler(
 			job.identity().chunkX(),
 			job.identity().chunkZ(),
@@ -67,6 +69,41 @@ final class ClientTerrainDensityComputer {
 		).sample();
 		return new TerrainDensityResult(job.identity(), sample.densities(), sample.computeNanos());
 	}
+
+	/** Each worker owns its sampler compiler; at most three contexts per worker. */
+	static final class Session {
+		private final HolderLookup.Provider registries;
+		private final Map<Thread, Map<ContextKey, Prepared>> workers = new ConcurrentHashMap<>();
+		private final boolean reuse = !"false".equalsIgnoreCase(System.getProperty("worldgen_assist.client.reuse_context",
+			System.getenv("WORLDGEN_ASSIST_CLIENT_REUSE_CONTEXT")));
+
+		Session(HolderLookup.Provider registries) { this.registries = registries; }
+
+		Prepared prepare(TerrainDensityJob job, Holder.Reference<NoiseGeneratorSettings> settings) {
+			Map<ContextKey, Prepared> cache = workers.computeIfAbsent(Thread.currentThread(),
+				ignored -> new LinkedHashMap<>(3, 0.75F, true));
+			ContextKey key = new ContextKey(job.identity().dimension(), job.worldSeed(), job.generateStructures(),
+				job.noiseSettings(), job.minY(), job.height());
+			synchronized (cache) {
+				Prepared existing = cache.get(key);
+				if (reuse && existing != null) return existing;
+				Prepared created = new Prepared(WorldgenContextFingerprintFactory.create(registries, key.dimension(),
+					key.seed(), key.structures(), key.minY(), key.height(), settings),
+					RandomState.create(registries.lookupOrThrow(Registries.NOISE), key.seed(), settings.value()));
+				cache.put(key, created);
+				if (cache.size() > 3) cache.remove(cache.keySet().iterator().next());
+				return created;
+			}
+		}
+
+		void clear() { workers.clear(); }
+		int size() {
+			return workers.values().stream().mapToInt(cache -> { synchronized (cache) { return cache.size(); } }).sum();
+		}
+	}
+
+	private record ContextKey(Identifier dimension, long seed, boolean structures, Identifier settings, int minY, int height) { }
+	private record Prepared(WorldgenContextFingerprint fingerprint, RandomState state) { }
 
 	static final class RejectedJobException extends RuntimeException {
 		private final TerrainJobFailurePayload.Reason reason;

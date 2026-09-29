@@ -1,5 +1,86 @@
 # Minecraft 26.3 and Forge/NeoForge port
 
+## Alpha.5 packaging (2026-09-29)
+
+The protocol-4 follow-up and subsequent pipeline/dispatch changes are packaged
+as `0.1.0-alpha.5+mc26.3`. Each loader's final archive differs from its saved
+candidate only in version metadata. Latest Fabric runtime evidence covers
+Overworld with two owners; native builds passed but changed native runtime
+paths were not rerun. Earlier custom-dimension and alpha.4 records below remain
+historical with their original hashes. See
+[alpha.5 verification](releases/v0.1.0-alpha.5+mc26.3-verification.md).
+
+## Unpublished follow-up candidate (2026-09-27)
+
+The current working tree explores compatible custom dimensions and a smaller
+density result. The released alpha.4 JARs and hashes below are unchanged.
+The three-ID admission allowlist is removed for the trusted-raw path only.
+The server still requires the vanilla `NoiseBasedChunkGenerator` density
+operation, or a custom wrapper that explicitly supplies its actual vanilla
+noise delegate. Unsupported generator paths fall back locally. The client
+requires the exact current dimension, a keyed noise settings entry in its
+lookup, matching context fingerprint, and exact 26.3 volume geometry.
+Because generated 26.3 registry synchronization omits noise settings,
+density functions, and noise parameters, a server-only datapack definition
+is not automatically supported by this change.
+
+General protocol `CURRENT=4` encodes each 26.3 float density as four raw
+bytes before optional DEFLATE; the prior alpha.4 protocol 3 used eight-byte
+doubles. This is a protocol break between candidate and release JARs.
+The selected 26.3 alpha.4 performance evidence contained 87 logged remote
+results with median RTT 137.15 ms, client compute 6.46 ms, client encode
+6.29 ms, server decode 3.49 ms, estimated transfer/dispatch remainder
+121.14 ms, and encoded payload 226,859 bytes. These are descriptive medians
+from that recorded run, not a causal decomposition or proof that v4 improves
+throughput. The focused batch `scripts/Run-FocusedWorldgenGate.ps1` selects
+only affected JUnit classes, a custom-dimension/Overworld correctness pair,
+one Overworld performance pair, and sequential native builds. The Fabric
+matrix at `test-artifacts/validation-matrix-20260927-165014-519/` completed
+10 selected cases with zero failures and two intentional skips. The four
+selected JUnit suites ran six tests with zero failures. The custom fixture
+matched all 841 shared NOISE digests and its one remotely applied chunk;
+Overworld matched all 941 shared digests and its one applied chunk. The
+analysis is `COMPLETE` with zero issues. The exact candidate Fabric JAR is
+SHA-256 `DEFF86143B2F59915AAE17B54FF3628485466348DB009924BD01B8BE4B746E4C`.
+
+The same selected performance pair measured median throughput of 70.32
+tasks/s vanilla and 70.08 tasks/s assisted. Server CPU was 49,906.25 ms
+vanilla and 50,203.125 ms assisted; tick p95 was 8.8649 ms and 7.8950 ms.
+It does **not** establish a throughput speedup. The new run logged 78
+remote-result events with median encoded payload 180,401 bytes, RTT 126.24
+ms, client encode 4.85 ms, server decode 1.71 ms, and estimated transfer/
+dispatch remainder 110.75 ms. Those event samples differ from the earlier
+87-event run, so the cross-run median changes are descriptive; the exact
+protocol change halves the uncompressed bytes by construction.
+
+A later two-owner Fabric experiment limited only the dedicated server Java
+process to four or two logical processors while both clients ran on the
+other PC. All six vanilla/assisted scenarios completed matched 1,682-task
+measured repeats with identical coordinates and safe cleanup. Median
+throughput was 51.50 versus 51.12 tasks/s at four logical processors and
+29.29 versus 28.38 at two; server 9-by-9 region-ready time was also longer
+with assistance at both limits. The client-visible chunk wait was not
+instrumented, and affinity does not recreate a physically weak server.
+See `TEST_RESULTS_LATEST.md` and the corrected read-only summary at
+`test-artifacts/csb-20260927-180639-953/summary-reanalysis.json`.
+The measured assisted windows sent 187 jobs at four logical processors and
+232 at two, while completing 5,046 NOISE tasks per tier. The coordinator's
+per-owner in-flight limit is one. Further work needs to measure local
+admission reasons and remote wait time before changing that limit.
+
+Forge's selected fragment-assembler suite passed three tests and the native
+build succeeded; NeoForge's native build succeeded. The final sequential
+wrapper summary is `test-artifacts/focused-worldgen-gate-20260927-171829-732/summary.json`.
+The built native JAR SHA-256 values are Forge
+`47C5AAC779C86FD846BA16A2718AFCF797A3F26DDF2252B334B633260F0C1FE7`
+and NeoForge
+`4162EA31622EFED25A98DA0AB7DB3FA864C897B0633B92A012F4CADC95203CE6`.
+It reuses the exact completed Fabric matrix artifact after the wrapper's
+process-output handling was repaired. Neither native loader has a custom-
+dimension runtime pair for this candidate. Custom noise registries unavailable
+to the client, independent custom density algorithms, and a general
+performance gain remain outside the verified result.
+
 The 26.3 version is `0.1.0-alpha.4+mc26.3`. Selected matched output checks
 pass across all three vanilla dimensions on each loader and installed-JAR
 Overworld pairs pass for all three loaders. Forge and NeoForge both passed

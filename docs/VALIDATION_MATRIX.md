@@ -1,5 +1,127 @@
 # Validation matrix
 
+## Network dispatch: minimal affected gate (2026-09-29)
+
+`scripts/Run-NetworkDispatchGate.ps1 -Execute` runs once implementation is
+complete: six tests across `ClientReplySession263Test`,
+`ConnectionScopedResultIngress263Test` and `RemoteBatchDispatch263Test`, then
+Fabric build and the two native builds needed to compile their changed client
+transports (`-x test`), followed by one installed Fabric Overworld
+vanilla/assisted correctness pair (two owners, two logical server CPUs,
+eight validation cells, cache 128, prefetch, default 100ms demand base).
+
+Tests cover direct worker send, revoked/cancelled connection isolation, queued
+receipt revocation, independent owners/results, batching under existing limits,
+cancel-before-dispatch, failed-send reservation cleanup and bounded codec
+round-trip/rejection. Runtime also requires both clients' worker-direct sends,
+network result ingress with no main-route receipts, and actual 2..4-job batch
+packets. `transport-paths.json` records route counts and client handoff means;
+the independent comparator verifies applied NOISE digests and owner overlap.
+No unrelated suite, native runtime matrix or performance scenario is selected.
+`-LocalOnly` explicitly omits the installed runtime pair.
+
+The first selected gate `network-dispatch-gate-20260929-215751-919` passed all
+six tests, affected builds, both cases and comparison. Both required applied
+chunks and 1,802 shared NOISE digests matched; network ingress and batches were
+observed. Its exact hash and warnings are in `TEST_RESULTS_LATEST.md`.
+
+## Adaptive demand wait: minimal affected gate (2026-09-29)
+
+`scripts/Run-DemandWaitGate.ps1 -Execute` runs only
+`AdaptiveDemandWait263Test` (five virtual-time tests) and
+`CachedDensityProvenance263Test` (one consumed-cache identity/isolation test),
+and the affected `GenerationPrefetch263Test` (one candidate-queue test),
+Fabric build and the
+affected Overworld two-owner correctness pair, sequentially. Tests cover a
+reply after the old deadline, prefetch age, one decoded-response grace, the
+hard ceiling, fixed control, per-owner learning/reset, slow direct admission,
+failure/cancellation timer cleanup, a delayed timer executor and rejection
+after expiry. The cache test ensures early results retain their original
+server-issued ID for actual-application/owner proof, are consumed once, and
+cannot be stored with a different coordinate or context. The candidate test
+also covers saturated admission for two owners; the wait test confirms a slow
+owner can still submit when no ahead work is active. Seven tests run in total.
+
+The pair uses the already authorized dedicated fixture, two logical server
+CPUs and `-CorrectnessDemandWaitMs 100` to exercise the actual default base
+(rather than the older correctness runner's 1000ms allowance). It checks the
+runtime's 100–200ms adaptive bounds and independently compares vanilla digests.
+The summary and child logs are saved under `test-artifacts/demand-wait-gate-*`.
+No unrelated JUnit suite, native-loader matrix or performance scenarios run.
+`-LocalOnly` selects the same unit/build step and explicitly omits runtime.
+The final selected gate `demand-wait-gate-20260929-200658-043` passed all seven
+tests, Fabric build, both runtime cases and final comparison (`COMPLETE`, zero
+issues). Both required applied chunks and 1,822 shared NOISE digests matched.
+Intermediate failures are retained in `TEST_RESULTS_LATEST.md`.
+
+## Pipelined candidate gate (2026-09-29)
+
+`scripts/Run-PipelinedAssistGate.ps1 -Execute` runs once all implementation is
+complete: four focused JUnit classes (context reuse, existing three-dimension
+sampler equivalence, preparation lifecycle, generation candidate scheduling),
+an Overworld two-owner correctness pair, Forge/NeoForge builds and eight
+performance scenarios, sequentially. It uses the dedicated other PC's server
+limited to two logical CPUs and two clients on the initiating PC.
+
+Each movement workload compares vanilla/current/prepared/prefetch on one JAR,
+with one excluded warm-up and three measured repeats. Movement is far
+relocation or relocation followed by 16 scripted 8-block steps at 250ms
+intervals; this measures a reproducible approach, not ordinary movement inputs.
+The current-style control disables context reuse and both server pipeline
+switches, retaining the request timeout for demand. It is not the historical
+artifact. The prepared variant also changes the demand wait budget, so its
+effect must not be attributed to validation overlap alone.
+
+The final summary includes fixed-region NOISE and full conversion, 81-chunk
+receipt coverage for each owner/repeat, CPU/tick metrics, early-use counts and
+client preparation/send-wait diagnostics. Full conversion excludes the send
+queue; receipt excludes rendering. Different clock origins prevent subtracting
+those medians as a delivery duration. Child logs stay in evidence files until
+the final batch summary. This is not the full loader/dimension matrix.
+
+`-LocalOnly` runs the same selected JUnit classes and three loader builds in
+one batch, without SSH, transfer or Minecraft scenarios. Its summary explicitly
+records `runtime_validation=NOT_RUN`. It requires no permission to send a JAR
+to the dedicated remote fixture. The full mode requires authorization for that
+destination; see `TEST_RESULTS_LATEST.md` for the approval-limited checkpoint.
+
+After a successful local-only gate, `-LocalEvidence <summary.json>
+-ExpectedArtifactSHA256 <64-hex hash>` resumes the runtime gate without repeating
+unit tests or loader builds. It requires three successful local steps and an
+exact match with the built Fabric JAR. This still runs the complete selected
+correctness pair and eight performance scenarios; it does not resume a partial
+performance batch. The dedicated fixture transfer/execution authorization is
+required before using this mode.
+
+For the unpublished parallel-worker scheduler change, run
+`scripts/Run-ParallelAssistGate.ps1 -Execute` once. It selects only
+`WorkerRegistry263Test` and the paired two-owner Overworld performance profile
+with prediction and validation, then builds Forge and NeoForge sequentially.
+All child output and one final summary are saved under a timestamped
+`test-artifacts/parallel-assist-gate-*` directory. A compile or unit failure
+causes the runtime pair to be skipped; it must not be described as a runtime
+pass. The batch does not prove a speedup until its paired measurements are
+complete and comparable.
+
+For the targeted two-owner constrained-server experiment, run
+`scripts/Run-ConstrainedServerBenchmark.ps1 -Execute`. It runs one quiet
+six-scenario batch with unrestricted, four-logical-processor, and
+two-logical-processor server Java affinity; each tier has one vanilla and one
+assisted Overworld performance scenario. The remote helper records the
+available/applied affinity masks and the time until both owners' 9-by-9
+NOISE regions finish on the server. The per-tier comparator checks exact
+measured coordinates, task counts, JAR/source identity, and runtime/client
+conditions. The optional `-TwoLogicalOnly` limits a follow-up to the weakest
+server tier. The benchmark now enables a Fabric client receipt probe in both
+modes: it timestamps the measured BEGIN message and `ClientChunkEvents.CHUNK_LOAD`
+on the same client clock, then requires all 81 chunks in each owner's 9×9
+region. The comparator reports the slower owner's completion time per repeat
+as `client_region_receipt_ms`; missing chunks make the comparison incomplete.
+`server_region_ready_ms` remains a separate server-side measure. The two clients share the first PC; the dedicated
+server runs on the second. The batch does not rerun JUnit or rebuild an
+unchanged JAR. Its tested candidate and 2026-09-27 evidence are recorded in
+`TEST_RESULTS_LATEST.md`.
+
 On the 26.3 development branch, the Fabric installed-client batch runner now
 accepts the authorized isolated two-PC fixture. Its default plan contains ten
 scenarios: paired assisted/vanilla correctness in each vanilla dimension for
@@ -110,6 +232,22 @@ with an explicit cleanup proof does not prevent independent scenarios.
 
 The 26.2 public Overworld transcript fixture is not ported. The 26.3 batch
 records it as `SKIPPED`; it is never counted as a trusted-raw result.
+
+For the unpublished 26.3 custom-dimension/float32 candidate,
+`scripts/Run-FocusedWorldgenGate.ps1 -Execute` is the selected gate. It invokes
+the 26.3 Fabric batch with `-IncludeFixture`, three affected correctness or
+performance pairs, and `-TestClass` for four focused JUnit classes, followed
+by sequential Forge and NeoForge builds (Forge selects only its fragment
+assembler JUnit class). The `fixture` scenario installs a temporary
+`worldgen_assist:fixture` dimension using built-in Overworld noise settings
+inside its isolated test world. The default ten-scenario plan and the
+`-FullMatrix` vanilla cross-product are unchanged when `-IncludeFixture` is
+absent. Every child log is retained; the wrapper prints one final summary
+path. These are candidate checks, not historical alpha.4 evidence.
+After a wrapper-only fix, `-ReuseMatrixSummary <summary.json>` runs the
+remaining native builds without repeating a successful Minecraft matrix;
+the wrapper requires the current Fabric JAR hash and every selected case to
+match the completed summary.
 
 Before the network matrix, `Run-SettingsSmoke.ps1` launches one isolated
 development client. It enters the settings screen from vanilla Options,

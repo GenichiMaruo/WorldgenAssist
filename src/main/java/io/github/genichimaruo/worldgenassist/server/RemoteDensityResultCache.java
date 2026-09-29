@@ -10,30 +10,54 @@ import net.minecraft.resources.Identifier;
 
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityJob;
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityResult;
+import io.github.genichimaruo.worldgenassist.common.TerrainJobIdentity;
 import io.github.genichimaruo.worldgenassist.common.WorldgenContextFingerprint;
 
 public final class RemoteDensityResultCache {
 	private final int capacity;
-	private final Map<Key, double[]> entries;
+	private final Map<Key, Entry> entries;
+	private final long maxAgeNanos;
 
 	public RemoteDensityResultCache(int capacity) {
+		this(capacity, Long.MAX_VALUE);
+	}
+
+	RemoteDensityResultCache(int capacity, long maxAgeNanos) {
 		if (capacity < 0 || capacity > RemoteWorldgenConfig.MAX_CACHE_ENTRIES) {
 			throw new IllegalArgumentException(
 				"capacity must be between 0 and " + RemoteWorldgenConfig.MAX_CACHE_ENTRIES + ": " + capacity
 			);
 		}
 		this.capacity = capacity;
+		this.maxAgeNanos = maxAgeNanos;
 		this.entries = new LinkedHashMap<>(Math.max(1, capacity), 0.75F, true);
 	}
 
 	public synchronized Optional<double[]> get(Key key) {
 		Objects.requireNonNull(key, "key");
-		double[] densities = entries.get(key);
-		return densities == null ? Optional.empty() : Optional.of(densities.clone());
+		pruneExpired();
+		Entry entry = entries.get(key);
+		return entry == null ? Optional.empty() : Optional.of(entry.result().densities());
 	}
 
 	public synchronized boolean contains(Key key) {
+		pruneExpired();
 		return entries.containsKey(Objects.requireNonNull(key, "key"));
+	}
+
+	public synchronized Optional<double[]> take(Key key) {
+		pruneExpired();
+		Entry value = entries.remove(Objects.requireNonNull(key));
+		return value == null ? Optional.empty() : Optional.of(value.result().densities());
+	}
+	/** Consumes the density while retaining the server-issued request identity for application tracing. */
+	public synchronized Optional<TerrainDensityResult> takeResult(Key key) {
+		pruneExpired();
+		Entry value = entries.remove(Objects.requireNonNull(key));
+		return value == null ? Optional.empty() : Optional.of(value.result());
+	}
+	public synchronized void removeMatching(java.util.function.Predicate<Key> predicate) {
+		entries.keySet().removeIf(predicate);
 	}
 
 	public synchronized boolean remove(Key key) {
@@ -52,7 +76,13 @@ public final class RemoteDensityResultCache {
 					+ " actual=" + result.densityCount()
 			);
 		}
-		entries.put(key, result.densities());
+		TerrainJobIdentity identity = result.identity();
+		if (!identity.dimension().equals(key.dimension()) || identity.chunkX() != key.chunkX()
+			|| identity.chunkZ() != key.chunkZ() || !identity.contextFingerprint().equals(key.contextFingerprint())) {
+			throw new IllegalArgumentException("Density identity does not match cache key");
+		}
+		pruneExpired();
+		entries.put(key, new Entry(result, System.nanoTime()));
 		while (entries.size() > capacity) {
 			entries.remove(entries.keySet().iterator().next());
 		}
@@ -65,8 +95,15 @@ public final class RemoteDensityResultCache {
 	}
 
 	public synchronized int size() {
+		pruneExpired();
 		return entries.size();
 	}
+
+	private void pruneExpired() {
+		long now = System.nanoTime();
+		entries.values().removeIf(entry -> now - entry.storedNanos() >= maxAgeNanos);
+	}
+	private record Entry(TerrainDensityResult result, long storedNanos) { }
 
 	public synchronized void removeOwner(UUID ownerId) {
 		entries.keySet().removeIf(key -> ownerId.equals(key.ownerId()));

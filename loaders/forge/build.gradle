@@ -3,7 +3,7 @@ plugins {
     id 'net.minecraftforge.gradle' version '[7.0.17,8)'
 }
 
-version = '0.1.0-alpha.4+mc26.3'
+version = '0.1.0-alpha.5+mc26.3'
 group = 'io.github.genichimaruo'
 base.archivesName = 'worldgen-assist-forge'
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)

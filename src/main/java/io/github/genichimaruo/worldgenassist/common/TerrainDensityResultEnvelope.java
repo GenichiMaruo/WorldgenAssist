@@ -9,7 +9,8 @@ import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
 public final class TerrainDensityResultEnvelope {
-	public static final int BYTES_PER_DENSITY = Double.BYTES;
+	/** 26.3 samples float densities; protocol v4 transports their exact raw bits. */
+	public static final int BYTES_PER_DENSITY = Float.BYTES;
 	public static final int MAX_ENCODED_DENSITY_BYTES = TerrainDensityJob.MAX_SAMPLE_COUNT * BYTES_PER_DENSITY;
 
 	private final TerrainJobIdentity identity;
@@ -58,7 +59,13 @@ public final class TerrainDensityResultEnvelope {
 		byte[] raw = new byte[Math.multiplyExact(result.densityCount(), BYTES_PER_DENSITY)];
 		ByteBuffer rawBuffer = ByteBuffer.wrap(raw).order(ByteOrder.BIG_ENDIAN);
 		for (int index = 0; index < result.densityCount(); index++) {
-			rawBuffer.putDouble(result.densityAt(index));
+			double value = result.densityAt(index);
+			float density = (float) value;
+			if (!Float.isFinite(density) || (double) density != value
+				|| Double.doubleToRawLongBits((double) density) != Double.doubleToRawLongBits(value)) {
+				throw new IllegalArgumentException("Density is not an exact finite float at " + index);
+			}
+			rawBuffer.putInt(Float.floatToRawIntBits(density));
 		}
 
 		byte[] candidate = new byte[raw.length];
@@ -94,7 +101,7 @@ public final class TerrainDensityResultEnvelope {
 		ByteBuffer buffer = ByteBuffer.wrap(raw).order(ByteOrder.BIG_ENDIAN);
 		double[] densities = new double[densityCount];
 		for (int index = 0; index < densities.length; index++) {
-			densities[index] = buffer.getDouble();
+			densities[index] = Float.intBitsToFloat(buffer.getInt());
 		}
 		return new TerrainDensityResult(identity, densities, clientComputeNanos);
 	}

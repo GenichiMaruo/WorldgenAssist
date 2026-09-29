@@ -16,9 +16,31 @@ import io.github.genichimaruo.worldgenassist.server.NoiseStageDigestLogger;
 import io.github.genichimaruo.worldgenassist.server.RemoteWorldgenManager;
 import io.github.genichimaruo.worldgenassist.server.WorldgenStageMetrics;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ChunkStatusTasks.class)
 abstract class ChunkStatusTasksMixin {
+	@WrapMethod(method = "full")
+	private static CompletableFuture<ChunkAccess> worldgenAssist$observeFull(WorldGenContext context, ChunkStep step,
+		StaticCache2D<GenerationChunkHolder> chunks, ChunkAccess chunk, Operation<CompletableFuture<ChunkAccess>> original) {
+		CompletableFuture<ChunkAccess> result = original.call(context, step, chunks, chunk);
+		if (!Boolean.getBoolean("worldgen_assist.remote.diagnostics")) return result;
+		return result.whenComplete((generated, error) -> {
+			if (error == null) io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
+				"[CAWG] chunk.full_ready chunk={},{} dimension={}", chunk.getPos().x(), chunk.getPos().z(),
+				context.level().dimension().identifier());
+		});
+	}
+
+	@Inject(method = "generateStructureStarts", at = @At("HEAD"))
+	private static void worldgenAssist$observeGeneration(WorldGenContext context, ChunkStep step,
+		StaticCache2D<GenerationChunkHolder> chunks, ChunkAccess chunk,
+		CallbackInfoReturnable<CompletableFuture<ChunkAccess>> callback) {
+		RemoteWorldgenManager.observeGeneration(context, chunk);
+	}
+
 	@WrapMethod(
 		method = "buildTerrain(Lnet/minecraft/world/level/chunk/status/WorldGenContext;Lnet/minecraft/world/level/chunk/status/ChunkStep;Lnet/minecraft/util/StaticCache2D;Lnet/minecraft/world/level/chunk/ChunkAccess;)Ljava/util/concurrent/CompletableFuture;"
 	)

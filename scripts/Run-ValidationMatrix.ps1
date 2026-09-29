@@ -2,6 +2,8 @@
 param(
     [switch] $Execute,
     [string[]] $CaseId = @(),
+    [string[]] $TestClass = @(),
+    [switch] $IncludeFixture,
     [switch] $FullMatrix,
     [string] $CapabilityManifest = (Join-Path $PSScriptRoot 'validation-capabilities.json'),
     [switch] $SkipPerformance,
@@ -306,8 +308,14 @@ foreach ($dimension in @('overworld', 'the_nether', 'the_end')) {
         }
     }
 }
+if ($IncludeFixture) {
+    foreach ($mode in @('vanilla', 'assisted')) {
+        $scenarioPlan += [ordered]@{ id = "correctness-fixture-$mode-p1-direct"; purpose = 'correctness'; dimension = 'fixture'; mode = $mode; players = 1; cache_entries = 0; prediction = $false; validation_cells = 8 }
+    }
+}
 
 $selection = @($CaseId | ForEach-Object { $_ -split ',' } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique)
+$selectedTests = @($TestClass | ForEach-Object { $_ -split ',' } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique)
 $targeted = $selection.Count -gt 0
 if ($targeted -and $FullMatrix) { throw '-CaseId and -FullMatrix are mutually exclusive.' }
 if ($targeted) {
@@ -335,7 +343,7 @@ $plan = [ordered]@{
     execution_note = 'Every scenario is isolated. Runtime/performance success requires scenario-result.json; unimplemented capability remains SKIPPED.'
     build_cases = @(
         [ordered]@{ id = 'compile'; gradle = @('compileJava', 'compileClientJava', '--continue'); junit = $false },
-        [ordered]@{ id = 'unit'; gradle = @('test', '--rerun-tasks', '--continue'); junit = $true },
+        [ordered]@{ id = 'unit'; gradle = if ($selectedTests.Count -gt 0) { @('test', '--rerun-tasks') + @($selectedTests | ForEach-Object { @('--tests', $_) }) + @('--continue') } else { @('test', '--rerun-tasks', '--continue') }; junit = $true },
         [ordered]@{ id = 'build'; gradle = @('build', '-x', 'test', '--continue'); junit = $false }
     )
     runtime_and_performance_cases = $scenarioPlan
@@ -361,7 +369,7 @@ try {
 
     $results = @()
     foreach ($buildCase in $plan.build_cases) {
-        if ($targeted -and $buildCase.id -eq 'unit') { $results += New-SkippedCase -Id 'unit' -Reason 'Not selected: targeted scenario run.' -PlanCase $null; continue }
+        if ($targeted -and $buildCase.id -eq 'unit' -and $selectedTests.Count -eq 0) { $results += New-SkippedCase -Id 'unit' -Reason 'Not selected: targeted scenario run.' -PlanCase $null; continue }
         $gradleArguments = @('/d', '/c', (Join-Path $workspace 'gradlew.bat'))
         $gradleArguments += @($buildCase.gradle)
         $results += Invoke-OwnedProcess -CaseId $buildCase.id -FileName "$env:SystemRoot\System32\cmd.exe" -Arguments $gradleArguments -WorkingDirectory $workspace -TimeoutSeconds $BuildTimeoutSeconds -CaptureJunit ([bool]$buildCase.junit)
@@ -369,8 +377,11 @@ try {
     $artifact = Get-ArtifactInfo
     if ($null -ne $artifact) { Write-JsonFile -Path (Join-Path $runRoot 'artifact.json') -Value $artifact }
     $capabilities = Read-Capabilities
-    $runtimeDependenciesReady = @($results | Where-Object { $_.id -in @('compile', 'build') -and $_.status -ne 'PASSED' }).Count -eq 0
-    $runtimeDependencyReason = 'Compile or distribution build failed; runtime was skipped to avoid using a stale JAR.'
+    $runtimeDependenciesReady = @($results | Where-Object {
+        ($_.id -in @('compile', 'build') -and $_.status -ne 'PASSED') -or
+        ($selectedTests.Count -gt 0 -and $_.id -eq 'unit' -and $_.status -ne 'PASSED')
+    }).Count -eq 0
+    $runtimeDependencyReason = 'Selected tests, compile, or distribution build failed; runtime was skipped to avoid invalid evidence.'
     $runtimeSafe = $true
     if($targeted){
         $results+=New-SkippedCase -Id 'settings-menu-smoke' -Reason 'Not selected: targeted scenario run.' -PlanCase $null
@@ -405,7 +416,9 @@ try {
     $results += New-SkippedCase -Id 'public-fixture-regression' -Reason 'The 26.2 public-seed transcript fixture is not ported to 26.3.' -PlanCase $null
 
     $aggregationReason = Test-AggregationCapability -Capabilities $capabilities
-    if ($null -ne $aggregationReason) {
+    if (@($results | Where-Object { $_.id -match '^(correctness|performance)-' -and $_.status -eq 'PASSED' }).Count -eq 0) {
+        $results += New-SkippedCase -Id 'aggregate-runtime-performance' -Reason 'No runtime scenario passed; there is no pair to aggregate.' -PlanCase $null
+    } elseif ($null -ne $aggregationReason) {
         $results += New-SkippedCase -Id 'aggregate-runtime-performance' -Reason $aggregationReason -PlanCase $null
     } else {
         $aggregationResult = Invoke-OwnedProcess -CaseId 'aggregate-runtime-performance' -FileName $localPwsh -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $comparisonRunner, '-RunRoot', $runRoot) -WorkingDirectory $workspace -TimeoutSeconds $ScenarioTimeoutSeconds -CaptureJunit $false

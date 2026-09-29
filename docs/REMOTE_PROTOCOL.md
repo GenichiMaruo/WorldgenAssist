@@ -1,10 +1,197 @@
 # Remote Protocol
 
+## Alpha.5 release protocol
+
+`0.1.0-alpha.5+mc26.3` packages protocol **4** and the candidate changes below.
+Alpha.4 remains on protocol 3; upgrade the server and participating clients
+together. Final distribution contents match the latest saved candidates except
+version metadata. Historical checkpoints retain their original identities;
+see `releases/v0.1.0-alpha.5+mc26.3-verification.md` for current evidence scope.
+
+## Result dispatch and optional request batches (2026-09-29)
+
+Development protocol remains **4**: job/result identity and density encoding
+are unchanged. `terrain_job_batch` is an additive, optional clientbound channel
+with 1..4 complete jobs. Its codec bounds the count before allocation and
+rejects repeated job IDs. Fabric sends it only when the client advertises that
+channel; otherwise the original individual requests are used. Every job keeps
+its own registration, owner, deadline, cancellation and immediate result packet.
+There is no per-job extra approval round trip or wait for other results.
+Native loaders currently use individual requests through the shared sender's
+fallback. Published protocol-3 artifacts are unchanged.
+
+Fabric accepts results using a hello-approved connection/owner snapshot before
+the server main-thread packet queue. The event thread only submits to the
+bounded existing decoder executor. Claiming/rechecking owner/deadline/identity
+and decoding run there; revoked connection work cannot be decoded/completed.
+Unknown/revoked connections are dropped rather than handed to UUID-only main
+handling. The existing density validation and final application gates remain.
+Client reply senders capture one connection and are revoked on disconnect,
+join/rejection or an observed dimension change. See `WORLDGEN_PIPELINE.md` for
+new timestamp definitions. The focused gate
+`network-dispatch-gate-20260929-215751-919` passed: both owners' results matched
+vanilla, 276 accepted receipts used the network route and ten batch packets
+were exercised. Six affected tests and all three loader builds passed; only
+Fabric runtime was selected and no performance claim follows from this gate.
+
+The same candidate's later constrained-server measurement confirms that the
+new Fabric ingress path was present in the tested JAR, but its shortened RTT
+endpoint cannot by itself establish a latency reduction. In three repeats the
+server 9-by-9 region proxy improved while both-client 81-chunk receipt was
+slightly slower and total throughput nearly unchanged. See
+`TEST_RESULTS_LATEST.md` for exact conditions and values.
+
+## Adaptive demand waiting (2026-09-29, focused gate complete)
+
+The new candidate keeps protocol 4 and the same owner/validation/disclosure
+gates. Within the enabled pipeline, the configured demand wait is now a base
+budget. Successful validated turnarounds update an owner-specific exponential
+mean/deviation estimate; initial cold estimate is 150ms, and the margin is 25ms.
+The initial wait accounts for the time already spent on a prefetch request.
+Waiting is bounded by twice the base, never above 1000ms (default base 100,
+maximum 200). A decoded response waiting for validation can receive one grace
+of at most 25ms within that same ceiling. Timer expiry still cancels the work,
+clears retained output and uses the original local continuation.
+Completion also checks the absolute ceiling, so a delayed timer callback cannot
+allow a result past that ceiling.
+
+After three samples, direct requests whose estimated turnaround exceeds the
+ceiling are skipped only while that owner has active ahead work. With no active
+ahead work, bounded direct admission remains available to start the owner's
+pipeline; a slow estimate cannot exclude an owner completely. Ahead computation
+remains eligible: it can finish before actual demand. Owner/context invalidation
+clears latency learning. Setting
+`WORLDGEN_ASSIST_REMOTE_ADAPTIVE_DEMAND_WAIT=false` (or
+`worldgen_assist.remote.adaptive_demand_wait=false`) restores the fixed base
+budget. With both original pipeline switches off, the comparison baseline
+still uses the configured request timeout.
+
+Generation candidate observation, fingerprint completion and remote
+preparation completion now enqueue a coalesced server task to refill available
+prefetch slots between ticks. A server/context token prevents stale queued
+tasks from dispatching after invalidation. All dispatch still occurs on the
+server thread; the original tick dispatcher remains a backstop. Packet
+reception and client sending are unchanged, so their queue delays still exist.
+This does not establish a speedup for the new artifact.
+
+Cached density now retains the original immutable result and server-issued job
+ID through consumption/application instead of synthesizing a fresh ID. Cache
+insertion checks coordinate/context identity as well as shape; owner/epoch key
+checks remain authoritative. This preserves tracing and allows the installed
+fixture to prove cached assistance actually applied for each owner. It also
+avoids cloning/revalidating the density while holding the cache state lock.
+When the bounded generation-candidate queue is full, an underrepresented owner
+can displace one candidate of an owner with at least two more entries. Capacity
+is unchanged; round-robin dispatch can now receive candidates for both owners.
+
+The selected gate passed seven affected JUnit tests, Fabric build and an
+installed two-owner Overworld correctness pair on a two-logical-CPU server.
+Both required applied chunks and all 1,822 shared NOISE digests matched vanilla;
+the owners' successful jobs overlapped. Runtime logs exercised 100–200ms wait
+budgets. Evidence is `demand-wait-gate-20260929-200658-043`. A matched three
+repeat benchmark on a two-logical-CPU server then found assisted region
+completion 13.5% slower and client receipt 10.6% slower; see
+`TEST_RESULTS_LATEST.md` for measurements and limits.
+
+## Pipelined 26.3 candidate (2026-09-29, selected gate complete)
+
+Protocol remains 4; payload shapes are unchanged. Clients reuse locally
+verified fingerprints and `RandomState` objects, at most three contexts per
+worker. Every request still checks the expected fingerprint. Connection and
+dimension changes replace the session. New logs separate preparation, worker
+queue, total worker work and render-thread send wait; compute time is still
+density sampling only.
+
+One bounded server worker prepares secret random validation samples while the
+client calculates. Comparison waits for both preparation and decoded result.
+Failure cancels both paths promptly. Admission covers the remote wait and
+preparation under the global and adaptive owner caps; cancelled running
+preparation retains its slot until the real invocation exits. Sample selection
+and coverage are unchanged. Preparation timing now includes sampler binding.
+
+An observer at `generateStructureStarts` records bounded metadata for actual
+generation within current owner demand, restricted to the exact vanilla noise
+generator. Server-tick dispatch interleaves owners and prioritizes nearby
+candidates; it never advances a stage or loads a chunk. Fingerprint preparation
+runs off the main thread. Actual TERRAIN demand rechecks all existing
+blender/beardifier/retrogen/geometry/epoch gates. Validated results are consumed
+once and expire after the request timeout. Movement prediction remains lower
+priority and reserves one owner slot.
+
+Remote policy stays opt-in. Within enabled mode, reuse and validation
+preparation default on; planned prefetch defaults on with nonzero cache
+capacity. A/B controls are `WORLDGEN_ASSIST_CLIENT_REUSE_CONTEXT`,
+`WORLDGEN_ASSIST_REMOTE_PREPARE_VALIDATION`, `WORLDGEN_ASSIST_REMOTE_PREFETCH`,
+and `WORLDGEN_ASSIST_REMOTE_DEMAND_WAIT_MS` (5..1000, default 100). JVM property
+equivalents use `worldgen_assist.client.reuse_context` and
+`worldgen_assist.remote.<lowercase suffix>`. With both server pipeline switches
+off, demand keeps the existing request timeout for the comparison baseline.
+Otherwise the short TERRAIN wait budget is independent of request lifetime;
+a result arriving after fallback cannot install.
+
+`rtt_ms` now ends at payload-handler arrival rather than after validation.
+It includes setup, client scheduling and waiting for the server packet processor
+to enter the handler; it is not timestamped at socket arrival. `estimated_transfer_ms` remains an
+unattributed residual, not pure network time. Decoder queue and validation
+preparation/queue/comparison have separate logs. `chunk.full_ready` marks full
+conversion, not delivery or rendering. The selected Fabric two-owner correctness
+pair and eight matched constrained-server performance scenarios passed. No
+client-receipt speedup versus vanilla was established. See `TEST_RESULTS_LATEST.md`.
+
+## 26.3 development candidate after alpha.4
+
+The current unpublished scheduler keeps protocol `CURRENT=4`: the existing
+`WorkerHelloPayload.maxParallelJobs` field advertises the client's configured
+worker count, so no wire shape or version change is needed. The client reads
+`worker_threads=1..4` from `worldgen-assist-client.properties` (default 2),
+or `-Dworldgen_assist.client.worker_threads=1..4` at startup. Invalid values
+fall back to one worker. The server caps each owner at the lower of four,
+the advertised count, and the configured global limit. It starts at one
+in-flight job, adds a slot after two successfully applied or validated results,
+and halves its current limit after a timeout, decode failure, or client failure.
+The global in-flight cap and server-authoritative validation remain in force.
+Prediction reserves one owner slot for direct player-demand work; until an
+owner has at least two active slots it does not dispatch predictions. Direct
+results are no longer retained as duplicate full-density cache entries; only
+completed predictions enter that cache. The bounded server result decoder has
+up to two workers. `-Dworldgen_assist.remote.diagnostics=true` emits a 200-tick
+summary of local fallback categories, submissions, pending jobs, and decoder
+queue depth. These controls do not establish a measured speedup.
+
+The unpublished candidate increments the **general trusted-raw** protocol to
+`CURRENT=4`. The 26.3 sampler produces exact IEEE-754 `float` values; v4
+transports their raw 32-bit patterns in big-endian order before optional
+DEFLATE, halving the maximum uncompressed result from 786,432 to 393,216
+bytes. A decoded value is widened exactly to the existing in-memory `double`
+field. Encoding rejects a value that cannot round-trip through `float`,
+including a changed signed zero. The 26.2 public fixture's separate v3 family
+is still unavailable on 26.3.
+
+The candidate admits a custom dimension ID only when the server's generator
+uses the vanilla `NoiseBasedChunkGenerator.buildTerrain/doFill` density path,
+the noise settings are keyed, and the existing geometry, empty blender,
+empty beardifier, retrogen, owner, and context checks pass. A custom wrapper
+must explicitly implement `RemoteDensityCompatibleGenerator` and return the
+noise delegate it actually invokes. Prediction stays restricted to the exact
+vanilla generator class. Unsupported generators fall back locally.
+
+Generated 26.3 `RegistryDataLoader.SYNCHRONIZED_REGISTRIES` includes dimension
+types but not noise settings, density functions, or noise parameters. The
+worker still creates `VanillaRegistries.createWorldLookup()`; therefore a
+datapack-only custom noise registry that the client cannot reproduce fails
+closed. A custom dimension using matching built-in noise settings is the
+focused runtime fixture. The selected Fabric protocol-4 fixture and Overworld
+assisted/vanilla pairs passed with one matching remotely applied chunk each
+(841 and 941 shared matching NOISE digests). Focused Forge/NeoForge builds
+passed, but their custom-dimension runtime paths were not checked. See
+`TEST_RESULTS_LATEST.md`; alpha.4 release evidence remains historical.
+
 ## Minecraft 26.3 development branch
 
 The sections below describe the published **26.2** line unless explicitly
-stated otherwise. The 26.3 Fabric, Forge, and NeoForge implementations send
-full-block float-exact density volumes and set general `CURRENT=3`; the
+stated otherwise. The published alpha.4 Fabric, Forge, and NeoForge 26.3
+implementations send full-block float-exact density volumes and set general
+`CURRENT=3`; the
 separate public-seed fixture is unavailable. Selected installed-artifact
 correctness runs and their limits are recorded in `PORT_26_3.md` and
 `TEST_RESULTS_LATEST.md`. Do not interpret the
@@ -74,8 +261,8 @@ The 250 ms per-owner settings request limit returns RATE_LIMITED with a retry
 message; it does not silently drop a rapid Save after Read.
 
 `WorkerHelloPayload` advertises protocol version, requested parallelism, and a
-bounded implementation-version string. The current client advertises one
-thread. The server accepts the exact current protocol only and caps the result
+bounded implementation-version string. The published alpha.3 client advertises
+one thread. The server accepts the exact current protocol only and caps the result
 at its configured per-worker limit.
 
 Every job-bearing message contains the complete `TerrainJobIdentity`:

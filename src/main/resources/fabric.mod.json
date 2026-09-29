@@ -22,7 +22,8 @@
 		]
 	},
 	"mixins": [
-		"worldgen_assist.mixins.json"
+		"worldgen_assist.mixins.json",
+		"worldgen_assist.fabric.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.19.5",
