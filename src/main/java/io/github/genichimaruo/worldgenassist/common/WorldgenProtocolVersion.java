@@ -3,7 +3,7 @@ package io.github.genichimaruo.worldgenassist.common;
 public record WorldgenProtocolVersion(int value) {
 	public static final int MIN_VALUE = 1;
 	public static final int MAX_VALUE = 65_535;
-	public static final WorldgenProtocolVersion CURRENT = new WorldgenProtocolVersion(4);
+	public static final WorldgenProtocolVersion CURRENT = new WorldgenProtocolVersion(6);
 
 	public WorldgenProtocolVersion {
 		if (value < MIN_VALUE || value > MAX_VALUE) {

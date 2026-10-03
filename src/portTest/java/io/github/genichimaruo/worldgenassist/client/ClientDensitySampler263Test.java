@@ -62,6 +62,12 @@ class ClientDensitySampler263Test {
 			NoiseGeneratorSettings.OVERWORLD.identifier(), noise.minY(), noise.height(), 1, 1);
 		var computed = ClientTerrainDensityComputer.compute(lookup, dimension, job);
 		assertEquals(job.sampleCount(), computed.densityCount());
+		var surfaceJob = new TerrainDensityJob(identity, seed, true, job.noiseSettings(), job.minY(), job.height(), 1, 1,
+			io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.SURFACE_FIELDS);
+		assertEquals(769, ClientTerrainDensityComputer.compute(lookup, dimension, surfaceJob).densityCount());
+		var gridJob = new TerrainDensityJob(identity, seed, true, job.noiseSettings(), job.minY(), job.height(), 1, 1,
+			io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.GRID_AND_SURFACE);
+		assertEquals(6894, ClientTerrainDensityComputer.compute(lookup, dimension, gridJob).densityCount());
 		var rejected = assertThrows(ClientTerrainDensityComputer.RejectedJobException.class,
 			() -> ClientTerrainDensityComputer.compute(lookup, Identifier.parse("minecraft:overworld"), job));
 		assertEquals(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT, rejected.reason());

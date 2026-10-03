@@ -10,12 +10,16 @@ import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.NoiseSettings;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.densityfunction.DensitySampler;
+import net.minecraft.world.level.levelgen.densityfunction.DensityBufferPool;
 import net.minecraft.world.level.levelgen.densityfunction.SamplerContext;
 import net.minecraft.world.level.levelgen.densityfunction.DensityVolume;
 import net.minecraft.world.level.levelgen.densityfunction.ScopedDensityBuffer;
 
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityJob;
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityResult;
+import io.github.genichimaruo.worldgenassist.common.TerrainWorkKind;
+import io.github.genichimaruo.worldgenassist.common.SurfaceDensityData;
+import io.github.genichimaruo.worldgenassist.common.GridDensityData;
 
 /** Independent, bounded server sampling of the 26.3 block-indexed float volume. */
 final class RemoteDensityValidator {
@@ -51,48 +55,178 @@ final class RemoteDensityValidator {
 			throw new IllegalArgumentException("Invalid validation group count: " + sampleGroups);
 		}
 		if (sampleGroups == 0) { return new Prepared(job, 0, new int[0], new float[0], 0L); }
+		if (job.workKind() == TerrainWorkKind.GRID_AND_SURFACE) {
+			return prepareGrid(job, sampleGroups, randomState, settings, random, start);
+		}
+		if (job.workKind() == TerrainWorkKind.SURFACE_FIELDS) {
+			return prepareSurface(job, sampleGroups, randomState, settings, random, start);
+		}
 
 		int totalValues = job.sampleCount();
 		int totalGroups = Math.floorDiv(totalValues + VALUES_PER_GROUP - 1, VALUES_PER_GROUP);
 		int[] groups = selectCells(totalGroups, Math.min(sampleGroups, totalGroups), random);
-		DensitySampler.Bound sampler = randomState.samplersWithContext(SamplerContext.EMPTY_UNCACHED)
-			.get(settings.noiseRouter().finalDensity());
+		// Keep the original bottom of each column: interpolated float volumes use
+		// repeated additions within cells, so arbitrary point/sub-column sampling
+		// need not preserve the exact bits produced by vanilla's full volume.
+		Map<Integer, Integer> columnHeights = new HashMap<>();
+		for (int group : groups) {
+			int end = Math.min(totalValues, (group + 1) * VALUES_PER_GROUP);
+			for (int index = group * VALUES_PER_GROUP; index < end; index++) {
+				columnHeights.merge(index / job.height(), index % job.height() + 1, Math::max);
+			}
+		}
 		Map<Integer, float[]> sampledColumns = new HashMap<>();
 		int chunkMinX = Math.multiplyExact(job.identity().chunkX(), TerrainDensityJob.CHUNK_SIDE);
 		int chunkMinZ = Math.multiplyExact(job.identity().chunkZ(), TerrainDensityJob.CHUNK_SIDE);
 		int[] indices = new int[Math.min(sampleGroups, totalGroups) * VALUES_PER_GROUP];
 		float[] expectedValues = new float[indices.length];
 		int validated = 0;
-		for (int group : groups) {
-			int begin = group * VALUES_PER_GROUP;
-			int end = Math.min(totalValues, begin + VALUES_PER_GROUP);
-			for (int index = begin; index < end; index++) {
-				if (Thread.currentThread().isInterrupted()) {
-					throw new CancellationException("Remote density validation interrupted");
-				}
-				int y = index % job.height();
-				int x = (index / job.height()) % TerrainDensityJob.CHUNK_SIDE;
-				int z = index / (job.height() * TerrainDensityJob.CHUNK_SIDE);
-				int columnKey = z * TerrainDensityJob.CHUNK_SIDE + x;
-				float[] column = sampledColumns.get(columnKey);
-				if (column == null) {
-					DensityVolume columnVolume = new DensityVolume(1, job.height(), 1,
-						chunkMinX + x, job.minY(), chunkMinZ + z);
-					column = new float[job.height()];
-					try (ScopedDensityBuffer buffer = sampler.sampleVolume(columnVolume)) {
-						for (int columnY = 0; columnY < column.length; columnY++) {
-							column[columnY] = buffer.get(columnY);
-						}
+		// A private context enables vanilla's internal DAG caches without sharing
+		// mutable buffers between validation invocations or generation workers.
+		DensityBufferPool pool = randomState.acquireDensityBufferPool();
+		try {
+			DensitySampler.Bound sampler = randomState.samplersWithContext(SamplerContext.builder()
+				.useBufferArena(pool).enableCaches().build()).get(settings.noiseRouter().finalDensity());
+			for (int group : groups) {
+				int begin = group * VALUES_PER_GROUP;
+				int end = Math.min(totalValues, begin + VALUES_PER_GROUP);
+				for (int index = begin; index < end; index++) {
+					if (Thread.currentThread().isInterrupted()) {
+						throw new CancellationException("Remote density validation interrupted");
 					}
-					sampledColumns.put(columnKey, column);
+					int y = index % job.height();
+					int x = (index / job.height()) % TerrainDensityJob.CHUNK_SIDE;
+					int z = index / (job.height() * TerrainDensityJob.CHUNK_SIDE);
+					int columnKey = z * TerrainDensityJob.CHUNK_SIDE + x;
+					float[] column = sampledColumns.get(columnKey);
+					if (column == null) {
+						int sampledHeight = columnHeights.get(columnKey);
+						DensityVolume columnVolume = new DensityVolume(1, sampledHeight, 1,
+							chunkMinX + x, job.minY(), chunkMinZ + z);
+						column = new float[sampledHeight];
+						try (ScopedDensityBuffer buffer = sampler.sampleVolume(columnVolume)) {
+							for (int columnY = 0; columnY < column.length; columnY++) {
+								column[columnY] = buffer.get(columnY);
+							}
+						}
+						sampledColumns.put(columnKey, column);
+					}
+					indices[validated] = index;
+					expectedValues[validated] = column[y];
+					validated++;
 				}
-				indices[validated] = index;
-				expectedValues[validated] = column[y];
-				validated++;
 			}
+		} finally {
+			randomState.releaseDensityBufferPool(pool);
 		}
 		return new Prepared(job, groups.length, java.util.Arrays.copyOf(indices, validated),
 			java.util.Arrays.copyOf(expectedValues, validated), System.nanoTime() - start);
+	}
+
+	private static Prepared prepareGrid(TerrainDensityJob job, int sampleGroups, RandomState state,
+		NoiseGeneratorSettings settings, RandomGenerator random, long start) {
+		if (!SurfaceDensityData.supports(job.noiseSettings(),settings) || !GridDensityData.supports(settings)) {
+			throw new RemoteDensityValidationException("Unsupported terrain grid settings");
+		}
+		// Compact grid inputs have no block-step repeated-add dependency. Sample
+		// distinct secret points instead of paying for sixteen values per group.
+		final int groupSize=1; int total=job.sampleCount();
+		int[] groups=selectCells((total+groupSize-1)/groupSize,Math.min(sampleGroups,(total+groupSize-1)/groupSize),random);
+		int[] indices=new int[groups.length*groupSize]; float[] expected=new float[indices.length]; int count=0;
+		int gridSize=GridDensityData.gridSize(job.height()), surfaceOffset=GridDensityData.surfaceOffset(job.height());
+		DensityBufferPool pool=state.acquireDensityBufferPool();
+		try {
+			var samplers=state.samplersWithContext(SamplerContext.builder().useBufferArena(pool).enableCaches().build());
+			var inputFunctions=GridDensityData.inputs(settings); var base=GridDensityData.volume(job);
+			float[] material=null;
+			var aquiferVolume=SurfaceDensityData.aquiferVolume(job);
+			for (int group:groups) {
+				if (Thread.currentThread().isInterrupted()) throw new CancellationException("Grid validation interrupted");
+				int index=group*groupSize,end=Math.min(total,index+groupSize);
+				while(index<end) {
+					if(index<surfaceOffset) {
+						int node=index/gridSize, within=index%gridSize, y=within%base.sizeY();
+						int x=(within/base.sizeY())%5,z=within/(base.sizeY()*5);
+						int length=Math.min(end-index,base.sizeY()-y);
+						var column=new DensityVolume(1,length,1,base.blockX(x),base.blockY(y),base.blockZ(z),4,8,4);
+						try(var buffer=samplers.get(inputFunctions.get(node)).sampleVolume(column)) {
+							for(int i=0;i<length;i++){indices[count]=index++;expected[count++]=buffer.get(i);}
+						}
+					} else {
+						int local=index-surfaceOffset;
+						indices[count]=index++;
+						if(local<SurfaceDensityData.AQUIFER_COUNT) {
+							int x=local%SurfaceDensityData.AQUIFER_WIDTH,z=local/SurfaceDensityData.AQUIFER_WIDTH;
+							try(var buffer=samplers.get(settings.aquifers().orElseThrow().surfaceLevel()).sampleVolume(
+								new DensityVolume(1,1,1,aquiferVolume.blockX(x),0,aquiferVolume.blockZ(z),4,1,4))) {
+								expected[count++]=buffer.get(0);
+							}
+						} else {
+							// Material interpolation needs its original full volume to preserve float rounding.
+							if(material==null) {
+								material=new float[256];
+								try(var buffer=samplers.get(settings.noiseRouter().chunkSurfaceLevel()).sampleVolume(SurfaceDensityData.materialVolume(job))) {
+									for(int i=0;i<256;i++)material[i]=buffer.get(i);
+								}
+							}
+							expected[count++]=material[local-SurfaceDensityData.AQUIFER_COUNT];
+						}
+					}
+				}
+			}
+		} finally {state.releaseDensityBufferPool(pool);}
+		return new Prepared(job,groups.length,java.util.Arrays.copyOf(indices,count),java.util.Arrays.copyOf(expected,count),System.nanoTime()-start);
+	}
+
+	private static Prepared prepareSurface(TerrainDensityJob job, int sampleGroups, RandomState state,
+		NoiseGeneratorSettings settings, RandomGenerator random, long start) {
+		if (!SurfaceDensityData.supports(job.noiseSettings(), settings)) {
+			throw new RemoteDensityValidationException("Unsupported surface settings");
+		}
+		final int groupSize = 16;
+		int[] groups = selectCells((SurfaceDensityData.SAMPLE_COUNT + groupSize - 1) / groupSize,
+			Math.min(sampleGroups, (SurfaceDensityData.SAMPLE_COUNT + groupSize - 1) / groupSize), random);
+		int[] indices = new int[groups.length * groupSize];
+		float[] expected = new float[indices.length];
+		int count = 0;
+		DensityBufferPool pool = state.acquireDensityBufferPool();
+		try {
+			var samplers = state.samplersWithContext(SamplerContext.builder().useBufferArena(pool).enableCaches().build());
+			var aquifer = samplers.get(settings.aquifers().orElseThrow().surfaceLevel());
+			float[] material = null;
+			DensityVolume base = SurfaceDensityData.aquiferVolume(job);
+			for (int group : groups) {
+				if (Thread.currentThread().isInterrupted()) throw new CancellationException("Surface validation interrupted");
+				int index = group * groupSize;
+				int end = Math.min(SurfaceDensityData.SAMPLE_COUNT, index + groupSize);
+				while (index < end) {
+					if (index < SurfaceDensityData.AQUIFER_COUNT) {
+						int x = index % SurfaceDensityData.AQUIFER_WIDTH;
+						int z = index / SurfaceDensityData.AQUIFER_WIDTH;
+						int length = Math.min(end - index, SurfaceDensityData.AQUIFER_WIDTH - x);
+						DensityVolume row = new DensityVolume(length, 1, 1, base.blockX(x), 0, base.blockZ(z), 4, 1, 4);
+						try (ScopedDensityBuffer buffer = aquifer.sampleVolume(row)) {
+							for (int i = 0; i < length; i++) {
+								indices[count] = index++; expected[count++] = buffer.get(i);
+							}
+						}
+					} else {
+						// Interpolated volumes use repeated float additions. Sample the
+						// original 16x16 volume, never a shifted point/sub-volume.
+						if (material == null) {
+							material = new float[256];
+							try (ScopedDensityBuffer buffer = samplers.get(settings.noiseRouter().chunkSurfaceLevel())
+								.sampleVolume(SurfaceDensityData.materialVolume(job))) {
+								for (int i = 0; i < material.length; i++) material[i] = buffer.get(i);
+							}
+						}
+						indices[count] = index; expected[count++] = material[index++ - SurfaceDensityData.AQUIFER_COUNT];
+					}
+				}
+			}
+		} finally { state.releaseDensityBufferPool(pool); }
+		return new Prepared(job, groups.length, java.util.Arrays.copyOf(indices, count),
+			java.util.Arrays.copyOf(expected, count), System.nanoTime() - start);
 	}
 
 	/** Immutable server-owned sample; positions are never sent to the worker. */

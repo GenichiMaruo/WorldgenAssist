@@ -1,5 +1,586 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## Alpha.6 release packaging (2026-10-03 JST)
+
+Final0.1.0-alpha.6+mc26.3 Fabric/Forge/NeoForge archives were assembled in one
+sequential batch without repeating runtime/unit/performance tests. Exact
+decompressed archive comparison to successful dev.12 evidence proved that
+only each loader's version descriptor differs; all classes, Mixins and other
+resources match, and all source archive entries match. Prior correctness and
+performance records below retain their dev.12 identities. Exact final hashes,
+candidate hashes and scope are in
+[alpha.6 verification](releases/v0.1.0-alpha.6+mc26.3-verification.md).
+Local packaging evidence: test-artifacts/release-alpha6/build-verification.json.
+Protocol6 is incompatible with alpha.5 protocol4. Defaults remain unchanged;
+the limited gain requires the documented experimental profile.
+
+## Candidate L: bounded asynchronous application (view10/view32 complete)
+
+remote-overlap-gate-20261003-094940-125 is COMPLETE with unchanged dev.12
+JAR; no builds/JUnit repeated. Fresh correctness1,813 shared / zero mismatch,
+waited-and-applied grids472/503 for the two owners, safe cleanup. Matching
+cooperative/wide view10 pair csb-20261003-095520-487 (actual affinity/JVM2,
+warmup1/measured3): FULL41,819.877 ->39,034.615ms (-6.66%), receipt47,334.5662
+->43,925.4632ms (-7.20%), CPU104,062.5 ->94,015.625ms (-9.65%), tick p95
+36.0791 ->37.9017ms (+5.05%). FULL/CPU improved all three repeats; receipt
+two of three. Actual grids1480/1282/1375 from1532/1477/1421 sent; raw cache
+hits652/463/552 are distinct. Each repeat completed1,682 terrain tasks and385
+receipts per owner. Generation failures/job-timeout counters0, but bounded
+demand-wait fallbacks27/13/30 are separate and nonzero. Completed7,145 positions
+/ zero late stores. RTT mean median29.576858ms, compute2.567871ms, validation
+0.159556ms. Fixed-order three-repeat descriptive evidence, not a general claim
+or an isolated causal comparison to K's earlier separate batch.
+
+Matching full-view32 pair csb-20261003-100930-620 is COMPLETE: FULL298,621.631
+->293,004.549ms (-1.88%), receipt314,193.6249 ->309,658.5105ms (-1.44%),
+CPU624,859.375 ->583,500ms (-6.62%), tick p9549.9067 ->51.7245ms (+3.64%).
+FULL/receipt improved two of three repeats; CPU improved all three. FULL per
+repeat off280357.466/300790.516/298621.631ms, on277909.150/313130.996/293004.549ms.
+Actual grids9541/8908/9064 from10354/10077/9999 sent, distinct from prefetch-only
+sent1415/1428/1497 and raw cache hits757/483/734. Each repeat completed10,658
+terrain tasks and3,461 receipts per owner. Generation failures/job timeouts0,
+bounded demand-wait fallbacks158/225/173, completed43,084 positions / zero late
+stores. RTT mean median26.453151ms, compute2.499686ms, validation0.124808ms,
+decode0.293935ms. Exact JAR/source/settings/coordinates match, safe cleanup
+and both owned disconnects confirmed. This is a small descriptive gain with
+remaining variance and worse tick p95, not stable/general acceleration.
+The same JAR/harness/profile was used without extra build/unit/correctness
+repetitions. CPU covers the whole measured interval, not only until FULL.
+
+Candidate K's matching view32 pair csb-20261003-085104-175 is COMPLETE but
+slower: FULL284,325.404 ->308,268.538ms (+8.42%), receipt302,373.4547 ->
+324,979.9174ms (+7.48%), CPU598,140.625 ->647,046.875ms (+8.18%). All three
+FULL/receipt repeats were slower; both conditions used cooperative backend,
+actual affinity/JVM2, view32, owner16/global32/client16. Each repeat completed
+10,658 terrain tasks and3,461 receipts per owner, zero failures/timeouts.
+Actual grid applications2733/2461/2732 from4549/4323/4412 sent; raw cache hits
+660/442/640 are distinct. Completed43,114 positions / zero late stores.
+Exact JAR/source/settings/coordinates match and both clients stopped cleanly.
+RTT mean median30.273949ms, compute2.504377ms, validation0.115084ms.
+More useful results did not provide a completion or server-CPU benefit.
+
+This configuration-only experiment uses the exact unchanged dev.12 JAR
+and its existing ready_surface_only=false path. A pending result delays only
+that chunk's CompletableFuture, not a server/network thread; independent
+generation can continue. Base100ms/max200ms, original job/owner/lifecycle
+limits and local fallback remain. Run-RemoteOverlapGate completes one fresh
+matching-harness two-owner Overworld correctness pair (both owners must wait
+asynchronously and actually consume a grid), then one cooperative/wide view10
+pair with warmup1/measured3. Builds/JUnit NOT_RUN because MOD code is unchanged.
+View10 and view32 completed as above. Native runtime not selected. Remote
+assistance and experimental scheduler/application defaults stay unchanged.
+
+## Candidate K dev.12: view10 and matching view32 complete
+
+Recovery remote-window-gate-20261003-083305-914 is COMPLETE: exact original
+five-test/three-build evidence reused, fresh matching-harness Fabric correctness
+1,803 shared / zero mismatch, both owners negotiating sixteen jobs, direct
+network admission and actual grid consumption. Both fixture clients disconnected
+normally before save/stop. Completed7164 positions / zero late cache stores.
+Native runtime remains unverified. Same-backend cooperative view10 pair
+csb-20261003-083838-402 completed actual logical/JVM2, warmup1/measured3:
+FULL40,543.785 -> 39,341.047ms (-2.97%), receipt46,534.0949 -> 45,122.3589ms
+(-3.03%), CPU102,656.25 -> 96,937.5ms (-5.57%), tick p9534.1135 -> 36.9271ms
+(+8.25%). FULL improved in two of three repeats; receipt also two of three.
+Each repeat completed1682 terrain tasks and385 receipts per owner; zero
+failures/timeouts. Actual grid applications778/667/729 from894/946/834 sent,
+distinct from raw cache-hit counts597/407/560. RTT mean median33.58372ms,
+client compute2.557138ms, validation0.112288ms, decode0.405659ms, bytes22076.936508.
+Three descriptive repeats and fixed off-before-on order do not establish a
+general benefit or isolate the window change from all earlier versions.
+The unchanged exact dev.12 JAR was measured at server/client view32 with
+both cooperative conditions and the same owner16/global32/client16 profile.
+Only this larger performance condition is run; no repeated build/JUnit/runtime
+correctness suite. Distance32 was slower as recorded above; view10's small
+gain does not generalize to the requested larger workload.
+
+First gate remote-window-gate-20261003-034557-843 FAILED: five JUnit methods
+and all three builds/metadata passed; normal correctness passed, assisted
+failed only during bounded clean shutdown. Both required applications/digests
+were recorded, but no completed correctness comparison or performance exists
+yet. Fabric SHA97187A759E3AE7D2DA74E00BB50AF3EC70FD7AAF15248D7AAE8DEFEB5CC1672D.
+Forge SHAA129153948EC2C8012DBC704F823C3D5114188BB53A3FCEA54BED115BE1C870A;
+NeoForge SHA8FE4EA30E4DA0F481DDB9D5C603C2C57CEE9BA27BBC50779A1BB7890990CF0F9.
+Fixture recovery explicitly disconnects both owned clients after measurement
+and before stop to avoid a source-observed mutable PlayerList iteration risk.
+No MOD change; reuse only successful exact-JAR unit/build evidence. Original
+failed runtime remains failed; both runtime cases must be fresh together.
+
+Protocol6 and density shape stay unchanged. New explicit owner_window (1..64,
+default4) and client.job_window (1..64, default twice worker count) permit a
+larger bounded latency window. Global configured limit remains authoritative;
+normal defaults remain owner4/global8/client4. The affected gate selects five
+unit methods, three builds and Fabric Overworld two-owner correctness, then
+one matching cooperative view10 performance pair with owner16/global32/client16.
+Refill watermark grows with the explicit window; adaptive failure backoff,
+owner isolation, cancellation, deadlines and epoch fences remain unchanged.
+Prefetch lookahead defaults to zero after dev.11's unsuccessful measurements;
+the optional setting and its original evidence are retained. No new Mixins.
+
+One-CPU dev.11 pair csb-20261003-031726-969 is COMPLETE, unchanged exact JAR,
+cooperative both modes, view10, warmup1/measured3. NOISE region median
+33,969.668 -> 35,201.888ms (+3.63%); **FULL** 48,917.337 -> 49,441.635ms
+(+1.07%); client receipt 57,055.5315 -> 56,922.1964ms (-0.23%); CPU
+64,546.875 -> 63,406.25ms (-1.77%); tick p95 33.5529 -> 40.5673ms.
+This does not establish a generation speedup. Completed affinity/JVM1 evidence
+is separate from earlier CPU2 results. Older pending paragraphs describe the
+original planning checkpoint and are superseded by this completed result.
+
+Existing H JFR reanalysis computational-analysis-noise-callers.json retains
+all original data: material-rule density inclusive samples 2.776% off/2.507%
+on; surface-depth noise 0.305%/0.267%. These overlapping CPU sampling fractions
+do not imply wall-clock speedup. No game runtime repeated for this analysis.
+
+## Candidate J dev.11 complete: more grid use, no view10 speedup
+
+generation-lookahead-gate-20261003-024234-087 is COMPLETE: two tests, zero
+failures/errors/skips, three builds/versioned metadata and Fabric correctness
+1,813 shared / zero mismatch. Both owners consumed grids and used network
+admission; 7,153 completed positions / zero late stores. Fabric SHA-256
+3980D2F6D014939B00C7064EE6910BDA283D5F9D44D8090B3296F0AC20D8F5C9.
+Native runtime remains unverified. csb-20261003-024820-512 matching cooperative
+view10 pair is COMPLETE (one warmup, measured3, actual logical/JVM2): FULL
+39,978.974 -> 41,151.292ms (+2.93%), receipt 46,174.2811 -> 47,115.7074 (+2.04%),
+CPU 97,312.5 -> 100,578.125 (+3.36%), tick p95 32.2868 -> 35.9744 (+11.42%).
+Actual grids 444/347/388 from 661/605/543 jobs. Every repeat completed 1,682
+terrain tasks and 385 chunks per owner, zero failures/timeouts. RTT mean median
+27.411326ms, validation0.145341ms. Additional adoption is not speedup.
+
+One-logical/JVM-CPU hypothesis completed in csb-20261003-031726-969, using
+the unchanged dev.11 JAR, two strong clients and matching cooperative backend.
+FULL +1.07%, receipt -0.23%; no convincing isolated improvement. Earlier data
+retain their original artifact and source/harness identities.
+
+Future observed demand is requested before each owner's immediate head (default
+lookahead16, bounded 0..64, control0). Every candidate and owner fairness remain
+retained. Protocol6 and all job/cache/lifecycle bounds are unchanged. The focused
+gate selected two new ordering/bounds tests, three builds and one two-owner
+correctness pair before same-backend view10 speed comparison.
+
+## Candidate I dev.10 complete: latency reduction alone did not speed completion
+
+Fabric client requests now use connection-scoped bounded network admission;
+native requests retain main-thread handling. Protocol 6, server authority and
+eight secret checks remain. Run-ClientRequestGate selects four affected unit
+methods, three builds and the smallest two-owner correctness pair, then one
+matched-backend view10 performance pair. Gate client-request-gate-20261003-022053-441
+is COMPLETE: four tests, zero failures/errors/skips; three builds and metadata
+passed. Fabric SHA F2987C2C78C019BB35C9A54E0FE729096B31D1FFEE0AF7C051A62D1A9A045409.
+Correctness: 1,792 shared digests / zero mismatch, both owners consuming grids
+and logging request_path=network; 7,158 completed positions / zero late stores.
+Native compilation only, changed native lifecycle paths not runtime-tested.
+csb-20261003-022647-096 is COMPLETE: matching cooperative backend on both sides,
+two actual logical/JVM CPUs, view10, one warmup plus three measured repeats.
+FULL 40,080.353 -> 40,630.007 ms (+1.37%); receipt 45,960.8874 -> 46,662.6227
+(+1.53%); CPU 100,140.625 -> 99,234.375 (-0.90%); tick p95 35.1778 -> 35.4605.
+All repeats completed 1,682 terrain tasks and 385 chunks per owner. No failures
+or timeouts. Sent/applied grids 610/377,559/309,495/351; RTT mean median29.424292ms,
+validation0.131864ms. These descriptive medians do not establish speedup or
+causal improvement relative to a different version's earlier RTT.
+
+## Cooperative dev.9: server parallelism helps; isolated assistance slower
+
+The candidate now provides explicit noise_backend=cooperative, at most two
+automatic local terrain workers and four queued tasks per worker, default
+backend still vanilla. Explicit overrides remain authoritative. Lifecycle and
+tick saturation registration include the mode; transport remains protocol 6.
+Essential validation timings are restored in quiet traces and retained job.sent
+lines supply prefetch counts. Gate `cooperative-terrain-gate-20261002-233308-926`
+passed two affected tests, all three builds/versioned native metadata, two-owner
+Fabric correctness and view10 performance. Fabric SHA-256
+`6642D74367C5C5130C5BFD2193AF4E2E80ABD8A83244B5EBB17EA693D51DD136`.
+Shared 1,803 digests and both required applied owner chunks matched, zero
+mismatch. Real parallel terrain execution was recorded, zero late cache stores.
+
+`csb-20261002-233926-431` completed matched view10 settings, two logical/JVM
+CPUs, one warmup plus three measured repeats. All three FULL and receipt
+times were shorter. Median FULL 46,849.310 -> 41,960.782 ms (-10.43%), receipt
+53,581.0364 -> 47,817.8833 (-10.76%), CPU 87,000 -> 104,125 (+19.68%).
+Tick p95 median 22.7268 -> 34.4215 ms (+51.46%). The combined scheduler and
+client assistance reduces wait by using more server CPU; it does not establish
+client offload alone or general speedup. All repeats completed 1,682 terrain
+tasks and both owners received all 385 target chunks; sent/applied 671/402,
+600/288, 503/315. No terrain failures or job timeouts, 608 bounded local
+admission fallbacks executed normally. Validation timing median 0.126156 ms.
+Native changed runtime paths remain unverified. Exact-JAR full32 confirmation
+reused the completed assisted scenario and reran only the failed baseline,
+without another build/unit suite.
+
+The original full32 batch `csb-20261002-235317-913` crossed local midnight.
+Its vanilla warmup failed the controller's idle wait after latest.log rolled:
+the retained console stdout contains all required NOISE and FULL target chunks,
+while the new latest.log omitted 6,827 required NOISE / 6,394 FULL records.
+There are no valid measured vanilla repeats from that failed scenario. Cleanup
+was safe. Preserve its INCOMPLETE status. After the unchanged assisted scenario
+finishes, Run-Cooperative32Recovery can reuse only successful exact-JAR/source
+evidence and rerun the vanilla baseline, plus a cooperative/no-assistance case
+to isolate client contribution. Comparisons explicitly record reversed case
+order and remain descriptive. No build or unrelated unit suite is repeated.
+
+Recovered full32 comparison in `cooperative32-recovery-20261003-005853-523/vanilla-comparison`
+is COMPLETE with matching source/JAR/settings/coordinates/workload: FULL median
+332,000.362 -> 301,262.651 ms (-9.26%), receipt 350,664.2747 -> 318,581.2107
+(-9.15%), CPU 527,078.125 -> 636,281.25 (+20.72%), tick p95 29.8794 -> 48.6834
+ms (+62.93%). All three FULL and receipt rows were shorter; all repeats
+completed 10,658 terrain tasks and both owners received 3,461 chunks.
+Assisted sent 3,980/3,915/4,138 and applied cached grids 1,701/1,510/1,299,
+with no terrain failures or job timeouts. Raw ready_cache_used counts only
+cache.hit; it is not the total of queued_ready grid applications. Use retained
+job.complete source=cache for actual consumption.
+
+The earlier recovery `cooperative32-recovery-20261003-003030-484` completed
+its vanilla runtime and comparison, then its wrapper failed by reading unset
+LASTEXITCODE after a successful in-process PowerShell script. Preserve its
+INCOMPLETE wrapper record; removing that irrelevant check and adding explicit
+successful-baseline reuse avoids repeating valid runtime evidence. The second
+recovery completed aggregation and the cooperative/no-assistance runtime.
+Its cooperative-comparison is COMPLETE: FULL 289,001.270 -> 301,262.651 ms
+(+4.24%), receipt 304,766.7000 -> 318,581.2107 (+4.53%), CPU 606,921.875 ->
+636,281.25 (+4.84%). Assistance is slower than the same backend without it.
+The three conditions were executed assisted, normal baseline, cooperative
+baseline; these are descriptive three-repeat medians, not randomized trials.
+
+Matched cooperative JFR `cpu-profile-20261003-014354-350` is COMPLETE with the
+unchanged dev.9 JAR, two owners, actual CPU/JVM2, view10 and one measured repeat.
+Execution samples: 8,861 off / 8,975 on. Inclusive density 24.51%/21.92%,
+management 0.49%/1.25%, validation two assisted samples; categories overlap.
+The targeted callers analysis locates DensityVolume.indexOfBlock mainly in
+server material/ore processing; eligibility accounted for 24 assisted samples
+and remote grid integration five. None proves absolute CPU cost or causation.
+`console-capture-20261003-014354-762` passes two PS5 checks (live read and midnight
+rolling-log preservation). Both runtime cases verify integrated console capture.
+`cpu-profile-20261003-014131-259` remains INCOMPLETE: inherited PS7 module path
+prevented PS5 Get-FileHash before any Minecraft case. The successful retry sets
+the owned child PS5 module path explicitly; no game run was repeated for that
+preparation failure.
+
+## Completed dev.8 CPU diagnosis
+
+`cpu-profile-20261002-213032-205` used the unchanged dev.8 SHA-256 below,
+two owners, two logical/JVM CPUs, view10, one warmup and one measured repeat.
+Both scenarios completed and cleaned up. Deep analysis reads exports as a
+stream and excludes NativeMethodSample waiting records: 5,745 vanilla / 5,849
+assisted ExecutionSamples, 11 / 13 truncated stacks. One Worker-Main thread
+had 83.92% / 81.77% of computational samples. Inclusive surface material
+29.82% / 28.69%, block fill 27.29% / 26.40%, density sampler 23.60% / 21.03%.
+Categories overlap, percentages are not absolute CPU times, and this single
+instrumented repeat is not a speed gate. Validation had two assisted samples
+(0.034%); that is evidence against validation dominating this diagnostic,
+not a precise stable cost estimate. Original shallow/native-inclusive exports
+are retained separately from computational-analysis.json.
+
+The first diagnosis `cpu-profile-20261002-212753-264` failed before Minecraft
+startup because the dedicated Java image has no built-in profile.jfc. Cleanup
+was safe and no client/runtime measurement occurred. The retry transferred the
+pinned local JDK's settings with SHA-256 verification, then recorded to each
+owned evidence child without attach.dll. No extra unit/build/correctness suite.
+
+## Load-ahead dev.8: correctness passed, performance gate incomplete
+
+Gate `load-ahead-gate-20261002-210528-949`, Fabric SHA-256
+`960700A2131431AF3DA9BA2898C5A9FEF0966A7050C1D9575573DAED37C66A5A`:
+five affected JUnit tests and all three loader builds passed, native versioned
+TOML descriptors matched dev.8. Two-owner correctness shared 1,803 digests with
+zero mismatch, required applied chunks matched and both owners consumed grids.
+Early-load hints were observed. Native changed runtime paths were not run.
+
+Performance root `csb-20261002-211136-651`: both scenarios completed and cleaned
+up, all three repeats completed 1,682 terrain tasks and each owner received all
+385 target chunks. However, quiet tracing suppressed validation timing required
+by the comparator: `MISSING_REMOTE_METRIC`. Original analysis and gate remain
+INCOMPLETE/failed, not retroactively converted into passing results. The saved
+observation labels this gap. FULL median 44,272.984 -> 46,281.260 ms (+4.54%),
+receipt 51,292.5711 -> 52,289.2154 (+1.94%), CPU 80,671.875 -> 90,328.125
+(+11.97%); all three FULL repeats slower. Sent/applied 553/235, 526/193,
+495/229. This does not support speedup. Closed-log check found zero late cache
+stores among 7,198 completed positions, recorded in dev8-observation.json.
+
+The subsequent diagnostic reused this JAR without build/JUnit/correctness
+reruns; its completed results and limits are above.
+
+## Candidate G implementation checkpoint (2026-10-02, not yet tested)
+
+Local alpha.6-dev.8 keeps protocol 6. It observes Minecraft's completed
+loads of unfinished terrain before structure starts, skips already generated
+terrain, retains owner/world lifecycle gates and adds no tickets or waits.
+At balanced queue capacity a nearer candidate can replace only its own
+owner's farther candidate. Grid validation calculates selected aquifer points
+alone; original material 16x16 interpolation remains exact. Eight secret
+points are unchanged. Routine detailed logs follow diagnostics/trace_jobs,
+with an explicit quiet performance option while preserving sent/result/use
+metrics, late-cache traces, warnings and errors. Native version labels now
+read shared gradle.properties instead of hardcoding alpha.5; prior locally
+built labels are archived, published release assets remain untouched.
+Run-LoadAheadGate selects five affected tests, three builds plus native
+metadata inspection, two-owner Fabric correctness and one quiet distance-10
+pair. All implementation precedes this batch. No G result exists yet.
+
+## Candidate F distance-32 confirmation (2026-10-02)
+
+`csb-20261002-194852-473` completed with zero issues using the exact
+dev.7 Fabric JAR above, actual JVM processors=2 plus two logical affinity
+CPUs, both clients/server view 32, one warm-up plus three measured fresh
+regions. Each mode completed 10,658 NOISE tasks per repeat (31,974 measured)
+and both clients received all 3,461 target chunks each time. Median FULL
+336.991s vanilla versus 348.701s assisted (+3.47%); receipt 356.444s versus
+368.300s (+3.33%); CPU 531.391s versus 558.359s (+5.08%); NOISE readiness
+296.984s versus 306.692s (+3.27%). All three FULL repeats were slower with
+assistance. The small distance-10 gain did not carry over to full view 32.
+
+Measured sent/use pairs were 3,031/372, 2,961/380 and 2,967/436: only about
+13% of sent requests and 4% of all terrain tasks supplied consumed cache
+results. Client compute remained 2.478ms, but RTT was 80.295ms and validation
+1.641ms (medians of per-repeat means). Cleanup succeeded in both modes.
+This motivates earlier, better prioritized useful work rather than claiming
+general speedup. Fixed-order, n=3 evidence remains descriptive.
+
+## Candidate F completed distance-10 gate (2026-10-02)
+
+`retired-work-gate-20261002-192955-323` passed six affected tests, three
+builds, Fabric two-owner correctness and its speed pair. Shared NOISE
+digests: 1,803, zero mismatch; both required applications matched and both
+owners consumed terrain grids. Correctness recorded 184 grid applications,
+zero BUSY, stage errors or shutdown dumps. Fabric alpha.6-dev.7 SHA-256:
+`F95C394B8EB75ACA1026ECF6E50DC5D0E57E8823393BF5910B5DC1AC48FB13B1`.
+The binary and built sources JAR are archived in the gate folder.
+
+`csb-20261002-193557-391` completed with zero issues: full view 10,
+two logical affinity CPUs and actual JVM processors=2, one warm-up and
+three fresh measured regions. Both modes completed 1,682 NOISE tasks
+per repeat and each client received all 385 target chunks. Median FULL
+46.757s vanilla versus 45.680s assisted (-2.30%); NOISE readiness 34.043s
+versus 33.111s (-2.74%); receipt 53.531s versus 52.459s (-2.00%);
+server CPU 91.266s versus 87.125s (-4.54%). All three FULL repeats were
+shorter with assistance. This is a small descriptive improvement with
+fixed vanilla-then-assisted order, n=3, not a general speed guarantee.
+
+Measured cache applications were 298/221/297. Validation was 1.494ms,
+client compute 2.487ms, encoded bytes 22,164 and RTT 44.260ms (medians
+of per-repeat means). Late-cache inspection covered 7,194 completed
+positions and found zero saves after their NOISE completion. Cleanup was
+safe. Native builds passed; native runtime remains unverified. The prior
+dev.6 shutdown failure remains unresolved; dev.7 adds diagnostics and this
+successful run does not prove that intermittent failure fixed.
+
+The exact dev.7 JAR's full view 32 confirmation is recorded above and did
+not reproduce a speedup; the modest distance-10 result is not a general claim.
+
+## Candidate F retained shutdown failure (2026-10-02)
+
+`retired-work-gate-20261002-190807-467` passed six focused tests and three
+builds. Local dev.6 Fabric SHA-256:
+`892D7CEB36933824D6F68146F388321358D74B9D5D7A7CA82FB0662C8245BD80`.
+Vanilla correctness passed; assisted correctness reached both required
+applications but failed clean shutdown, so comparison and performance did
+not run. Cleanup was safe. The assisted log contained 209 grid applications
+and no stage failures, but those facts do not establish a successful gate.
+The server stack was in stopServer's ordinary chunk draining loop, with
+idle generation/validation workers. Local dev.7 adds a diagnostic-only
+server-thread read of shutdown work; the underlying failure is unresolved.
+
+## Candidate F retired work and sampled verification (2026-10-02, checkpoint)
+
+Local alpha.6-dev.6 retains protocol 6 and exact terrain grids. It cancels
+work that cannot be consumed once terrain execution starts, fences late
+cache writes with bounded expiring metadata, atomically clears remaining
+work at terrain completion and avoids requesting already completed terrain
+using a nonblocking holder lookup. Eight secret grid points replace eight
+groups of sixteen; surface-only and full-density verification are unchanged.
+Run-RetiredWorkGate selects six affected tests, three builds, two-owner
+correctness and one full-view distance 10 speed pair, including a late-cache
+check. Its dev.6 failure and dev.7 completed gate are recorded above.
+
+## Candidate E completed (2026-10-02)
+
+`grid-density-gate-20261002-184106-142` passed nine affected tests, three
+builds, Fabric two-owner correctness (1,803 shared digests, zero mismatch,
+both required applications equal), actual grid use by both owners and a
+complete speed pair. Fabric SHA-256:
+`2D100E932AD5BFDE88BB66913CC629AE06B1517E4DD4886E9784EBCE171268E9`.
+The built sources JAR is archived alongside it. Native runtime was not run.
+`csb-20261002-184703-650` used actual JVM processors=2 plus affinity=2,
+full view 10, one warm-up and three measured fresh regions, 1,682 NOISE
+tasks per repeat and 385/385 received chunks per owner. Median FULL
+46.188s vanilla versus 46.308s assisted (+0.26%); receipt 53.429s versus
+52.835s (-1.11%); CPU 85.391s versus 89.938s (+5.32%). This does not
+establish an end-to-end speedup. Applied output used about 22,139 encoded
+bytes, client compute 2.529ms and validation 2.796ms (per-repeat mean medians).
+Measured cache applications were only 27/74/107. Cleanup was safe.
+
+## Candidate E terrain grids (2026-10-02, implementation checkpoint)
+
+Local alpha.6-dev.5 uses protocol 6. It sends the five outer 4x8x4
+interpolator inputs (5x49x5 each at Overworld height 384), followed by the
+769 surface fields: 6,894 exact float values. Vanilla interpolation,
+nonlinear final-density operations and block mutation stay on the server.
+The ready-only path and all owner/epoch/deadline/seed opt-ins are retained.
+Run-GridDensityGate batches nine affected tests, three builds, two-owner
+correctness with actual grid use, and one full-view distance 10 speed pair.
+The completed batch is recorded above; speedup is still not established.
+
+## Candidate D completed (2026-10-02)
+
+`ready-surface-gate-20261002-181204-435` passed all five focused tests,
+three builds, two-owner Fabric correctness and its performance pair.
+All 1,813 shared digests and both required applications matched; both
+owners used queued-ready output. Fabric SHA-256:
+`CBE5F03CEF70735F07E8339C8F0010C9D98282408A3A7A194E386C55CA259FDC`.
+Native runtime was not selected. `csb-20261002-181802-421` is COMPLETE,
+with two logical affinity CPUs and actual JVM processors=2, full view 10,
+one warm-up plus three measured fresh regions. Each repeat had 1,682 NOISE
+tasks and 385/385 received chunks per owner. Median FULL 43.949s versus
+45.819s assisted (+4.26%); receipt 51.001s versus 52.253s (+2.46%);
+server CPU 78.844s versus 89.266s (+13.22%). There is no speedup.
+The complete assisted log had zero BUSY, remote timeout and shutdown-dump
+records; cleanup was safe. Only 96/81/101 cache applications occurred in
+the measured repeats. The result motivates offloading more useful work,
+not claiming success from removing response waits.
+
+## Candidate C retained failures and candidate D (2026-10-02)
+
+Local alpha.6-dev.3 Fabric SHA-256
+`A93F7FA3B0BFDDF99C92569FAE1F529956411CBB97C100AAB9727107D9C0B079`.
+`generation-resource-gate-20261002-170658-130` passed six affected tests and
+three builds, then exceeded the correctness controller deadline. The server
+finished generation; indexing completed jobs once replaced per-job log scans.
+The revised `generation-resource-gate-20261002-172329-371` reused those exact
+build/test artifacts and passed two-owner correctness: 1,803 shared NOISE
+digests, zero mismatches, both required applications equal and concurrent owners.
+Actual JVM availableProcessors and affinity were both limited to two.
+
+Its `csb-20261002-172904-994` performance pair is **INCOMPLETE**. All three
+measured repeats reached 1,682 NOISE tasks, but assisted shutdown stalled in
+world saving and the bounded controller killed its owned server. Cleanup was
+proved safe; this is not a successful performance gate. Partial FULL times
+vanilla/assisted were 46.960/47.839s, 47.101/47.402s, 40.358/40.491s.
+Corresponding CPU milliseconds were 93750/92796.875, 89765.625/86843.75,
+73203.125/68968.75. They suggest CPU reduction without shorter completion,
+but do not establish a speedup. Many BUSY replies occurred: the server released
+leases when replies arrived while client executor tasks were still returning.
+
+Candidate D, local alpha.6-dev.4, completed as recorded above. Surface work enters the
+vanilla executor immediately, claims independently validated cache output at
+execution time and never waits for a response. Missing output falls back at
+once. Client queues retain bounded post-result handoff slack. Diagnostics can
+emit an in-process shutdown thread dump without the dedicated Java image's
+missing attach library. Run-ReadySurfaceGate batches only the affected scope,
+ownership and executor tests plus builds, correctness and a speed pair.
+
+## Surface-field candidate B (2026-10-02)
+
+`surface-density-gate-20261002-163816-896/summary.json` passed nine affected
+tests, three loader builds, and Fabric two-owner correctness. All 1,813 shared
+NOISE digests and both required applied chunks matched. 526 completed
+applications recorded nonzero surface-field consumption. Archived Fabric
+alpha.6-dev.2 SHA-256:
+`BD95723687E85C02B2D8256D658C8CD7112A5E19DC45947BEE103C8DC4B857C5`.
+Native runtime was not selected; no release was published.
+
+Screening: `csb-20261002-164537-906/summary.json` COMPLETE, zero issues,
+two logical server CPUs via affinity only, full view distance 10, two clients,
+one warm-up and three measured repeats. Each repeat completed 1,682 NOISE
+tasks; both owners received 385/385 target chunks. Median FULL was 39.168s
+vanilla vs 40.439s assisted (+3.25%); client receipt 44.391s vs 45.752s
+(+3.07%); server CPU 96.500s vs 97.984s (+1.54%). NOISE was 28.286s vs
+29.117s (+2.94%). This remains a regression, not a speedup. Per-repeat mean
+medians for applied output: client compute 0.583ms, encode 0.154ms, RTT
+45.675ms, decode 0.036ms, validation 0.392ms, encoded bytes 343.226.
+The payload optimization works, but end-to-end savings are not established.
+
+Candidate C (local alpha.6-dev.3, pending) retains surface fields, assigns only
+observed terrain work within the source-derived ticket dependency square,
+and advertises existing client running+queued capacity. Its measurement
+explicitly limits both affinity and JVM availableProcessors to two, so results
+must not be treated as a controlled comparison against candidate B's CPU model.
+
+## Validation-cost candidate (2026-10-02)
+
+`validation-cost-gate-20261002-150213-010/summary.json` passed two focused
+tests, three loader builds, a two-owner Fabric correctness pair (1,813 shared
+NOISE digests, zero mismatches), and the full distance-32 performance pair.
+Archived local alpha.6 Fabric SHA-256:
+`20AAC1922FD19B68834F5D92FD7D4FC490184B63902BC9FB01C74DB01D7D2BB1`.
+This candidate was not published. Performance evidence is
+`csb-20261002-151052-305/summary.json`, COMPLETE, zero issues, three matched
+fresh measured repeats, two logical server CPUs and two distance-32 clients.
+Every repeat completed 10,658 NOISE tasks and both owners received 3,461 chunks.
+
+| Median | Vanilla | Assisted | Change |
+| --- | ---: | ---: | ---: |
+| NOISE ready | 254.013s | 278.704s | 9.72% slower |
+| FULL ready | 289.682s | 316.435s | 9.24% slower |
+| Both clients received target | 306.654s | 334.176s | 8.97% slower |
+| Server CPU | 602.016s | 644.844s | 7.11% higher |
+
+Applied-result validation averaged 4.223ms (median of per-repeat means),
+versus 14.569ms in the earlier alpha.5 run. This demonstrates reduced local
+validation cost, not an end-to-end speedup or a controlled historical comparison.
+All three paired FULL and receipt measurements remained slower with assistance.
+The warmed unit microbenchmark measured preparation 4.836ms to 1.567ms;
+timing assertions were not used. Affinity limits execution to two logical CPUs
+but does not change JVM availableProcessors; many background workers remain.
+
+The next local `alpha.6-dev.2` candidate uses protocol 5 surface intermediates.
+Its correctness and performance remain pending until its sequential gate passes.
+
+## Alpha.5 distance-32 constrained-server experiment (2026-10-02)
+
+The requested SSH experiment completed using the existing published Fabric
+alpha.5 JAR, SHA-256
+`629085B905A1B86DA6E8A62A79C2B8C452063568807A770AB7E0EF94CB539EEB`.
+Evidence: `test-artifacts/csb-20261002-134517-261/summary.json`, paired report
+`c2/analysis/scenario-matrix-analysis.json`, and density-use analysis alongside it.
+
+- Dedicated server on the authorized SSH PC, applied affinity mask 3 (two
+  logical CPUs), 6 GiB heap, view-distance 32, simulation-distance 3. Two
+  installed clients on the initiating PC, each 4 GiB heap and renderDistance 32,
+  CUSTOM preset, FPS cap 30. Traffic uses the existing loopback SSH tunnel.
+- Overworld, seed 8675309, prediction enabled, cache 128, eight validation cells,
+  prefetch profile. One excluded warm-up and three measured fresh relocations
+  per mode. No production code changes, builds, JUnit or correctness matrix.
+- All six measured repeats completed exactly 10,658 NOISE tasks on matching
+  coordinates, 31,974 per mode. Source manifests and JAR identities matched.
+  Every owner/repeat received all 3,461 target chunks, including outer view
+  coordinates. Both scenarios proved cleanup safety. Analysis is COMPLETE with
+  zero issues and DESCRIPTIVE_ONLY performance scope.
+
+| Median metric | Vanilla | Assisted | Assisted change |
+| --- | ---: | ---: | ---: |
+| Target NOISE ready | 251.707s | 289.049s | 14.8% slower |
+| Target FULL ready | 286.485s | 329.332s | 15.0% slower |
+| Both clients received target | 303.751s | 347.289s | 14.3% slower |
+| NOISE throughput | 32.703/s | 28.798/s | 11.9% lower |
+| Whole measured server CPU | 594.375s | 673.906s | 13.4% higher |
+| Server tick p95 | 22.360ms | 34.348ms | 53.6% higher |
+
+Successful remote/cache density applications were 2,230, 1,828 and 1,951,
+17.15–20.92% of NOISE completions (18.79% pooled, not CPU saved). The raw
+measured logs recorded 115, 179 and 101 demand-wait fallbacks (395 total),
+which the comparator's separate fallback/timeout counters omit. The median
+of per-repeat means was client compute 5.804ms, decode 5.561ms, validation
+14.569ms and RTT 115.076ms. RTT includes unseparated transport and queues and
+is not pure network time; these result timings exclude unused/failed requests.
+Request queue means were 1.02–1.18ms and ingress queue means 2.81–3.38ms.
+
+The larger workload used more successful remote density results, but did not
+reduce server CPU or player-visible wait. Additional server processing and
+bounded waiting remain plausible contributors; exact CPU attribution requires
+profiling. This experiment does not support workload size alone as a fix for
+this hardware/network setup. Each assisted FULL and receipt measurement was
+slower than its corresponding vanilla repeat. Fixed mode order, three repeats,
+shared client hardware and relocation rather than long continuous exploration
+limit generalization. Receipt is chunk loading, not finished rendering.
+
+Retained harness failures: `csb-20261002-134113-077` stopped during warm-up
+because a region-loop variable collided with the typed log offset. Its clients
+also used FANCY preset (distance 16); it is not performance evidence. After
+correcting both, the complete runtime pair above passed. The outer batch adapter
+then errored reading an unset LASTEXITCODE after the successful nested script;
+the adapter now runs the batch in a child PowerShell and propagates its exit.
+Its syntax/geometry/plan checks passed after this fix; successful Minecraft
+measurements were retained without rerunning them. Offline test-account/Realms
+and OS counter warnings remain in logs as in prior installed fixtures.
+
 ## Alpha.5 packaging checkpoint (2026-09-29)
 
 Version `0.1.0-alpha.5+mc26.3` packages the protocol-4 candidate below.

@@ -8,4 +8,7 @@ public interface RemoteDensityTarget {
 	void worldgenAssist$clearRemoteDensity(UUID jobId);
 
 	RemoteDensityField worldgenAssist$getRemoteDensity();
+	void worldgenAssist$installRemoteOpportunity(RemoteDensityOpportunity opportunity);
+	RemoteDensityOpportunity worldgenAssist$takeRemoteOpportunity();
+	void worldgenAssist$clearRemoteOpportunity(RemoteDensityOpportunity opportunity);
 }

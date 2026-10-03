@@ -1,5 +1,219 @@
 # Mixin Targets
 
+## Candidate L application timing experiment (unchanged dev.12 JAR)
+
+No new target or Mixin. RemoteWorldgenManager.generate's existing asynchronous
+awaitDemand/thenCompose path is explicitly selected by the overlap fixture
+profile; AdaptiveDemandWait bounds the future to100–200ms and invokes local
+fallback on failure. It does not block a thread or change ChunkStep dependency
+order. Fresh Fabric gate remote-overlap-gate-20261003-094940-125 completed:
+1,813 matching shared chunks, both owners' actual wait/grid use, view10 FULL
+-6.66%, receipt -7.20%, CPU -9.65%. Exact-JAR view32 pair
+csb-20261003-100930-620 completed: FULL -1.88%, receipt -1.44%, CPU -6.62%,
+tick p95 +3.64%. Completion/receipt improved two of three repeats, CPU all
+three; fixed-order descriptive evidence, no general speed claim. No new
+Mixin/code change or repeated build/unit/correctness suite for this larger run.
+
+Generated26.3 ChunkMap.runGenerationTask resumes via future.thenRun;
+ChunkTaskDispatcher completes each short message before polling another task.
+ChunkGenerationTask.waitForScheduledLayer uses getNow, returning an incomplete
+future. This supports independent-task overlap without reordering that task's
+dependencies. No scheduling Mixin was added for this source finding.
+
+## Candidate K wider bounded window (dev.12, view10 Fabric verified)
+
+Fresh recovery gate remote-window-gate-20261003-083305-914 COMPLETE:1,803
+shared / zero mismatch, both clients' network admission and sixteen-job
+negotiation, clean separate disconnects. View10 matching cooperative pair
+FULL -2.97%, receipt -3.03%, CPU -5.57%; only two of three FULL repeats faster.
+No generalized speed claim; unchanged JAR's matching view32 pair completed
+slower (FULL +8.42%, receipt +7.48%, CPU +8.18%; csb-20261003-085104-175).
+
+The first gate saved both owners' required applied digests but assisted runtime
+failed to stop cleanly, so no speed pair was run. Generated 26.3 PlayerList
+removeAll iterates the mutable players list by increasing index; listener
+disconnect invokes executeBlocking(handleDisconnection), onDisconnect removes
+the player. A synchronous removal can skip the next player. Diagnostic logs
+showed only owner A disconnected and tickets remained with zero generation
+tasks. This supports, but does not alone prove, that shutdown explanation.
+The fixture now kicks its two owned clients individually and observes both
+disconnect logs after all measurements, before save/stop. No production Mixin
+or JAR change. Failed evidence remains failed; fresh matching runtime cases
+reuse only the successful exact-JAR unit/build evidence.
+
+No new Minecraft symbols or Mixins. Explicit owner/client windows can exceed
+four while global, negotiated and adaptive per-owner reservations remain
+authoritative. Queue capacity includes bounded post-result handoff slack.
+Default lookahead returns to zero after unsuccessful dev.11 measurements.
+Completed dev.11 JVM/affinity1 pair had FULL +1.07%, receipt -0.23%; no speed
+claim. Existing Fabric admission/respawn targets retain their verified sources.
+
+## Candidate J future demand ordering (dev.11, Fabric verified)
+
+generation-lookahead-gate-20261003-024234-087 completed two affected tests,
+three builds and Fabric correctness (1,813 shared / zero mismatch). The
+matching-backend view10 pair completed all three repeats: FULL +2.93%, receipt
++2.04%, CPU +3.36%, actual grids 444/347/388 from 661/605/543 requests. More
+consumption did not produce speedup. The same exact JAR's single-logical/JVM-CPU
+measurement completed: FULL +1.07%, receipt -0.23%. This changes resource
+conditions, not Mixins.
+
+No new Mixin or generated Minecraft symbol. GenerationPrefetchQueue rotates
+each owner's existing distance-sorted observations by at most sixteen positions
+(bounded setting 0..64, zero restores nearest-first), keeping at least four
+future candidates in a short queue. All candidates remain retained, unique,
+owner-interleaved and subject to the original expiry/demand/generation fences.
+Server stage dependencies and task order are unchanged. The hypothesis is
+that the server can process its immediate queue while client results for later
+observed demand travel, increasing ready result consumption without waiting.
+
+## Candidate I direct client admission (dev.10, Fabric verified)
+
+Gate client-request-gate-20261003-022053-441 passed four affected tests, three
+builds and Fabric correctness: 1,792 shared / zero mismatch, both owners using
+the direct network request path. Matching cooperative view10 backend pair
+completed: FULL +1.37%, receipt +1.53%, CPU -0.90%. No isolated speed gain.
+
+FabricClientRequestConnectionMixin263 uses the generated 26.3 Connection
+channelRead0(ChannelHandlerContext,Packet)V genericsFtw injection already used
+by server ingress. The enclosing vanilla shouldHandleMessage check is retained;
+handled packets increment receivedPackets exactly once. Only complete request,
+batch (max four) and cancel payloads use the captured connection/dimension
+snapshot. The event thread performs bounded admission, never world access or
+terrain computation. Fabric's pinned ClientCommonNetworkAddon.schedule uses
+client.execute; this candidate bypasses that frame-turn delay after acceptance.
+channelInactive and setupInboundProtocol HEAD revoke that exact connection.
+ClientboundRespawnPacket suspends admission before normal packet handling.
+Generated ClientPacketListener.handleRespawn first calls PacketUtils, updates
+the level/player on the main thread, and only its TAIL resumes/publishes the
+new context through FabricClientRespawnRequestMixin263. Unknown contexts retain
+the original receiver. Both Mixins are Fabric client-only entries. Native
+loaders retain their original main-thread request route; protocol stays 6.
+
+## Cooperative terrain scheduling (2026-10-02, dev.9 Fabric verified)
+
+No new Mixin descriptor. NoiseBasedChunkGeneratorMixin's existing verified
+26.3 buildTerrain supplyAsync interception also selects the local bounded
+executor for the explicit cooperative mode. The vanilla supplier and its
+generation-thread RemoteDensitySamplingScope are retained. Generated Fabric
+Util.java verifies maxAllowedExecutorThreads = clamp(availableProcessors-1,
+1,maxThreads); two JVM CPUs mean one normal background worker. Native builds
+verified shared selector/configuration compilation, not native runtime
+parallel behavior. The completed gate cooperative-terrain-gate-20261002-233308-926
+proved real local_peak_task_active >=2, both-owner grid use and matching
+required/shared terrain digests (1,803 shared / zero mismatch). View10 improved
+FULL/receipt with higher CPU and tick time. Recovered view32 also improved
+FULL/receipt by 9.26%/9.15%, with higher CPU/tick costs. That combines the
+scheduler and remote assistance. The completed same-backend view32 ablation
+found assistance slower: FULL +4.24%, receipt +4.53%, CPU +4.84%.
+
+## Earlier completed-load opportunity (2026-10-02, candidate G)
+
+ChunkMapLoadOpportunityMixin263 shadows final worldGenContext and injects
+RETURN into private scheduleChunkLoad(ChunkPos)CompletableFuture. Generated
+26.3 Fabric source and patched Forge 66.0.3 / NeoForge 26.3.0.13-beta source
+JARs verify both names and the mainThreadExecutor completion path. It wraps
+the existing load future with a nonblocking observation, returns the same
+ChunkAccess, skips persisted TERRAIN or later and catches optional-observer
+runtime failures. No extra load/generation or tickets are introduced.
+The common/Forge Mixin lists include it. Native builds alone do not verify
+runtime injection. Dev.8's Fabric two-owner gate verified early-load observations
+and actual grid application with matching required/shared terrain digests.
+Slow-shutdown diagnostics now retain the captured stopping
+server identity so a newly started integrated server is not inspected.
+
+## Slow-shutdown inspection (2026-10-02, local dev.7)
+
+No new Mixin target. A diagnostics-only delayed task reads ChunkMap's
+updatingChunkMap, pendingUnloads, toDrop, unloadQueue, pendingGenerationTasks
+and dispatchers on the server thread, plus GenerationChunkHolder's
+generationRefCount/task and public getAllFutures. These names were inspected
+in generated 26.3 source. Reflection failures are logged without changing
+shutdown behavior; this is investigation, not a claimed shutdown fix.
+
+## Existing-terrain admission (2026-10-02, candidate F Fabric verified)
+
+ServerChunkCacheRemoteWaitMixin263 adds an invoker for the private
+`ServerChunkCache.getVisibleChunkIfPresent(J)ChunkHolder`, verified in
+generated 26.3 Fabric, Forge and NeoForge sources. ReadyTerrainLookup runs
+only during server-thread dispatch and reads
+`holder.getChunkIfPresentUnchecked(ChunkStatus.TERRAIN)`; its source calls
+future.getNow, without scheduling generation, tickets or blocking waits.
+The lighting getter was not used: its parent status is FEATURES, later
+than TERRAIN. The dev.7 two-owner Fabric correctness and performance gate
+passed with this invoker. Builds alone do not establish native runtime behavior.
+
+## Terrain-grid sampler template (2026-10-02, candidate E Fabric verified)
+
+No new Mixin target. The verified NoiseChunk constructor sampler-set hook
+also wraps finalDensity for GRID_AND_SURFACE only under the same exact
+state/settings/volume and empty Beardifier/Blender gate. Generated 26.3
+InterpolatedFunction.compileSampler still compiles and executes the original
+float interpolation algorithm. Only its input is replaced by a transient
+sampler that reads the assigned grid and delegates out-of-range queries.
+DfRewriteRule traversal stops at the five outer interpolators; their input
+graphs remain authoritative fallbacks. DensityFunctionCompiler caches one
+reused template per state/settings, never a distinct graph for each job.
+Affected tests must verify full-volume raw bits, secret validation and
+fallback; Fabric runtime must prove both owners consumed actual grid samples.
+
+## Queued surface opportunity (2026-10-02, candidate D verified)
+
+No new invocation or injection target. ChunkAccessRemoteDensityMixin now carries
+one synchronized single-use opportunity in addition to its volatile field.
+The existing buildTerrain supplier scope takes the opportunity at execution,
+uses only validated ready data and restores/clears state in finally. This scope
+does not touch an asynchronous response after vanilla computation has started.
+Standalone scope tests cover nested restoration, missing/revoked data, failure
+and one-shot claims. Fabric runtime must also prove both owners consume queued
+surface output; native builds alone do not verify native runtime behavior.
+
+## Terrain dependency ownership (2026-10-02, candidate C pending)
+
+No new injection target. Generated 26.3 DistanceManager player-loading tickets
+use ChunkLevel.byStatus(ENTITY_TICKING)=31. FULL is 33; the generated FULL
+pyramid accumulates TERRAIN at radius two, yielding terrain ticket level 35.
+Observed terrain can therefore belong to a player out to viewDistance+4 in a
+square, even when outside the circular delivery view. Candidate C derives this
+margin from the public ChunkLevel APIs instead of hardcoding four. It changes
+owner selection for observed/demanded terrain only, never adds Minecraft tickets
+or requests generation. Prediction retains its separate bounded rule.
+
+## Surface-field constructor interception (2026-10-02, Fabric gate passed)
+
+Generated 26.3 NoiseChunk constructor binds RandomState.samplersWithContext
+before constructing the aquifer. NoiseChunkSurfaceSamplerMixin263 wraps that
+invocation with descriptor `(SamplerContext)DensitySamplerSet`. The full
+constructor arguments are RandomState, nullable Beardifier, NoiseGeneratorSettings,
+Aquifer.FluidPicker, Blender and DensityVolume. The existing buildTerrain
+supplyAsync wrap enters a finally-restored thread scope when the task executes.
+Both shared/Fabric and Forge mixin lists include the new constructor hook.
+The wrapper requires exact state/settings/volume and empty beardifier/blending.
+Native builds alone do not verify native runtime injection or final output.
+
+## Validation-cost candidate (2026-10-02, focused gate passed)
+
+No Mixin target or descriptor changes. Generated 26.3
+`NoiseChunk` creates a private `SamplerContext` with `enableCaches()` and a
+`RandomState.acquireDensityBufferPool()` pool, released when generation ends.
+The candidate validator follows the same invocation-local cache/pool ownership.
+`SamplerContext.sampleVolumeCached` reuses only exactly equal volumes.
+`InterpolatedFunction.Sampler.fillCell` adds a float step repeatedly along Y;
+single-point sampling uses a different lerp expression. Validation therefore
+retains each column's original minimum Y and clips only above its last selected
+sample. This needs exact-volume tests before any runtime/performance claim.
+
+
+## 26.3 view-distance benchmark references (2026-10-02)
+
+No new Mixins are used. Generated `ChunkTrackingView.isWithinDistance` with
+`includeNeighbors=false` subtracts one from each absolute coordinate delta,
+clamps to zero and requires squared distance strictly below viewDistance².
+At distance 32 this gives 3,461 measured coordinates per owner. Generated
+client `GraphicsPreset.FANCY.apply` sets render distance to 16; the benchmark
+uses serialized `graphicsPreset:"custom"` to preserve distance 32 on startup.
+Both references were inspected in the pinned generated 26.3 sources.
+
 ## Alpha.5 packaging
 
 The verified candidate targets below are included in alpha.5. Final JARs

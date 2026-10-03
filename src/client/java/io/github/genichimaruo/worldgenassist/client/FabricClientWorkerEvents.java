@@ -11,6 +11,7 @@ import io.github.genichimaruo.worldgenassist.network.WorkerAcceptedPayload;
 import io.github.genichimaruo.worldgenassist.network.WorkerHelloPayload;
 
 public final class FabricClientWorkerEvents {
+	private static ClientWorldgenWorker activeWorker;
 	private FabricClientWorkerEvents() {}
 
 	public static void register() {
@@ -25,7 +26,13 @@ public final class FabricClientWorkerEvents {
 				};
 			}
 		});
-		ClientPlayNetworking.registerGlobalReceiver(WorkerAcceptedPayload.TYPE, (payload, context) -> worker.onAccepted(payload));
+		activeWorker = worker;
+		ClientPlayNetworking.registerGlobalReceiver(WorkerAcceptedPayload.TYPE, (payload, context) -> {
+			worker.onAccepted(payload);
+			if (worker.prepareRequestContext(context.client())) {
+				FabricClientRequestIngress.bind(context.client().getConnection().getConnection(), worker);
+			}
+		});
 		ClientPlayNetworking.registerGlobalReceiver(TerrainJobRequestPayload.TYPE,
 			(payload, context) -> worker.handleRequest(context.client(), payload.job()));
 		ClientPlayNetworking.registerGlobalReceiver(TerrainJobBatchPayload.TYPE,
@@ -33,5 +40,13 @@ public final class FabricClientWorkerEvents {
 		ClientPlayNetworking.registerGlobalReceiver(TerrainJobCancelPayload.TYPE, (payload, context) -> worker.cancel(payload));
 		ClientPlayConnectionEvents.JOIN.register((listener, sender, client) -> worker.onJoin());
 		ClientPlayConnectionEvents.DISCONNECT.register((listener, client) -> worker.onDisconnect());
+	}
+
+	public static void onRespawn(net.minecraft.client.Minecraft client) {
+		var worker = activeWorker;
+		if (worker == null || client.getConnection() == null) return;
+		var connection = client.getConnection().getConnection();
+		worker.resumeNetworkContext(connection);
+		if (worker.prepareRequestContext(client)) FabricClientRequestIngress.bind(connection, worker);
 	}
 }

@@ -6,6 +6,7 @@ import net.minecraft.world.level.chunk.ChunkAccess;
 
 import io.github.genichimaruo.worldgenassist.server.RemoteDensityField;
 import io.github.genichimaruo.worldgenassist.server.RemoteDensityTarget;
+import io.github.genichimaruo.worldgenassist.server.RemoteDensityOpportunity;
 import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -13,6 +14,16 @@ import org.spongepowered.asm.mixin.Unique;
 @Mixin(ChunkAccess.class)
 abstract class ChunkAccessRemoteDensityMixin implements RemoteDensityTarget {
 	@Unique private volatile @Nullable RemoteDensityField worldgenAssist$remoteDensity;
+	@Unique private @Nullable RemoteDensityOpportunity worldgenAssist$remoteOpportunity;
+	@Override public synchronized void worldgenAssist$installRemoteOpportunity(RemoteDensityOpportunity opportunity) {
+		worldgenAssist$remoteOpportunity = opportunity;
+	}
+	@Override public synchronized @Nullable RemoteDensityOpportunity worldgenAssist$takeRemoteOpportunity() {
+		var opportunity = worldgenAssist$remoteOpportunity; worldgenAssist$remoteOpportunity = null; return opportunity;
+	}
+	@Override public synchronized void worldgenAssist$clearRemoteOpportunity(RemoteDensityOpportunity opportunity) {
+		if (worldgenAssist$remoteOpportunity == opportunity) worldgenAssist$remoteOpportunity = null;
+	}
 
 	@Override
 	public void worldgenAssist$installRemoteDensity(RemoteDensityField field) {

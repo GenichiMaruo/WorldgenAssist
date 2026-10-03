@@ -1,5 +1,204 @@
 # Validation matrix
 
+## Candidate L: configuration-only asynchronous overlap gate
+
+Run-RemoteOverlapGate -Execute selects the exact unchanged dev.12 JAR; no
+build/JUnit rerun. All harness edits precede one fresh two-owner Overworld
+correctness pair, both cooperative, wide window and RemoteApplicationProfile
+overlap. It requires actual bounded wait plus grid application for each owner,
+matching digests and safe cleanup. Only then one view10 full-view pair runs
+(warmup1/measured3, actual affinity/JVM2). Recorded application configuration
+and comparison signature include profile/ready-only/base/max wait; no unrelated
+dimension/lifecycle suite. Maximum wait remains200ms, not the30-second job
+lifetime. Default ready profile stays intact. Completed gate
+remote-overlap-gate-20261003-094940-125:1,813 matching shared chunks, both
+owners' actual asynchronous use, matching view10 FULL -6.66%, receipt -7.20%,
+CPU -9.65%. Job timeout counter0 differs from27/13/30 bounded wait fallbacks.
+Matching view32 performance pair csb-20261003-100930-620 completed using the
+unchanged JAR: FULL -1.88%, receipt -1.44%, CPU -6.62%, tick p95 +3.64%.
+Completion/receipt improved two of three repeats; CPU all three. Each repeat
+completed10,658 terrain tasks and3,461 receipts per owner; settings/coordinates
+match and safe cleanup confirmed. Generation failures/job timeouts0 differ
+from158/225/173 bounded wait fallbacks. No extra build/JUnit/correctness
+repetitions. Fixed-order three-repeat evidence remains descriptive.
+
+## Candidate K affected gate (dev.12, view10/view32 complete)
+
+remote-window-gate-20261003-083305-914 COMPLETE reused only successful exact
+unit/build evidence from the failed first batch. Fresh matching-harness runtime
+passed1,803 shared / zero mismatches, both negotiated windows16 and successful
+individual disconnects. Same-backend view10 FULL -2.97%, receipt -3.03%, CPU
+-5.57%; two of three completion/receipt repeats improved. Actual grids778/667/729.
+Run-ConstrainedServerBenchmark -Execute -TwoLogicalOnly -ViewDistance32
+-MeasureFullView -ServerJvmProcessors2 -QuietRemoteTrace -AssistedNoiseBackend
+cooperative -VanillaNoiseBackend cooperative -WindowProfile wide ran only
+the larger performance pair, exact unchanged dev.12 JAR. All implementation
+was completed before affected testing; no extra unit/build/correctness repeats.
+Completed csb-20261003-085104-175: FULL +8.42%, receipt +7.48%, CPU +8.18%;
+all three completion/receipt repeats slower. Work/settings/coordinates match;
+10,658 terrain tasks and3,461 receipts per owner each, failures/timeouts0.
+
+Run-RemoteWindowGate selects ClientWorkExecutor263Test (three methods) and
+RemoteWindow263Test (two): bounded full-window admission during sent-result
+handoff, cancellation/purge, invalid bounds, adaptive growth, owner/global/
+advertised clamps and disconnect isolation. Three builds and exact native
+metadata precede the smallest Fabric two-owner Overworld correctness pair.
+Both conditions use cooperative backend. Explicit window profile wide records
+owner16/global32/client16, refill16 and lookahead0; correctness must match and
+both owners must consume grids. One view10 pair (warmup1, measured3, actual
+CPU/JVM2) follows. No unrelated dimension/runtime or broad unit suite.
+
+Completed dev.11 single-CPU case: csb-20261003-031726-969. FULL +1.07%,
+receipt -0.23%; no convincing isolated speed improvement. The unchanged MOD
+needed no extra build or correctness run for that resource-only experiment.
+
+## Candidate J affected gate (dev.11, complete)
+
+generation-lookahead-gate-20261003-024234-087 passes two tests, three builds,
+1,813 shared Fabric digests / zero mismatch and both-owner grid use. Its matched
+view10 pair is COMPLETE but slower (FULL +2.93%, receipt +2.04%, CPU +3.36%).
+Run-ConstrainedServerBenchmark -SingleLogicalOnly -ServerJvmProcessors 1
+completed with the same exact JAR, one logical/JVM CPU and matching cooperative
+backend, two strong clients, warmup1 + measured3. No build/JUnit/correctness
+rerun: only the changed resource condition was measured. FULL +1.07%, receipt
+-0.23%; csb-20261003-031726-969 is the retained result.
+
+Run-GenerationLookaheadGate selects GenerationLookahead263Test's two methods:
+future ordering without lost/duplicate demand or owner imbalance, and short
+queues/expiry/invalid bounds. Existing client gate tests are not repeated.
+Three builds and the smallest two-owner Overworld correctness pair precede
+the same-backend cooperative view10 pair (one warmup, three measured repeats).
+Startup must record lookahead16/capacity128. Both clients must consume grids,
+and source/JAR/coordinates/complete target receipt must match.
+
+## Candidate I affected gate (dev.10, complete)
+
+Run-ClientRequestGate runs four methods only: ClientConnectionAdmission263Test
+and ClientReplySession263Test. It verifies immediate bounded admission without
+main-thread pumping, respawn/replacement fences and revoked worker replies.
+All three builds/metadata checks precede the minimal Fabric two-owner Overworld
+correctness pair. Both owners must consume a grid and log request_path=network.
+The subsequent view10 speed pair uses cooperative backend for BOTH conditions,
+two logical/JVM server CPUs, one warmup and three measured repeats. It isolates
+assistance; no unrelated dimension or broad unit matrix is selected.
+
+## Candidate H focused gate (dev.9, view10/full32 and ablation complete)
+
+Run-CooperativeTerrainGate selects CooperativeBackend263Test's two methods:
+default/explicit bounded policy and concurrently running independent terrain
+scopes with clean worker reuse. It builds all three loaders and checks exact
+native metadata, then compares the smallest two-owner Overworld correctness
+pair (vanilla executor versus cooperative workers plus assistance). Both owners
+must actually consume grid output and shared/required digests must match.
+One full-view10 performance pair with three measured repeats follows. Its
+retained validation timing, exact identity, complete receipt and real peak of
+at least two local terrain tasks are required. The reported comparison scope
+explicitly includes scheduler changes; it does not isolate client assistance.
+
+`cooperative-terrain-gate-20261002-233308-926` passed both tests, all three
+builds and the Fabric two-owner correctness pair: 1,803 shared chunks / zero
+mismatch, actual grid use by both owners and local peak >=2. The exact dev.9
+JAR's view10 pair `csb-20261002-233926-431` completed all three repeats.
+FULL/receipt medians improved 10.43%/10.76%, with CPU +19.68% and tick p95
++51.46%. Recovered view32 aggregation is COMPLETE with matched source/JAR,
+conditions, coordinates and 10,658 completed tasks per repeat / 3,461 received
+chunks per owner: FULL/receipt -9.26%/-9.15%, CPU +20.72%, tick p95 +62.93%.
+Run-Cooperative32Recovery reuses only successful exact-identity cases and runs
+the missing vanilla baseline plus cooperative/no-assistance to isolate client
+contribution. Original midnight-roll and wrapper LASTEXITCODE failures remain
+INCOMPLETE. The second recovery runs only the remaining cooperative baseline;
+no broad suite, build or completed runtime condition is repeated.
+
+## CPU diagnostic after dev.8
+
+`Run-WorldgenCpuProfile.ps1 -Execute` runs one sequential vanilla/assisted
+Overworld pair with the existing exact JAR, two owners, two logical/JVM CPUs,
+view10, one warmup and one measured repeat. No build, unit or correctness rerun.
+JFR starts with the owned JVM and dumps into its evidence child on exit, avoiding
+the dedicated Java image's missing attach.dll. CPU samples are restricted to
+recorded UTC measured windows. Sampling percentages are not CPU durations and
+the diagnostic overhead makes these unsuitable as a speed gate.
+
+## Candidate G focused gate (2026-10-02)
+
+Run-LoadAheadGate selects GenerationPrefetch263Test (three) and
+GridDensity263Test (two): same-owner nearest replacement, existing quota/
+expiry behavior and all 513 aquifer single-point bits in six settings/seed
+contexts, forced aquifer/material sampling, existing full grid/final bits.
+Three native/Fabric builds and versioned native metadata are inspected.
+Two-owner Fabric correctness must show actual grid use by both owners,
+nonzero load_hints and matching digests. A matched full-view10 speed pair
+uses QuietRemoteTrace in both modes, records/checks that setting and retains
+consumption and late-cache evidence. The dev.8 gate exposed missing required
+validation timing with QuietRemoteTrace; its original performance analysis
+remains INCOMPLETE. Restore essential timing before another quiet speed gate.
+No unrelated suite runs.
+
+## Candidate F focused gate (2026-10-02)
+
+Run-RetiredWorkGate selects six tests in GridDensity263Test,
+StartedTerrain263Test and RemoteDensityScope263Test; builds all three loaders;
+then runs the smallest two-owner Fabric correctness pair and a matched
+weak-server full-view distance 10 pair. Grid tests also compare all 6,125
+single-point queries per settings/seed context with the bulk transport,
+confirming the cheaper independent validation does not change float bits.
+Runtime proves actual grid use by both owners, required digests, safe
+cleanup, exact CPU limits and zero cache stores after logged NOISE completion.
+
+## Candidate E focused gate (2026-10-02)
+
+`Run-GridDensityGate.ps1 -Execute` runs nine affected tests (grid, surface,
+typed batch codec and client compute), Fabric/Forge/NeoForge builds,
+two-owner Fabric vanilla/assisted correctness and full-view distance 10
+performance. Six settings/seed contexts compare all 6,894 transport values
+and 98,304 final float bits, plus independent secret sampling, tampering,
+outside-grid fallback and typed cache isolation. Runtime must show nonzero
+grid consumption for both owners, equal applied digests, safe cleanup and
+actual JVM processors=2 as well as affinity=2. A promising candidate then
+uses its exact JAR for a separate full-view distance 32 confirmation without
+repeating unaffected unit/build gates. Published releases stay immutable.
+
+## Ready-surface candidate D focused gate (2026-10-02)
+
+Run-ReadySurfaceGate.ps1 batches five affected scope/ownership/executor tests,
+three loader builds, Fabric two-owner correctness (actual queued consumption for
+both owners), then a matched full-view distance-10 speed pair. Affinity and actual
+JVM availableProcessors both equal two. All implementation precedes testing.
+Passed prior surface transport/validation tests retain their original candidate
+B evidence; only changed scope and executor behavior is retested in this gate.
+
+## Surface-field focused gate (2026-10-02)
+
+Candidate C's Run-GenerationResourceGate.ps1 batches six affected scheduling/
+ownership/codec tests, three builds, a Fabric two-owner correctness pair and
+distance-10 full-view performance. Server affinity and actual JVM processor
+count both equal two; the runner fails if actual availableProcessors differs.
+The enlarged owner boundary applies only to Minecraft's observed work, and its
+test covers nearest-owner choice, dimension isolation, movement cleanup and
+distance-32 bound. Only after implementation is complete is this batch run.
+
+Run-SurfaceDensityGate.ps1 executes nine affected tests, Fabric/Forge/NeoForge
+builds, a two-owner/two-logical-CPU Fabric correctness pair, then a full-view
+distance-10 performance pair (one warm-up, three measured repeats). Runtime
+must prove surface-field consumption as well as matching final NOISE digests.
+Run only after all candidate implementation is complete. Larger distance-32
+confirmation follows only a promising screening result; no full loader matrix.
+
+## Validation-cost candidate (2026-10-02)
+
+`scripts/Run-ValidationCostGate.ps1 -Execute` runs one sequential batch after
+implementation: only `RemoteDensityValidator263Test` (two tests), Fabric build,
+shared-source Forge/NeoForge builds without their tests, one installed Fabric
+Overworld vanilla/assisted correctness pair with two owners/two logical server
+CPUs/eight secret groups, then the constrained-server pair at distance 32 on
+both clients and server. Each performance mode excludes one warmup and measures
+three fresh locations, including every chunk of both owners' view.
+`-ViewDistance` allows a smaller screening workload; `-LocalOnly` explicitly
+omits all runtime and performance cases. No unrelated test suite is selected.
+The JUnit descriptive preparation medians are not an end-to-end performance
+gate. Published alpha.5 artifacts and historical results remain immutable.
+
+
 ## Network dispatch: minimal affected gate (2026-09-29)
 
 `scripts/Run-NetworkDispatchGate.ps1 -Execute` runs once implementation is
@@ -441,6 +640,22 @@ ratios and make the analysis INCOMPLETE. Raw metrics remain available. An
 equal task count alone is insufficient for a controlled comparison.
 
 ## Results and review
+
+The focused `scripts/Run-ViewDistance32Benchmark.ps1 -Execute` batch uses the
+existing Fabric alpha.5 JAR, a dedicated SSH server restricted to two logical
+CPUs, two installed clients, and view distance 32 on both ends. It performs
+only harness syntax/geometry checks and the vanilla/assisted Overworld pair,
+with one excluded warm-up and three measured relocations per mode. No builds
+or JUnit suites run. The target covers the 26.3 `ChunkTrackingView` view-distance
+geometry (without its extra delivery-neighbor margin), rather than central
+9x9 chunks. Each measured region must arrive at both clients before the next
+repeat begins. Server heap is 6 GiB and each client heap 4 GiB; CPU affinity,
+saved client distance, target geometry and JAR identity are retained in evidence.
+The client explicitly uses `graphicsPreset:"custom"`: the verified 26.3
+`GraphicsPreset.FANCY.apply` resets render distance to 16 during startup.
+Receipt timestamps measure loading, not finished rendering. Two client
+processes share the initiating PC, and network traffic uses the existing SSH
+tunnel. Historical distance-10 results retain their original harness identity.
 
 Read `summary.md` or `summary.json` only after the completion line. They list
 every case, status, reason, JUnit failures, and log path. Status has a strict

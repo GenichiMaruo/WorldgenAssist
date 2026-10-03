@@ -2,7 +2,7 @@
 
 ## Scope and sources
 
-The current alpha.5 line targets Minecraft Java Edition **26.3** with
+The current alpha.6 line targets Minecraft Java Edition **26.3** with
 Fabric Loader **0.19.5** / Fabric API **0.161.0+26.3**, Forge **66.0.3**,
 and NeoForge **26.3.0.13-beta** on Java **25** (verification JDK 25.0.4).
 The earlier 26.2 Fabric alpha.3 remains on `mc/26.2` and is immutable.
@@ -42,7 +42,8 @@ security boundary and `ALPHA3_PERFORMANCE.md` for measured performance.
   remain intact. Its general protocol `CURRENT` is **2**; fixture packets use
   their separate v3 family. The fixture is **not ported to 26.3**. The
   immutable alpha.4 general trusted-raw protocol is **3**; alpha.5 uses **4**
-  for exact float32 density transport. Server and clients must match. Read
+  for exact float32 density transport. Alpha.6 uses **6** for bounded
+  terrain-grid/surface intermediate transport. Server and clients must match. Read
   `SEEDED_LEAF_FIXTURE_PROTOCOL.md` before changing runtime or network behavior.
 - Trusted raw-seed assistance supports eligible new vanilla noise terrain.
   Alpha.5 also admits compatible additional dimensions and explicit vanilla
@@ -50,8 +51,14 @@ security boundary and `ALPHA3_PERFORMANCE.md` for measured performance.
   Arbitrary custom generators and client-unavailable noise registries remain
   unsupported. Latest runtime evidence is Fabric Overworld with two owners;
   native builds passed but changed native paths were not rerun. Do not claim
-  end to end speedup: the latest constrained-server test improved NOISE-region
-  readiness but did not improve FULL completion or client receipt.
+  general client-offload speedup: dev.9's constrained-server cooperative
+  scheduler improved FULL/receipt, but assistance was 4.24%/4.53% slower than
+  the same scheduler without assistance at view32. Dev.12's wide-window
+  ready-only comparison was also slower (+8.42% FULL/+7.48% receipt). The
+  unchanged dev.12 asynchronous profile's view32 medians improved 1.88% FULL,
+  1.44% receipt and 6.62% CPU, but completion improved only two of three
+  repeats and tick p95 worsened. This is limited descriptive evidence; keep
+  scheduler and client-assistance effects separate.
 - Ordinary players may edit their own participation setting, but server policy
   changes require operator authority. Server-side revision and request identity
   checks must remain authoritative. Saved server policy needs a restart;

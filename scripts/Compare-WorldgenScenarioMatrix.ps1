@@ -8,6 +8,7 @@ $ErrorActionPreference = 'Stop'
 $culture = [Globalization.CultureInfo]::InvariantCulture
 $root = (Resolve-Path -LiteralPath $RunRoot -ErrorAction Stop).Path
 $output = if ([string]::IsNullOrWhiteSpace($AnalysisDirectory)) { Join-Path $root 'analysis' } else { [IO.Path]::GetFullPath($AnalysisDirectory) }
+. (Join-Path $PSScriptRoot 'WorldgenMeasurementRegion.ps1')
 if (Test-Path -LiteralPath $output) { throw "Refusing to overwrite analysis evidence: $output" }
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 
@@ -65,6 +66,10 @@ function Samples([object]$Result,[Collections.Generic.List[object]]$Issues,[stri
 
 function ClientReceiptSamples([object]$Record) {
     $directory=Split-Path -Parent $Record.path
+    $regionPath=Join-Path $directory 'remote-evidence/measurement-region.json'
+    $region=if(Test-Path -LiteralPath $regionPath){Get-Content -LiteralPath $regionPath -Raw|ConvertFrom-Json}else{[pscustomobject]@{radius=4;shape='square';expected_chunks_per_owner=81}}
+    $offsets=@(Get-WorldgenMeasurementOffsets $region.radius $region.shape)
+    if($offsets.Count -ne $region.expected_chunks_per_owner){throw 'Measurement-region count disagrees with its geometry'}
     $repeatCount=[int](Value (Value $Record.result 'performance') 'measured_repeats')
     $warmupCount=[int](Value (Value $Record.result 'performance') 'warmup_runs')
     $playerCount=[int](Value $Record.result 'players')
@@ -78,21 +83,22 @@ function ClientReceiptSamples([object]$Record) {
             $begin=[regex]::Match($log,"benchmark\.client_marker phase=BEGIN repeat=$repeat nanos=(?<nanos>\d+)")
             $centreX=if($owner -eq 0){$baseX}else{-$baseX}
             $centreZ=if($owner -eq 0){$baseZ}else{-$baseZ}
+            $expected=@{};foreach($offset in $offsets){$expected[([string]($centreX+$offset.x)+','+($centreZ+$offset.z))]=$true}
             $chunks=@{};$latest=0L
             if($begin.Success){
                 $started=[long]$begin.Groups['nanos'].Value
                 foreach($match in [regex]::Matches($log,"benchmark\.chunk_received repeat=$repeat chunk=(?<x>-?\d+),(?<z>-?\d+) nanos=(?<nanos>\d+)")){
                     $x=[int]$match.Groups['x'].Value;$z=[int]$match.Groups['z'].Value;$nanos=[long]$match.Groups['nanos'].Value
-                    if([Math]::Abs($x-$centreX) -le 4 -and [Math]::Abs($z-$centreZ) -le 4 -and $nanos -ge $started -and -not $chunks.ContainsKey("$x,$z")){
+                    if($expected.ContainsKey("$x,$z") -and $nanos -ge $started -and -not $chunks.ContainsKey("$x,$z")){
                         $chunks["$x,$z"]=$true
                         if($nanos -gt $latest){$latest=$nanos}
                     }
                 }
             }
             $ownerCoverage+=$chunks.Count
-            if($chunks.Count -eq 81){$ownerReady+=($latest-$started)/1000000.0}
+            if($chunks.Count -eq $offsets.Count){$ownerReady+=($latest-$started)/1000000.0}
         }
-        $coverage+=,[ordered]@{repeat=$repeat;owner_chunk_counts=$ownerCoverage}
+        $coverage+=,[ordered]@{repeat=$repeat;owner_chunk_counts=$ownerCoverage;expected_chunks_per_owner=$offsets.Count}
         if($ownerReady.Count -eq $playerCount){$ready+=($ownerReady|Measure-Object -Maximum).Maximum}
     }
     return [pscustomobject]@{complete=($ready.Count -eq $repeatCount);samples=[double[]]$ready;coverage=$coverage}
@@ -102,6 +108,9 @@ function MeasurementConditions([object]$Record) {
     $directory=Split-Path -Parent $Record.path
     $config=Get-Content -LiteralPath (Join-Path $directory 'remote-evidence/scenario-config.json') -Raw | ConvertFrom-Json
     $signature=@()
+    $regionPath=Join-Path $directory 'remote-evidence/measurement-region.json'
+    $region=if(Test-Path -LiteralPath $regionPath){Get-Content -LiteralPath $regionPath -Raw|ConvertFrom-Json}else{[pscustomobject]@{radius=4;shape='square';expected_chunks_per_owner=81}}
+    $signature+='measurement_region='+$region.shape+':'+$region.radius+':'+$region.expected_chunks_per_owner
     foreach($key in @('dimension','players','seed','warmup_runs','measured_repeats','view_distance','timeout_ms')){
         $value=Value $config $key
         if($null -eq $value){throw "Missing scenario condition: $key"}
@@ -110,6 +119,19 @@ function MeasurementConditions([object]$Record) {
     $logicalProcessors=Value $config 'server_logical_processors'
     $logicalProcessors=if($null -eq $logicalProcessors){0}else{[int]$logicalProcessors}
     $signature+='server_logical_processors='+$logicalProcessors
+    $jvmLimitPath=Join-Path $directory 'remote-evidence/server-jvm-cpu-limit.json'
+    $jvmCount=if(Test-Path -LiteralPath $jvmLimitPath){(Get-Content -LiteralPath $jvmLimitPath -Raw|ConvertFrom-Json).requested_active_processor_count}else{0}
+    $signature+='server_jvm_processors='+$jvmCount
+    $signature+='quiet_remote_trace='+[bool](Value $config 'quiet_remote_trace')
+    $applicationPath=Join-Path $directory 'remote-evidence/remote-application-config.json'
+    if(Test-Path -LiteralPath $applicationPath){
+        $application=Get-Content -LiteralPath $applicationPath -Raw|ConvertFrom-Json
+        foreach($key in @('profile','ready_surface_only','base_wait_ms','maximum_wait_ms')){
+            $signature+='remote_application/'+$key+'='+(Value $application $key)
+        }
+    }
+    $flightPath=Join-Path $directory 'remote-evidence/flight-recording-config.json'
+    $signature+='server_flight_recording='+[bool]$(if(Test-Path -LiteralPath $flightPath){(Get-Content -LiteralPath $flightPath -Raw|ConvertFrom-Json).enabled}else{$false})
     for($owner=0;$owner -lt [int](Value $Record.result 'players');$owner++){
         $options=@{}
         foreach($line in Get-Content -LiteralPath (Join-Path $directory "clients/owner-$owner/client/options.txt")){
@@ -177,6 +199,13 @@ foreach($identity in @($byKey.Keys|Sort-Object)){
         $correctness+=[ordered]@{identity=$identity;status=if($required.Count -gt 0 -and $shared.Count -gt 0 -and $mismatch.Count -eq 0 -and @($requiredRows|Where-Object{-not $_.equal}).Count -eq 0){'PASS'}else{'FAILED'};required_applied_chunks=$requiredRows;shared_digest_count=$shared.Count;shared_mismatch_count=$mismatch.Count}
     }else{
         $left=Samples $vanilla.result $issues $vanilla.path;$right=Samples $assisted.result $issues $assisted.path;$summary=[ordered]@{identity=$identity;status='COMPLETE';warmup_excluded=$true;metrics=@{};remote_assistance=@{};reliability=@{}}
+        $implementationSettings=[ordered]@{}
+        foreach($member in @($vanilla,$assisted)){
+            $backendPath=Join-Path (Split-Path -Parent $member.path) 'remote-evidence/noise-backend-config.json'
+            $implementationSettings[$member.result.mode]=if(Test-Path -LiteralPath $backendPath){Get-Content -LiteralPath $backendPath -Raw|ConvertFrom-Json}else{[ordered]@{noise_backend='vanilla';historical_default=$true}}
+        }
+        $summary.implementation_settings=$implementationSettings
+        $summary.comparison_scope=if($implementationSettings.vanilla.noise_backend -ne $implementationSettings.assisted.noise_backend){'Combined terrain backend and remote assistance; not isolated client assistance'}else{'Remote assistance with matching terrain backend'}
         $conditionsMatch=$false
         try{
             $leftConditions=MeasurementConditions $vanilla;$rightConditions=MeasurementConditions $assisted
@@ -197,6 +226,7 @@ foreach($identity in @($byKey.Keys|Sort-Object)){
         if(-not $sameWork){$summary.status='INCOMPLETE'}
         $comparedMetrics=@('server_cpu_ms','tick_mean_ms','tick_p95_ms','throughput_tasks_per_second')
         if(@($left|Where-Object{$null -eq (Value $_ 'server_region_ready_ms')}).Count -eq 0 -and @($right|Where-Object{$null -eq (Value $_ 'server_region_ready_ms')}).Count -eq 0){$comparedMetrics+='server_region_ready_ms'}
+        if(@($left|Where-Object{$null -eq (Value $_ 'server_full_region_ready_ms')}).Count -eq 0 -and @($right|Where-Object{$null -eq (Value $_ 'server_full_region_ready_ms')}).Count -eq 0){$comparedMetrics+='server_full_region_ready_ms'}
         foreach($metric in $comparedMetrics){
             $leftValues=[double[]]@($left|ForEach-Object{$value=Number (Value $_ $metric);if($null -ne $value){$value}});$rightValues=[double[]]@($right|ForEach-Object{$value=Number (Value $_ $metric);if($null -ne $value){$value}})
             if($null -eq $left -or $null -eq $right -or $leftValues.Count -ne $left.Count -or $rightValues.Count -ne $right.Count){Issue $issues 'MISSING_PERFORMANCE_METRIC' "Metric '$metric' is missing/non-finite for $identity." $root;$summary.status='INCOMPLETE';$summary.metrics[$metric]=$null}else{$leftStats=Stats $leftValues;$rightStats=Stats $rightValues;$summary.metrics[$metric]=[ordered]@{vanilla=$leftStats;assisted=$rightStats;median_delta=if($sameWork){$rightStats.median-$leftStats.median}else{$null};median_ratio=if(-not $sameWork -or $leftStats.median -eq 0){$null}else{$rightStats.median/$leftStats.median}}}
@@ -207,7 +237,7 @@ foreach($identity in @($byKey.Keys|Sort-Object)){
             $leftStats=Stats $leftReceipt.samples;$rightStats=Stats $rightReceipt.samples
             $summary.metrics.client_region_receipt_ms=[ordered]@{vanilla=$leftStats;assisted=$rightStats;median_delta=if($sameWork){$rightStats.median-$leftStats.median}else{$null};median_ratio=if($sameWork -and $leftStats.median -gt 0){$rightStats.median/$leftStats.median}else{$null}}
         }else{
-            Issue $issues 'INCOMPLETE_CLIENT_RECEIPT' "Client 9x9 receipt coverage is incomplete for $identity." $root
+            Issue $issues 'INCOMPLETE_CLIENT_RECEIPT' "Client target-region receipt coverage is incomplete for $identity." $root
             $summary.status='INCOMPLETE'
         }
         foreach($metric in @('client_compute_mean_ms','client_encode_mean_ms','rtt_mean_ms','server_decode_mean_ms','encoded_bytes_mean','apply_mean_ms','remote_total_mean_ms')){

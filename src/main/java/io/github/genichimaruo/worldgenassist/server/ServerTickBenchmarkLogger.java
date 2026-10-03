@@ -41,7 +41,7 @@ public final class ServerTickBenchmarkLogger {
 
 	public static ServerTickBenchmarkLogger create(NoiseStageBackendConfig backendConfig) {
 		Objects.requireNonNull(backendConfig, "backendConfig");
-		Supplier<BackendSaturation> saturation = backendConfig.mode() == NoiseStageBackendConfig.Mode.LOCAL
+		Supplier<BackendSaturation> saturation = backendConfig.mode().usesLocalWorkers()
 			? () -> BackendSaturation.from(LocalWorldgenTaskBackend.instance().sampleSaturationAndResetPeaks())
 			: BackendSaturation::unavailable;
 		return new ServerTickBenchmarkLogger(

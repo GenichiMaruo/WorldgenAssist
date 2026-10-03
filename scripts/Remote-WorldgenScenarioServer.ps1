@@ -11,10 +11,18 @@ param(
     [Parameter(Mandatory)][long]$Seed,
     [ValidateRange(1,10)][int]$WarmupRuns = 1,
     [ValidateRange(1,10)][int]$MeasuredRepeats = 3,
-    [ValidateSet(0,2,4)][int]$ServerLogicalProcessors = 0,
+    [ValidateSet(0,1,2,4)][int]$ServerLogicalProcessors = 0,
+    [ValidateSet(0,1,2,4)][int]$ServerJvmProcessors = 0,
     [ValidateSet('current','prepared','prefetch')][string]$PipelineProfile = 'prefetch',
     [ValidateSet('relocation','continuous')][string]$Movement = 'relocation',
-    [ValidateRange(5,1000)][int]$CorrectnessDemandWaitMs = 1000
+    [ValidateRange(5,1000)][int]$CorrectnessDemandWaitMs = 1000,
+    [ValidateRange(2,32)][int]$ViewDistance = 10,
+    [switch]$MeasureFullView,
+    [switch]$QuietRemoteTrace,
+    [switch]$ServerFlightRecording,
+    [ValidateSet('vanilla','local','cooperative')][string]$NoiseBackend='vanilla',
+    [ValidateSet('standard','wide')][string]$WindowProfile='standard',
+    [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='ready'
 )
 
 # Remote half of the all-dimension trusted-raw scenario.  It owns only the
@@ -31,6 +39,7 @@ if ($resolved -ne [IO.Path]::GetFullPath((Join-Path $dedicated 'port26.3'))) {
     throw 'Root must be the dedicated WorldgenAssist 26.3 test child'
 }
 $javaExecutable = Join-Path $dedicated 'java25/bin/java.exe'
+if ($RemoteApplicationProfile -eq 'overlap' -and $PipelineProfile -ne 'prefetch') { throw 'Overlap measurement requires the bounded prefetch pipeline' }
 if (-not (Test-Path -LiteralPath $javaExecutable -PathType Leaf)) { throw 'Dedicated JDK 25 is missing' }
 foreach ($target in @($resolved, (Join-Path $resolved 'mods'), (Join-Path $resolved 'logs'), (Join-Path $resolved 'evidence'))) {
     if ((Test-Path -LiteralPath $target) -and ((Get-Item -LiteralPath $target -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
@@ -48,13 +57,14 @@ $latest = Join-Path $resolved 'logs/latest.log'
 $process = $null; $stdout = $null; $stderr = $null; $success = $false
 $ownerNames = @('ScenarioOwnerA', 'ScenarioOwnerB')[0..($Players - 1)]
 $owners = @{}
+. (Join-Path $PSScriptRoot 'WorldgenMeasurementRegion.ps1')
+. (Join-Path $PSScriptRoot 'WorldgenScenarioConsole.ps1')
+$measurementRadius=if($MeasureFullView){$ViewDistance}else{4}
+$measurementShape=if($MeasureFullView){'view'}else{'square'}
+$measurementOffsets=@(Get-WorldgenMeasurementOffsets $measurementRadius $measurementShape)
 
 function Log-Text {
-    $value = [string](Get-Content -LiteralPath $latest -Raw -ErrorAction SilentlyContinue)
-    # Windows PowerShell can suppress an empty pipeline result. Keep callers'
-    # string operations valid while the server rolls over latest.log.
-    if ([string]::IsNullOrEmpty($value)) { return ' ' }
-    return $value
+    return Read-WorldgenConsoleText $stdout
 }
 function Wait-Log([string]$Pattern, [int]$Seconds, [int]$Offset = 0) {
     $deadline = [DateTime]::UtcNow.AddSeconds($Seconds)
@@ -96,11 +106,16 @@ function Find-AllCompletedForOwner([string]$Owner, [int]$Offset = 0) {
     $tail = $text.Substring([Math]::Min($Offset, $text.Length))
     $escaped = [regex]::Escape($Owner)
     $results = @()
+    # Index completions once. Re-scanning the complete log per sent job is
+    # quadratic and can exceed the fixture deadline when assistance scales up.
+    $completionIndices=@{}
+    foreach($entry in [regex]::Matches($tail,'(?m)^.*\[CAWG\] job\.complete id=(?<id>\S+)\b.*$')){
+        $completionIndices[$entry.Groups['id'].Value]=$entry.Index
+    }
     foreach ($sent in [regex]::Matches($tail, '(?m)^.*\[CAWG\] job\.sent id=(?<id>\S+) chunk=(?<chunk>-?\d+,-?\d+).*owner=' + $escaped + '\b.*$')) {
         $id = $sent.Groups['id'].Value
-        $completed = [regex]::Match($tail, '(?m)^.*\[CAWG\] job\.complete id=' + [regex]::Escape($id) + '\b.*$')
-        if ($completed.Success) {
-            $results += [pscustomobject]@{ id=$id; chunk=$sent.Groups['chunk'].Value; sent_index=$sent.Index; completed_index=$completed.Index }
+        if ($completionIndices.ContainsKey($id)) {
+            $results += [pscustomobject]@{ id=$id; chunk=$sent.Groups['chunk'].Value; sent_index=$sent.Index; completed_index=$completionIndices[$id] }
         }
     }
     return $results
@@ -161,7 +176,7 @@ function Wait-Idle([int]$Offset, [int]$Seconds, [int]$LocationIndex, [Diagnostic
         $ownerRegion = @{}
         $cx=if($ownerIndex -eq 0){$baseX}else{-$baseX}
         $cz=if($ownerIndex -eq 0){$baseZ}else{-$baseZ}
-        for($dx=-4;$dx -le 4;$dx++){for($dz=-4;$dz -le 4;$dz++){$key=[string]($cx+$dx)+','+($cz+$dz);$required[$key]=$true;$ownerRegion[$key]=$true}}
+        foreach($regionOffset in $measurementOffsets){$key=[string]($cx+$regionOffset.x)+','+($cz+$regionOffset.z);$required[$key]=$true;$ownerRegion[$key]=$true}
         $ownerRegions += $ownerRegion
     }
     foreach($key in $required.Keys){$requiredFull[$key]=$true}
@@ -276,9 +291,9 @@ function Get-TickStatistics([string]$Text, [double]$CpuMilliseconds, [double]$Wa
         request_queue_mean_ms=Mean-LogValue 'job\.request_dispatch .*request_queue_ms=(?<value>-?\d+(?:\.\d+)?)'
         ingress_queue_mean_ms=Mean-LogValue 'job\.result_ingress .*ingress_queue_ms=(?<value>-?\d+(?:\.\d+)?)'
         result_claim_mean_ms=Mean-LogValue 'job\.result_ingress .*claim_ms=(?<value>-?\d+(?:\.\d+)?)'
-        network_ingress_count=@([regex]::Matches($Text,'job\.result_ingress .*path=network\b')).Count
+        network_ingress_count=if($QuietRemoteTrace){$null}else{@([regex]::Matches($Text,'job\.result_ingress .*path=network\b')).Count}
         request_batch_count=@([regex]::Matches($Text,'jobs\.batch_sent ')).Count
-        prefetch_sent=@([regex]::Matches($Text,'prefetch\.sent ')).Count
+        prefetch_sent=@([regex]::Matches($Text,'job\.sent .*source=prefetch\b')).Count
         prefetch_applied=@([regex]::Matches($Text,'job\.complete .*source=prefetch\b')).Count
         ready_cache_used=@([regex]::Matches($Text,'cache\.hit ')).Count
         demand_wait_fallbacks=@([regex]::Matches($Text,'job\.fallback_local .*reason=TimeoutException')).Count
@@ -335,7 +350,7 @@ try {
     Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $evidence 'runner.ps1')
     if ((Get-Content -LiteralPath (Join-Path $resolved 'eula.txt') -Raw) -notmatch '(?m)^eula=true\s*$') { throw 'Existing EULA acceptance is required' }
     if (Get-NetTCPConnection -LocalPort 25585 -State Listen -ErrorAction SilentlyContinue) { throw 'Loopback fixture port 25585 is already occupied' }
-    $viewDistance = 10
+    $viewDistance = $ViewDistance
     @('server-ip=127.0.0.1','server-port=25585','online-mode=false','white-list=false','enforce-whitelist=false',("level-name=$case"),("level-seed=$Seed"),("view-distance=$viewDistance"),'simulation-distance=3',("max-players=$Players"),'gamemode=spectator','difficulty=peaceful','enable-rcon=false','enable-query=false','pause-when-empty-seconds=-1','spawn-protection=0') | Set-Content -LiteralPath (Join-Path $resolved 'server.properties')
     if ($Dimension -eq 'fixture') {
         $pack = Join-Path $resolved ($case + '/datapacks/worldgenassist-fixture')
@@ -347,14 +362,34 @@ try {
             Set-Content -LiteralPath (Join-Path $definition 'fixture.json')
         Add-Content -LiteralPath (Join-Path $resolved 'server.properties') -Value 'initial-enabled-packs=vanilla,file/worldgenassist-fixture'
     }
-    [ordered]@{dimension=$Dimension;mode=$Mode;players=$Players;purpose=$Purpose;cache_entries=$CacheEntries;prediction=$predictionEnabled;validation_cells=$ValidationCells;seed=$Seed;warmup_runs=$WarmupRuns;measured_repeats=$MeasuredRepeats;view_distance=$viewDistance;timeout_ms=30000;server_logical_processors=$ServerLogicalProcessors;pipeline_profile=$PipelineProfile;movement=$Movement;listener='127.0.0.1:25585'} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'scenario-config.json')
+    [ordered]@{dimension=$Dimension;mode=$Mode;players=$Players;purpose=$Purpose;cache_entries=$CacheEntries;prediction=$predictionEnabled;validation_cells=$ValidationCells;seed=$Seed;warmup_runs=$WarmupRuns;measured_repeats=$MeasuredRepeats;view_distance=$viewDistance;timeout_ms=30000;server_logical_processors=$ServerLogicalProcessors;pipeline_profile=$PipelineProfile;movement=$Movement;quiet_remote_trace=[bool]$QuietRemoteTrace;listener='127.0.0.1:25585'} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'scenario-config.json')
+    [ordered]@{radius=$measurementRadius;shape=$measurementShape;expected_chunks_per_owner=$measurementOffsets.Count} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'measurement-region.json')
+    Copy-Item -LiteralPath (Join-Path $resolved 'server.properties') -Destination (Join-Path $evidence 'server.properties')
     [ordered]@{base_ms=if($Purpose -eq 'correctness'){$CorrectnessDemandWaitMs}else{100};adaptive=($PipelineProfile -ne 'current');maximum_ms=if($PipelineProfile -eq 'current'){30000}elseif($Purpose -eq 'correctness'){[Math]::Min(1000,$CorrectnessDemandWaitMs*2)}else{200}} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'demand-wait-config.json')
-    $start = [Diagnostics.ProcessStartInfo]::new(); $start.FileName = $javaExecutable; $start.Arguments = '-Xmx3G -Dworldgen_assist.remote.diagnostics=true -jar "' + (Join-Path $resolved 'fabric-server-launch.jar') + '" nogui'; $start.WorkingDirectory = $resolved
+    $start = [Diagnostics.ProcessStartInfo]::new(); $start.FileName = $javaExecutable; $start.Arguments = $(if($MeasureFullView){'-Xmx6G'}else{'-Xmx3G'})+' -Dworldgen_assist.remote.diagnostics=true -jar "' + (Join-Path $resolved 'fabric-server-launch.jar') + '" nogui'; $start.WorkingDirectory = $resolved
     $start.UseShellExecute = $false; $start.CreateNoWindow = $true; $start.RedirectStandardInput = $true; $start.RedirectStandardOutput = $true; $start.RedirectStandardError = $true
+    if($ServerJvmProcessors -gt 0){$start.Arguments='-XX:ActiveProcessorCount='+$ServerJvmProcessors+' '+$start.Arguments}
+    if($QuietRemoteTrace){$start.Arguments='-Dworldgen_assist.remote.trace_jobs=false '+$start.Arguments}
+    if($ServerFlightRecording){
+        $profilePath=(Join-Path $evidence 'server.jfr').Replace('\','/')
+        $jfcPath=(Join-Path $resolved 'scenario-staging/profile.jfc').Replace('\','/')
+        Copy-Item -LiteralPath $jfcPath -Destination (Join-Path $evidence 'profile.jfc')
+        $start.Arguments='-XX:StartFlightRecording="filename='+$profilePath+',settings='+$jfcPath+',dumponexit=true,maxsize=256m" '+$start.Arguments
+    }
+    [ordered]@{enabled=[bool]$ServerFlightRecording;warmup_runs=$WarmupRuns;measured_repeats=$MeasuredRepeats} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'flight-recording-config.json')
+    [ordered]@{noise_backend=$NoiseBackend;worker_override=$null;queue_override=$null} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'noise-backend-config.json')
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_NOISE_BACKEND']=$NoiseBackend
+    foreach($setting in @('WORLDGEN_ASSIST_LOCAL_WORKERS','WORLDGEN_ASSIST_LOCAL_QUEUE_PER_WORKER')){$start.EnvironmentVariables.Remove($setting)}
     $assisted = $Mode -eq 'assisted'
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE'] = if($assisted){'true'}else{'false'}
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_SEED_DISCLOSURE'] = if($assisted){'trusted_raw'}else{'deny'}
-    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_TIMEOUT_MS'] = '30000'; $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT'] = '8'
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_TIMEOUT_MS'] = '30000'
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT'] = if($WindowProfile -eq 'wide'){'32'}else{'8'}
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_OWNER_WINDOW'] = if($WindowProfile -eq 'wide'){'16'}else{'4'}
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREFETCH_LOOKAHEAD'] = '0'
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_READY_SURFACE_ONLY'] = ($RemoteApplicationProfile -eq 'ready').ToString().ToLowerInvariant()
+    [ordered]@{profile=$RemoteApplicationProfile;ready_surface_only=($RemoteApplicationProfile -eq 'ready');base_wait_ms=if($PipelineProfile -eq 'current'){30000}elseif($Purpose -eq 'correctness'){$CorrectnessDemandWaitMs}else{100};maximum_wait_ms=if($PipelineProfile -eq 'current'){30000}elseif($Purpose -eq 'correctness'){[Math]::Min(1000,$CorrectnessDemandWaitMs*2)}else{200}} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'remote-application-config.json')
+    [ordered]@{profile=$WindowProfile;owner_window=[int]$start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_OWNER_WINDOW'];total_window=[int]$start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT'];lookahead=0} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'pipeline-window-config.json')
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_CACHE_ENTRIES'] = [string]$CacheEntries; $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREDICTION'] = $predictionEnabled.ToString().ToLowerInvariant(); $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_VALIDATION_SAMPLE_CELLS'] = [string]$ValidationCells
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREFETCH'] = ($PipelineProfile -eq 'prefetch').ToString().ToLowerInvariant()
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREPARE_VALIDATION'] = ($PipelineProfile -ne 'current').ToString().ToLowerInvariant()
@@ -383,7 +418,8 @@ try {
         if ($process.ProcessorAffinity.ToInt64() -ne $appliedMask) { throw 'Server CPU affinity was not applied' }
     }
     [ordered]@{requested_logical_processors=$ServerLogicalProcessors;available_affinity_mask=$availableMask;applied_affinity_mask=$process.ProcessorAffinity.ToInt64();java_pid=$process.Id} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'server-cpu-limit.json')
-    $stdout = $process.StandardOutput.ReadToEndAsync(); $stderr = $process.StandardError.ReadToEndAsync()
+    $stdout = Start-WorldgenConsoleCapture $process (Join-Path $evidence 'stdout.log'); $stderr = $process.StandardError.ReadToEndAsync()
+    [ordered]@{requested_active_processor_count=$ServerJvmProcessors;arguments=$start.Arguments} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'server-jvm-cpu-limit.json')
     "java_pid=$($process.Id); java_handle=$processHandle; controller_pid=$PID" | Set-Content -LiteralPath (Join-Path $evidence 'process-ownership.txt')
     $freshDeadline=[DateTime]::UtcNow.AddSeconds(60)
     while($true){
@@ -392,7 +428,13 @@ try {
         if($process.HasExited -or [DateTime]::UtcNow -gt $freshDeadline){throw 'No fresh server log'}
         Start-Sleep -Milliseconds 250
     }
-    Wait-Log 'Done \(' 180 | Out-Null; Send-Command 'gamerule minecraft:spectators_generate_chunks false'; Write-Output "SERVER_READY $case"
+    Wait-Log 'Done \(' 180 | Out-Null
+    $cpuContext=[regex]::Match((Log-Text),'server\.cpu_context available_processors=(\d+)')
+    if(-not $cpuContext.Success -and $ServerJvmProcessors -gt 0){throw 'Actual JVM availableProcessors evidence is missing'}
+    $observedProcessors=if($cpuContext.Success){[int]$cpuContext.Groups[1].Value}else{0}
+    if($ServerJvmProcessors -gt 0 -and $observedProcessors -ne $ServerJvmProcessors){throw 'Actual JVM processor count differs from requested limit'}
+    [ordered]@{requested_active_processor_count=$ServerJvmProcessors;observed_available_processors=$observedProcessors;arguments=$start.Arguments} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'server-jvm-cpu-limit.json')
+    Send-Command 'gamerule minecraft:spectators_generate_chunks false'; Write-Output "SERVER_READY $case"
     foreach($name in $ownerNames){ Wait-Log ([regex]::Escape($name)+' joined the game') 180 | Out-Null; if($assisted){$owners[$name]=New-OwnerUuid $name; Wait-Log ('worker\.register owner='+[regex]::Escape($owners[$name])+' status=ACCEPTED') 60 | Out-Null} }
     $owners | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'owner-map.json')
     if ($assisted) { Warm-AssistedOwners }
@@ -430,14 +472,37 @@ try {
         $requiredRows=@($required | ForEach-Object {if(-not $digestMap.ContainsKey($_.chunk)){throw "Applied digest missing for $Dimension/$($_.chunk)"};[ordered]@{dimension=$_.dimension;chunk=$_.chunk;digest=$digestMap[$_.chunk];owner=$_.owner;id=$_.id}})
         [ordered]@{required_applied_chunks=$requiredRows;noise_digests=$digests;concurrent_owners=$concurrentOwners} | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $evidence 'correctness.json')
     } else {
-        $warm=@();$measured=@();$total=$WarmupRuns+$MeasuredRepeats
+        $warm=@();$measured=@();$profileWindows=@();$total=$WarmupRuns+$MeasuredRepeats
         for($run=1;$run -le $total;$run++){
+            Write-Output "SERVER_REPEAT_BEGIN location=$run"
             $offset=(Log-Text).Length; $cpuBefore=$process.TotalProcessorTime.TotalMilliseconds; $wall=[Diagnostics.Stopwatch]::StartNew(); $phase=if($run -le $WarmupRuns){'warmup'}else{'measured'}; $number=if($phase -eq 'warmup'){$run}else{$run-$WarmupRuns}
-            Send-Command ('say CAWG_SCENARIO_'+$phase.ToUpperInvariant()+'_BEGIN_'+$number); Start-Location $run; if($run -eq 1){Send-Command 'gamemode creative @a'}; $regionReady=Wait-Idle $offset 120 $run $wall; Send-Command ('say CAWG_SCENARIO_'+$phase.ToUpperInvariant()+'_END_'+$number); $wall.Stop(); $slice=(Log-Text).Substring($offset); $record=Get-TickStatistics $slice ($process.TotalProcessorTime.TotalMilliseconds-$cpuBefore) $wall.Elapsed.TotalMilliseconds; $record.server_region_ready_ms=$regionReady.all_ms; $record.server_full_region_ready_ms=$regionReady.full_ms; $record.server_owner_region_ready_ms=$regionReady.per_owner_ms; $record.repeat=$number
+            $profileStart=[DateTimeOffset]::UtcNow.ToString('o')
+            Send-Command ('say CAWG_SCENARIO_'+$phase.ToUpperInvariant()+'_BEGIN_'+$number); Start-Location $run; if($run -eq 1){Send-Command 'gamemode creative @a'}; $regionReady=Wait-Idle $offset $(if($MeasureFullView){600}else{120}) $run $wall; Send-Command ('say CAWG_SCENARIO_'+$phase.ToUpperInvariant()+'_END_'+$number); $wall.Stop(); $slice=(Log-Text).Substring($offset); $record=Get-TickStatistics $slice ($process.TotalProcessorTime.TotalMilliseconds-$cpuBefore) $wall.Elapsed.TotalMilliseconds; $record.server_region_ready_ms=$regionReady.all_ms; $record.server_full_region_ready_ms=$regionReady.full_ms; $record.server_owner_region_ready_ms=$regionReady.per_owner_ms; $record.repeat=$number
             if($phase -eq 'warmup'){$warm += $record}else{$measured += $record}
+            $profileWindows+= [ordered]@{phase=$phase;repeat=$number;start_utc=$profileStart;end_utc=[DateTimeOffset]::UtcNow.ToString('o')}
+            if($ServerFlightRecording){$profileWindows | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $evidence 'flight-recording-windows.json')}
+            [ordered]@{warmup_runs=$WarmupRuns;measured_repeats=$MeasuredRepeats;warmup=@($warm);measured=@($measured)} | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $evidence 'performance.json')
+            Write-Output "SERVER_REPEAT_COMPLETE phase=$phase repeat=$number full_ms=$($record.server_full_region_ready_ms) tasks=$($record.completed_tasks)"
+            if($MeasureFullView -and $phase -eq 'measured'){
+                Write-Output "SERVER_RECEIPT_WAIT $number $run"
+                $receiptDeadline=[DateTime]::UtcNow.AddSeconds(300)
+                while(-not(Test-Path -LiteralPath (Join-Path $evidence "receipt-$number.ack"))){
+                    if($process.HasExited -or [DateTime]::UtcNow -gt $receiptDeadline){throw "Client full-view receipt missing for repeat $number"}
+                    Start-Sleep -Milliseconds 1000
+                }
+            }
         }
         [ordered]@{warmup_runs=$WarmupRuns;measured_repeats=$MeasuredRepeats;warmup=@($warm);measured=@($measured)} | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $evidence 'performance.json')
     }
+    # Generated 26.3 PlayerList.removeAll indexes a list that a synchronous
+    # disconnect may shrink. Close these owned fixture clients individually
+    # before stop, after every measurement and receipt has been recorded.
+    foreach($name in $ownerNames){
+        $disconnectOffset=(Log-Text).Length
+        Send-Command ('kick '+$name+' Fixture measurements complete')
+        Wait-Log ([regex]::Escape($name)+' lost connection:') 30 $disconnectOffset | Out-Null
+    }
+    [ordered]@{owners=$ownerNames;all_disconnects_observed=$true;phase='after_measurement_before_save_stop'} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'fixture-disconnects.json')
     Send-Command 'save-all flush'; Send-Command 'stop'
     if(-not $process.WaitForExit(30000)){
         # The dedicated Java image has jdk.jcmd, but no jcmd.exe launcher.
@@ -467,8 +532,7 @@ try {
     throw
 } finally {
     $cleanupSafe=$true
-    if($null -ne $process){if(-not $process.HasExited){try{$process.Kill();$process.WaitForExit(30000)}catch{$cleanupSafe=$false}};if(-not $process.HasExited){$cleanupSafe=$false};if($null -ne $stdout){$stdout.GetAwaiter().GetResult()|Set-Content -LiteralPath (Join-Path $evidence 'stdout.log')};if($null -ne $stderr){$stderr.GetAwaiter().GetResult()|Set-Content -LiteralPath (Join-Path $evidence 'stderr.log')};$process.Dispose()}
-    if(Test-Path -LiteralPath $latest){Copy-Item -LiteralPath $latest -Destination (Join-Path $evidence 'latest.log')}
+    if($null -ne $process){if(-not $process.HasExited){try{$process.Kill();$process.WaitForExit(30000)}catch{$cleanupSafe=$false}};if(-not $process.HasExited){$cleanupSafe=$false};if($null -ne $stdout){Save-WorldgenConsoleEvidence $stdout $latest (Join-Path $evidence 'latest.log')};if($null -ne $stderr){$stderr.GetAwaiter().GetResult()|Set-Content -LiteralPath (Join-Path $evidence 'stderr.log')};$process.Dispose()}
     $listener=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 25585 -State Listen -ErrorAction SilentlyContinue).Count -eq 0
     $cleanupSafe=$cleanupSafe -and $listener
     [ordered]@{success=$success;cleanup_safe=$cleanupSafe;loopback_only=$true;case=$case;dimension=$Dimension;mode=$Mode;players=$Players;purpose=$Purpose;prediction=$predictionEnabled} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'remote-result.json')

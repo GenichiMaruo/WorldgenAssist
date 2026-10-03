@@ -3,13 +3,15 @@ plugins {
     id 'net.neoforged.moddev' version '2.0.147'
 }
 
-version = '0.1.0-alpha.5+mc26.3'
 group = 'io.github.genichimaruo'
 base.archivesName = 'worldgen-assist-neoforge'
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 java.withSourcesJar()
 
 def root = file('../..').canonicalFile
+def releaseProperties = new java.util.Properties()
+new File(root, 'gradle.properties').withInputStream { releaseProperties.load(it) }
+version = releaseProperties.getProperty('mod_version')
 def sharedMain = new File(root, 'src/main/java').canonicalPath
 def sharedClient = new File(root, 'src/client/java').canonicalPath
 
@@ -66,6 +68,10 @@ neoForge {
 }
 
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+tasks.processResources {
+    inputs.property 'modVersion', project.version
+    filesMatching('META-INF/neoforge.mods.toml') { expand modVersion: project.version }
+}
 // ModDevGradle 2.0.147 requests a Java 21 asset downloader even though 26.3
 // development requires Java 25. Run that tool with the verified Gradle JDK.
 tasks.named('downloadAssets') {

@@ -3,13 +3,15 @@ plugins {
     id 'net.minecraftforge.gradle' version '[7.0.17,8)'
 }
 
-version = '0.1.0-alpha.5+mc26.3'
 group = 'io.github.genichimaruo'
 base.archivesName = 'worldgen-assist-forge'
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 java.withSourcesJar()
 
 def root = file('../..').canonicalFile
+def releaseProperties = new java.util.Properties()
+new File(root, 'gradle.properties').withInputStream { releaseProperties.load(it) }
+version = releaseProperties.getProperty('mod_version')
 def sharedMain = new File(root, 'src/main/java').canonicalPath
 def sharedClient = new File(root, 'src/client/java').canonicalPath
 sourceSets.main.java {
@@ -77,6 +79,10 @@ dependencies {
 }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
 tasks.test { useJUnitPlatform() }
+tasks.processResources {
+    inputs.property 'modVersion', project.version
+    filesMatching('META-INF/mods.toml') { expand modVersion: project.version }
+}
 tasks.jar {
     manifest.attributes 'MixinConfigs': 'worldgen_assist.mixins.json'
 }

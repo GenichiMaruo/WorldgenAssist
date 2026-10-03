@@ -1,5 +1,115 @@
 # Remote Protocol
 
+The configuration-only L experiment retains the exact dev.12 JAR and
+protocol6. WORLDGEN_ASSIST_REMOTE_READY_SURFACE_ONLY=false (property
+worldgen_assist.remote.ready_surface_only=false) selects the existing bounded
+asynchronous demand path instead of ready-at-worker-start-only admission.
+One chunk's future may wait100–200ms while independent chunks continue;
+no network/server thread waits. Existing validation, owner/epoch/cancellation,
+timeout and fallback fences remain. Default true remains unchanged. The fresh
+two-owner Fabric batch completed (1,813 matching shared chunks; view10 FULL
+-6.66%, receipt -7.20%, CPU -9.65%). Same-JAR view32 performance completed
+(csb-20261003-100930-620): FULL -1.88%, receipt -1.44%, CPU -6.62%, tick p95
++3.64%. Completion/receipt improved two of three repeats, CPU all three;
+the small descriptive result does not establish stable/general speedup.
+Job-timeout counters0 do not include bounded demand-wait fallbacks: view10
+27/13/30, view32 158/225/173. These stay separately reported. Only the larger
+performance pair was added; no new MOD build/unit/correctness repetitions.
+
+Dev.12 retains protocol6 and identical density payloads. Explicit server
+worldgen_assist.remote.owner_window / WORLDGEN_ASSIST_REMOTE_OWNER_WINDOW
+accepts 1..64 (default4), clamped by global max_in_flight and worker advertisement.
+Client worldgen_assist.client.job_window / WORLDGEN_ASSIST_CLIENT_JOB_WINDOW
+accepts 1..64 (default twice worker count). Each client executor queues at most
+that many tasks plus its existing running worker threads for result handoff.
+Adaptive per-owner admission begins at one and grows only after validated
+success; failures still halve it. Batch packets remain at most four jobs.
+Normal global8 and opt-in/seed gates remain unchanged. The experimental fixture
+wide profile explicitly uses owner16/global32/client16. The same-backend view10
+pair recorded about3% shorter FULL/receipt and5.6% less server CPU, but matching
+view32 completed slower: FULL +8.42%, receipt +7.48%, CPU +8.18%. There is no
+default/general speed claim (csb-20261003-085104-175).
+Prefetch lookahead default returns to 0; dev.11's default16 description below
+is historical. No positions or validation secrets are supplied by clients.
+
+Dev.11 changes only the order of server-approved observed generation demand:
+up to sixteen near-head positions are deferred in the request priority list,
+while the server works through its immediate queue. Protocol6, remote-off and
+seed-disclosure choices, eight secret checks, capacity and lifecycle fences
+are retained. No extra chunk generation or tickets are requested.
+
+Dev.10 retains protocol 6 and every assigned work/result bound. Fabric clients
+admit complete request batches directly from the connection event thread after
+main-thread acceptance/context capture. It changes scheduling, not packet
+shape, sampled validation or final world authority. Respawn, disconnect and
+protocol changes revoke the captured context before new admission.
+
+Local dev.9 adds an opt-in cooperative server terrain scheduler; transport is
+still protocol 6 and density-only intermediate authority is unchanged. Quiet
+diagnostics retain required validation timing. Scheduler gains, if any, must
+not be presented as proof of client offload gains in isolation.
+
+## Candidate G implementation (2026-10-02)
+
+Local alpha.6-dev.8 retains protocol6, the 6,894-value shape and eight secret
+points. Aquifer points use aligned one-point bulk sampling rather than a
+full 769-value surface prepass; material points still sample the original
+16x16 volume for exact float interpolation. The assigned owner/context,
+count/finite checks, quarantine, deadlines and seed choices are unchanged.
+
+## Candidate F sampling policy (2026-10-02)
+
+Local alpha.6-dev.6/dev.7 keep protocol 6's assigned grid/result shape. The server
+now chooses up to validation_sample_cells distinct secret **individual grid
+or surface values** for GRID_AND_SURFACE (normally eight). The client still
+returns all 6,894 values and receives no sample positions. Identity, finite
+float/count checks, quarantine and lifecycle bounds are unchanged. The
+protocol-5 surface-only policy and full-density groups remain unchanged.
+This reduces redundant server computation under the existing trusted-client
+model; it does not authenticate unexamined values against a malicious worker.
+
+## Terrain-grid development candidate E (2026-10-02)
+
+Local alpha.6-dev.5 uses protocol **6**; both ends must match. The third
+work kind GRID_AND_SURFACE carries five inputs to the outer vanilla 4x8x4
+terrain interpolators, each a 5 x (height/8+1) x 5 float grid. These precede
+the 769 surface fields: 6,894 values at height 384. Job shape remains
+block-aligned, with minY/height also aligned to eight. Only the supported
+registered Overworld settings with the verified five-node graph select it;
+`WORLDGEN_ASSIST_REMOTE_WORK_KIND=surface` selects candidate D's control,
+and `density` selects the full-volume control. Other contexts retain fallback.
+Eight secret groups check up to 128 independently sampled values without
+disclosing positions. This is sampled verification for trusted clients.
+The server retains exact vanilla interpolation and nonlinear operations;
+transient sampler templates are reused per state/settings rather than per
+job. Missing ready output or queries outside the assigned grid use vanilla.
+All previous owner, lifecycle, bounds and raw-seed opt-ins remain required.
+
+## Surface-field development candidate (2026-10-02)
+
+Local alpha.6-dev.2 through dev.4 use protocol **5**, adding a bounded work-kind byte to
+each job. Unknown kinds are rejected; server and clients must upgrade together.
+Published alpha.5 protocol 4 is unchanged. DENSITY keeps its exact float32 full
+volume. SURFACE_FIELDS returns 769 exact float32 intermediates: aquifer surface
+27x19 on a four-block grid and material chunk-surface 16x16 on the block grid.
+Only registered overworld/amplified/large_biomes settings with aquifers select
+surface work; other contexts retain DENSITY. `WORLDGEN_ASSIST_REMOTE_WORK_KIND=density`
+or `worldgen_assist.remote.work_kind=density` selects the previous control path.
+Remote assistance and trusted raw-seed disclosure gates remain required.
+
+Cache identity now includes work kind, owner and epoch. Existing assignment,
+quotas, deadlines, cancellation and fingerprint checks remain authoritative.
+Surface validation independently selects secret groups of 16 values (eight
+groups normally check 113 or 128 of 769 values); density groups remain 128.
+Material samples preserve the original volume's float arithmetic; aquifer
+samples use contiguous grid rows. No sample positions are disclosed. This is
+sampled verification, not proof against a malicious trusted client.
+The server consumes fields only in the assigned terrain task with the exact
+RandomState/settings/volume and empty blending/structure contribution. Other
+queries use original samplers. Final density, blocks, material rules, carvers,
+features, lighting and world mutation remain on the server. Runtime status is
+recorded in TEST_RESULTS_LATEST; no speedup is assumed from payload size alone.
+
 ## Alpha.5 release protocol
 
 `0.1.0-alpha.5+mc26.3` packages protocol **4** and the candidate changes below.

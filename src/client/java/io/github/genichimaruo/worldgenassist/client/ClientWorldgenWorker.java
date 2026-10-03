@@ -2,13 +2,10 @@ package io.github.genichimaruo.worldgenassist.client;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import net.minecraft.client.Minecraft;
@@ -34,7 +31,7 @@ public final class ClientWorldgenWorker {
 	private static final String CORRUPT_RESULT_TEST_ENVIRONMENT_VARIABLE = "WORLDGEN_ASSIST_CLIENT_TEST_CORRUPT_DENSITY";
 
 	private final int workerThreads;
-	private final ThreadPoolExecutor executor;
+	private final ClientWorkExecutor executor;
 	private final Map<UUID, Attempt> attempts = new ConcurrentHashMap<>();
 	private final HolderLookup.Provider worldgenRegistries;
 	private volatile ClientTerrainDensityComputer.Session densitySession;
@@ -43,19 +40,19 @@ public final class ClientWorldgenWorker {
 	private final boolean corruptResultsForAdversarialTest;
 	private volatile boolean accepted;
 	private volatile ClientReplySession replySession;
+	private final ClientConnectionAdmission<Object> networkAdmission = new ClientConnectionAdmission<>();
+	private Object requestConnection;
 
 	public ClientWorldgenWorker(ClientWorkerTransport transport) {
 		this.transport = transport;
 		this.workerThreads = ClientSettings.workerThreads();
-		this.executor = new ThreadPoolExecutor(
-			workerThreads, workerThreads, 0L, TimeUnit.MILLISECONDS,
-			new ArrayBlockingQueue<>(workerThreads),
+		this.executor = new ClientWorkExecutor(
+			workerThreads,
 			runnable -> {
 				Thread thread = new Thread(runnable, "CAWG-RemoteWorldgen");
 				thread.setDaemon(true);
 				return thread;
-			},
-			new ThreadPoolExecutor.AbortPolicy()
+			}
 		);
 		long startedNanos = System.nanoTime();
 		this.worldgenRegistries = VanillaRegistries.createWorldLookup();
@@ -76,7 +73,7 @@ public final class ClientWorldgenWorker {
 		}
 	}
 
-	public void onAccepted(WorkerAcceptedPayload payload) {
+	public synchronized void onAccepted(WorkerAcceptedPayload payload) {
 			accepted = payload.accepted();
 			if (!accepted) revokeReplies();
 			WorldgenAssist.LOGGER.info(
@@ -86,7 +83,8 @@ public final class ClientWorldgenWorker {
 			);
 	}
 
-	public void onJoin() {
+	public synchronized void onJoin() {
+			networkAdmission.clear(); requestConnection = null;
 			revokeReplies();
 			densitySession = new ClientTerrainDensityComputer.Session(worldgenRegistries);
 			activeDimension = null;
@@ -99,10 +97,14 @@ public final class ClientWorldgenWorker {
 			}
 			WorldgenAssist.LOGGER.info("[CAWG] worker.hello_sent protocol={} threads={}", WorldgenProtocolVersion.CURRENT, workerThreads);
 			replySession = new ClientReplySession(transport.captureSender());
-			transport.send(new WorkerHelloPayload(WorldgenProtocolVersion.CURRENT, workerThreads, WorldgenPlatform.version()));
+			// Advertise a bounded overlapping window. The executor retains one
+			// worker-width of queue slack for the post-result handoff.
+			transport.send(new WorkerHelloPayload(WorldgenProtocolVersion.CURRENT,
+				executor.advertisedJobs(), WorldgenPlatform.version()));
 	}
 
-	public void onDisconnect() {
+	public synchronized void onDisconnect() {
+			networkAdmission.clear(); requestConnection = null;
 			revokeReplies();
 			densitySession = new ClientTerrainDensityComputer.Session(worldgenRegistries);
 			activeDimension = null;
@@ -118,24 +120,58 @@ public final class ClientWorldgenWorker {
 		executor.purge();
 	}
 
-	public void handleRequest(Minecraft client, TerrainDensityJob job) {
-		if (!accepted || client.getConnection() == null || client.level == null) {
+	public synchronized void handleRequest(Minecraft client, TerrainDensityJob job) {
+		if (!prepareRequestContext(client)) {
 			sendFailure(client, job, TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT);
 			return;
 		}
+		submit(job, activeDimension, densitySession, replySession, System.nanoTime(), "main");
+	}
+
+	/** Called only on the client main thread; network admission reads captured values. */
+	public synchronized boolean prepareRequestContext(Minecraft client) {
+		if (!accepted || client.getConnection() == null || client.level == null) {
+			return false;
+		}
+		Object connection = client.getConnection().getConnection();
+		if (networkAdmission.suspended(connection)) return false;
 		Identifier currentDimension = client.level.dimension().identifier();
-		if (!currentDimension.equals(activeDimension)) {
-			if (activeDimension != null) {
+		if (!currentDimension.equals(activeDimension) || requestConnection != connection) {
 				revokeReplies();
 				replySession = new ClientReplySession(transport.captureSender());
-			}
 			densitySession = new ClientTerrainDensityComputer.Session(worldgenRegistries);
 			activeDimension = currentDimension;
+			requestConnection = connection;
+			networkAdmission.bind(connection);
 		}
-		ClientTerrainDensityComputer.Session requestSession = densitySession;
-		ClientReplySession requestReplies = replySession;
+		return replySession != null;
+	}
+
+	public synchronized boolean handleRequestFromNetwork(Object connection, TerrainDensityJob job, long receivedNanos) {
+		return accepted && networkAdmission.dispatch(connection,
+			() -> submit(job, activeDimension, densitySession, replySession, receivedNanos, "network"));
+	}
+
+	public synchronized void suspendNetworkContext(Object connection) {
+		if (networkAdmission.suspend(connection)) {
+			revokeReplies(); activeDimension = null;
+			densitySession = new ClientTerrainDensityComputer.Session(worldgenRegistries);
+		}
+	}
+	public synchronized void resumeNetworkContext(Object connection) { networkAdmission.resume(connection); }
+	public synchronized void closeNetworkContext(Object connection) {
+		if (networkAdmission.clear(connection)) {
+			revokeReplies(); requestConnection = null; activeDimension = null; accepted = false;
+		}
+	}
+	public synchronized boolean cancelFromNetwork(Object connection, TerrainJobCancelPayload payload) {
+		return networkAdmission.dispatch(connection, () -> cancel(payload));
+	}
+
+	private void submit(TerrainDensityJob job, Identifier currentDimension,
+		ClientTerrainDensityComputer.Session requestSession, ClientReplySession requestReplies,
+		long requestedNanos, String requestPath) {
 		if (requestReplies == null) return;
-		long requestedNanos = System.nanoTime();
 		AtomicBoolean cancelled = new AtomicBoolean();
 		FutureTask<Void> task = new FutureTask<>(() -> {
 			try {
@@ -166,9 +202,9 @@ public final class ClientWorldgenWorker {
 				try {
 					sent = requestReplies.send(new TerrainJobResultPayload(envelope), () -> !cancelled.get());
 				} finally { attempts.remove(job.identity().jobId()); }
-				if (sent) WorldgenAssist.LOGGER.info("[CAWG] job.client_dispatch id={} worker_queue_ms={} worker_total_ms={} send_wait_ms={} path=worker_direct",
+				if (sent) WorldgenAssist.LOGGER.info("[CAWG] job.client_dispatch id={} worker_queue_ms={} worker_total_ms={} send_wait_ms={} path=worker_direct request_path={}",
 						job.identity().jobId(), (workerStarted - requestedNanos) / 1_000_000.0,
-						(encodedNanos - workerStarted) / 1_000_000.0, (System.nanoTime() - encodedNanos) / 1_000_000.0);
+						(encodedNanos - workerStarted) / 1_000_000.0, (System.nanoTime() - encodedNanos) / 1_000_000.0, requestPath);
 			} catch (ClientTerrainDensityComputer.RejectedJobException exception) {
 				finishFailure(requestReplies, job, cancelled, exception.reason());
 			} catch (CancellationException exception) {
@@ -181,14 +217,14 @@ public final class ClientWorldgenWorker {
 		});
 		Attempt attempt = new Attempt(cancelled, task);
 		if (attempts.putIfAbsent(job.identity().jobId(), attempt) != null) {
-			sendFailure(client, job, TerrainJobFailurePayload.Reason.BUSY);
+			requestReplies.send(new TerrainJobFailurePayload(job.identity(), TerrainJobFailurePayload.Reason.BUSY), () -> true);
 			return;
 		}
 		try {
 			executor.execute(task);
 		} catch (RejectedExecutionException exception) {
 			attempts.remove(job.identity().jobId(), attempt);
-			sendFailure(client, job, TerrainJobFailurePayload.Reason.BUSY);
+			requestReplies.send(new TerrainJobFailurePayload(job.identity(), TerrainJobFailurePayload.Reason.BUSY), () -> true);
 		}
 	}
 
@@ -208,10 +244,11 @@ public final class ClientWorldgenWorker {
 		}
 	}
 
-	public void cancel(TerrainJobCancelPayload payload) {
+	public synchronized void cancel(TerrainJobCancelPayload payload) {
 		Attempt attempt = attempts.remove(payload.identity().jobId());
 		if (attempt != null) {
 			attempt.cancel();
+			executor.remove(attempt.task());
 		}
 	}
 

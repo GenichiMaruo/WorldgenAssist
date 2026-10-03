@@ -7,7 +7,8 @@
 Worldgen Assist is a Fabric, Forge, and NeoForge mod that lets a player's PC help the server calculate
 new terrain. Its goal is to reduce server world-generation work while keeping
 the server in control of the world. It is currently an experimental alpha;
-measured performance improvements have not yet been established.
+selected measurements show modest gains with explicit experimental settings,
+but stable or general performance improvements have not been established.
 
 When Minecraft needs a new eligible Overworld, Nether or End chunk, the mod can ask that same
 player's client to calculate the terrain density field. The server receives the
@@ -17,19 +18,24 @@ state remain server-authoritative.
 
 ## Alpha status
 
-Version **0.1.0-alpha.5+mc26.3** targets Minecraft **26.3** with separate
+Version **0.1.0-alpha.6+mc26.3** targets Minecraft **26.3** with separate
 Fabric, Forge, and NeoForge JARs. Use the JAR matching your loader on both the
 server and every participating client. The server remains authoritative and
 remote assistance is disabled by default. See the [26.3 installation guide](docs/INSTALL.md)
-and [alpha.5 verification record](docs/releases/v0.1.0-alpha.5+mc26.3-verification.md).
+and [alpha.6 verification record](docs/releases/v0.1.0-alpha.6+mc26.3-verification.md).
 The public-seed transcript fixture has not been ported to 26.3; only the
-explicit trusted raw-seed route is available there. Alpha.5 adds float32 transport,
-context reuse, validation preparation during client computation, generation
-prefetch, adaptive waiting and Fabric network dispatch improvements. Protocol 4
-requires matching alpha.5 server/client JARs; do not mix alpha.4 with alpha.5.
-The selected two-CPU/two-client test completed the target NOISE region earlier,
-but did not reduce FULL completion or client receipt time. No end to end speedup
-is established. See [release notes](docs/releases/v0.1.0-alpha.5+mc26.3.md).
+explicit trusted raw-seed route is available there. Alpha.6 adds smaller
+terrain-grid/surface intermediates, earlier generation hints, stale-result
+retirement, bounded larger job windows, Fabric client network admission and an
+optional cooperative server scheduler. Protocol **6** requires matching
+alpha.6 server/client JARs; do not mix alpha.5 (protocol 4) with alpha.6.
+An explicit asynchronous/wide/cooperative profile on a separate two-CPU server
+with two clients at distance32 reduced median FULL completion **1.88%**, receipt
+**1.44%** and server CPU time **6.62%**. Completion improved in two of three
+repeats; tick p95 worsened. Defaults are unchanged and this is not a general
+speed guarantee or an alpha.5-versus-alpha.6 controlled comparison.
+See [release notes](docs/releases/v0.1.0-alpha.6+mc26.3.md) and the
+[measured experimental profile](docs/INSTALL.md#measured-experimental-profile).
 
 The following alpha.3 results describe the earlier **Minecraft 26.2 Fabric** release.
 
@@ -45,7 +51,7 @@ disclosure is still a separate explicit choice.
 
 Each player's own client can assist concurrently. Direct work is
 assigned only within that worker's view; overlapping views choose one owner.
-The global default is eight jobs. Alpha.5 starts at one in-flight job per owner
+The global default is eight jobs. Alpha.6 starts at one in-flight job per owner
 and adapts up to four within the advertised client capacity; client computation
 defaults to two threads. See
 [multiplayer development and verification](docs/MULTIPLAYER_SUPPORT.md).
@@ -135,8 +141,9 @@ promise complete documentation translation or in-game localization.
 
 ## FAQ
 
-**Will this make my server faster?** Maybe not. Performance judgment is still
-deferred until controlled benchmarks support it.
+**Will this make my server faster?** Maybe not. A selected experimental profile
+showed a small distance32 gain, with one of three repeats slower. Ordinary
+defaults and other environments do not have an established speed benefit.
 
 **Can I use it on a private survival world?** Not for remote assistance. The
 trusted raw-seed route reveals the seed to the worker, and the public fixture is

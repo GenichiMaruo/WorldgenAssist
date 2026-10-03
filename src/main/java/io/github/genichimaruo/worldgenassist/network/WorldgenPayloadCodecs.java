@@ -7,6 +7,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.Identifier;
 
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityJob;
+import io.github.genichimaruo.worldgenassist.common.TerrainWorkKind;
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityResultEnvelope;
 import io.github.genichimaruo.worldgenassist.common.TerrainJobIdentity;
 import io.github.genichimaruo.worldgenassist.common.WorldgenContextFingerprint;
@@ -52,6 +53,7 @@ final class WorldgenPayloadCodecs {
 		buffer.writeVarInt(job.height());
 		buffer.writeVarInt(job.cellWidth());
 		buffer.writeVarInt(job.cellHeight());
+		buffer.writeByte(job.workKind().ordinal());
 	}
 
 	static TerrainDensityJob readJob(RegistryFriendlyByteBuf buffer) {
@@ -63,7 +65,8 @@ final class WorldgenPayloadCodecs {
 			buffer.readInt(),
 			buffer.readVarInt(),
 			buffer.readVarInt(),
-			buffer.readVarInt()
+			buffer.readVarInt(),
+			TerrainWorkKind.fromWire(buffer.readUnsignedByte())
 		);
 	}
 

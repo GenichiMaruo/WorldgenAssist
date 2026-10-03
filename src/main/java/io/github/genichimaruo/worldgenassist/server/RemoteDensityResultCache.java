@@ -9,6 +9,8 @@ import java.util.UUID;
 import net.minecraft.resources.Identifier;
 
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityJob;
+import io.github.genichimaruo.worldgenassist.common.TerrainWorkKind;
+import io.github.genichimaruo.worldgenassist.common.SurfaceDensityData;
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityResult;
 import io.github.genichimaruo.worldgenassist.common.TerrainJobIdentity;
 import io.github.genichimaruo.worldgenassist.common.WorldgenContextFingerprint;
@@ -121,8 +123,14 @@ public final class RemoteDensityResultCache {
 		int cellWidth,
 		int cellHeight,
 		UUID ownerId,
-		long ownerGeneration
+		long ownerGeneration,
+		TerrainWorkKind workKind
 	) {
+		public Key(long generation, Identifier dimension, int chunkX, int chunkZ, WorldgenContextFingerprint contextFingerprint,
+			Identifier noiseSettings, int minY, int height, int cellWidth, int cellHeight, UUID ownerId, long ownerGeneration) {
+			this(generation, dimension, chunkX, chunkZ, contextFingerprint, noiseSettings, minY, height, cellWidth, cellHeight,
+				ownerId, ownerGeneration, TerrainWorkKind.DENSITY);
+		}
 		public Key(long generation, Identifier dimension, int chunkX, int chunkZ, WorldgenContextFingerprint contextFingerprint,
 			Identifier noiseSettings, int minY, int height, int cellWidth, int cellHeight) {
 			this(generation, dimension, chunkX, chunkZ, contextFingerprint, noiseSettings, minY, height, cellWidth, cellHeight, null, 0L);
@@ -138,6 +146,7 @@ public final class RemoteDensityResultCache {
 			Objects.requireNonNull(dimension, "dimension");
 			Objects.requireNonNull(contextFingerprint, "contextFingerprint");
 			Objects.requireNonNull(noiseSettings, "noiseSettings");
+			Objects.requireNonNull(workKind, "workKind");
 			if (height <= 0 || height > TerrainDensityJob.MAX_HEIGHT) {
 				throw new IllegalArgumentException("Invalid cache-key height: " + height);
 			}
@@ -148,10 +157,17 @@ public final class RemoteDensityResultCache {
 				throw new IllegalArgumentException("Invalid cache-key vertical geometry");
 			}
 			Math.addExact(minY, height);
+			if (workKind == TerrainWorkKind.GRID_AND_SURFACE && (cellWidth != 1 || cellHeight != 1 || height % 8 != 0 || Math.floorMod(minY, 8) != 0)) {
+				throw new IllegalArgumentException("Invalid terrain grid cache geometry");
+			}
 		}
 
 		public int sampleCount() {
-			return Math.multiplyExact(TerrainDensityJob.CHUNK_SIDE * TerrainDensityJob.CHUNK_SIDE, height);
+			return switch (workKind) {
+				case SURFACE_FIELDS -> SurfaceDensityData.SAMPLE_COUNT;
+				case GRID_AND_SURFACE -> io.github.genichimaruo.worldgenassist.common.GridDensityData.sampleCount(height);
+				case DENSITY -> Math.multiplyExact(TerrainDensityJob.CHUNK_SIDE * TerrainDensityJob.CHUNK_SIDE, height);
+			};
 		}
 	}
 }

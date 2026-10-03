@@ -53,12 +53,12 @@ public final class WorldgenAssist {
 			);
 		}
 		NoiseStageBackendConfig backendConfig = NoiseStageBackendConfig.current();
-		if (backendConfig.mode() == NoiseStageBackendConfig.Mode.LOCAL) {
+		if (backendConfig.mode().usesLocalWorkers()) {
 			LocalWorldgenTaskBackend backend = LocalWorldgenTaskBackend.instance();
 			hooks.registerLocalBackend(backend);
 			LOGGER.info(
 				"[CAWG] backend.enabled stage=noise mode={} scheduler={} workers={} queue_per_worker={} queue_capacity={} property={} environment_variable={} workers_property={} workers_environment_variable={} queue_property={} queue_environment_variable={}",
-				backend.id(),
+				backendConfig.mode().id(),
 				backend.schedulerId(),
 				backendConfig.workerThreads(),
 				backendConfig.queuedTasksPerWorker(),

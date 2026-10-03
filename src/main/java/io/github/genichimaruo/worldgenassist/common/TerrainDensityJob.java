@@ -13,16 +13,25 @@ public record TerrainDensityJob(
 	int minY,
 	int height,
 	int cellWidth,
-	int cellHeight
+	int cellHeight,
+	TerrainWorkKind workKind
 ) {
 	public static final int CHUNK_SIDE = 16;
 	public static final int MAX_HEIGHT = 384;
 	public static final int MAX_SAMPLE_COUNT = CHUNK_SIDE * CHUNK_SIDE * MAX_HEIGHT;
 	public static final int MAX_NOISE_SETTINGS_ID_UTF8_BYTES = 256;
+	public TerrainDensityJob(TerrainJobIdentity identity, long worldSeed, boolean generateStructures,
+		Identifier noiseSettings, int minY, int height, int cellWidth, int cellHeight) {
+		this(identity, worldSeed, generateStructures, noiseSettings, minY, height, cellWidth, cellHeight, TerrainWorkKind.DENSITY);
+	}
 
 	public TerrainDensityJob {
 		Objects.requireNonNull(identity, "identity");
 		Objects.requireNonNull(noiseSettings, "noiseSettings");
+		Objects.requireNonNull(workKind, "workKind");
+		if (workKind != TerrainWorkKind.DENSITY && (cellWidth != 1 || cellHeight != 1)) {
+			throw new IllegalArgumentException("Surface fields require block-aligned job geometry");
+		}
 		int settingsIdBytes = noiseSettings.toString().getBytes(StandardCharsets.UTF_8).length;
 		if (settingsIdBytes > MAX_NOISE_SETTINGS_ID_UTF8_BYTES) {
 			throw new IllegalArgumentException(
@@ -42,9 +51,16 @@ public record TerrainDensityJob(
 			throw new IllegalArgumentException("Minimum Y must align to the cell height: minY=" + minY + " cellHeight=" + cellHeight);
 		}
 		Math.addExact(minY, height);
+		if (workKind == TerrainWorkKind.GRID_AND_SURFACE && (height % 8 != 0 || Math.floorMod(minY, 8) != 0)) {
+			throw new IllegalArgumentException("Terrain grid must align to vanilla's vertical cells");
+		}
 	}
 
 	public int sampleCount() {
-		return Math.multiplyExact(CHUNK_SIDE * CHUNK_SIDE, height);
+		return switch (workKind) {
+			case SURFACE_FIELDS -> SurfaceDensityData.SAMPLE_COUNT;
+			case GRID_AND_SURFACE -> GridDensityData.sampleCount(height);
+			case DENSITY -> Math.multiplyExact(CHUNK_SIDE * CHUNK_SIDE, height);
+		};
 	}
 }

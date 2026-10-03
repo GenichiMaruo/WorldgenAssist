@@ -3,5 +3,6 @@
 	"package": "io.github.genichimaruo.worldgenassist.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": ["FabricRemoteResultConnectionMixin263"],
+	"client": ["FabricClientRequestConnectionMixin263", "FabricClientRespawnRequestMixin263"],
 	"injectors": {"defaultRequire": 1}
 }

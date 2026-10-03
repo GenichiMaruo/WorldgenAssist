@@ -25,6 +25,8 @@ import io.github.genichimaruo.worldgenassist.server.LocalWorldgenTaskBackend;
 import io.github.genichimaruo.worldgenassist.server.NoiseStageBackendConfig;
 import io.github.genichimaruo.worldgenassist.server.NoiseTaskBenchmarkLogger;
 import io.github.genichimaruo.worldgenassist.server.RemoteDensityField;
+import io.github.genichimaruo.worldgenassist.server.RemoteDensitySamplingScope;
+import io.github.genichimaruo.worldgenassist.common.TerrainWorkKind;
 import io.github.genichimaruo.worldgenassist.server.RemoteDensityTarget;
 import io.github.genichimaruo.worldgenassist.server.VanillaDelegatingWorldgenTaskBackend;
 import io.github.genichimaruo.worldgenassist.WorldgenAssist;
@@ -56,7 +58,7 @@ abstract class NoiseBasedChunkGeneratorMixin {
 		Supplier<ChunkAccess> selectedTask = NoiseTaskBenchmarkLogger.wrap(
 			centerChunk.getPos(),
 			backendConfig.mode().id(),
-			task
+			RemoteDensitySamplingScope.wrap(centerChunk, task)
 		);
 		if (backendConfig.mode() == NoiseStageBackendConfig.Mode.VANILLA) {
 			return original.call(selectedTask, vanillaExecutor);
@@ -94,7 +96,7 @@ abstract class NoiseBasedChunkGeneratorMixin {
 	) {
 		RemoteDensityTarget target = (RemoteDensityTarget)chunk;
 		RemoteDensityField field = target.worldgenAssist$getRemoteDensity();
-		if (field == null) { return original.call(sampler, volume); }
+		if (field == null || field.workKind() != TerrainWorkKind.DENSITY) { return original.call(sampler, volume); }
 		ScopedDensityBuffer buffer = sampler.context().acquireBuffer(volume);
 		try {
 			field.copyVolume(volume, buffer);

@@ -1,5 +1,11 @@
 [CmdletBinding()]
-param([switch]$Execute, [switch]$TwoLogicalOnly)
+param([switch]$Execute, [switch]$TwoLogicalOnly, [switch]$SingleLogicalOnly,
+    [ValidateRange(2,32)][int]$ViewDistance=10, [switch]$MeasureFullView,
+    [ValidateSet(0,1,2,4)][int]$ServerJvmProcessors=0,[switch]$QuietRemoteTrace,
+    [ValidateSet('vanilla','cooperative')][string]$AssistedNoiseBackend='vanilla',
+    [ValidateSet('vanilla','cooperative')][string]$VanillaNoiseBackend='vanilla',
+    [ValidateSet('standard','wide')][string]$WindowProfile='standard',
+    [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='ready')
 
 # Six isolated two-owner scenarios in one bounded batch. No production build or
 # unrelated JUnit suite is repeated for this harness-only experiment.
@@ -15,9 +21,11 @@ $profiles = @(
     [ordered]@{name='four-logical';logical_processors=4;modes=@('assisted','vanilla')},
     [ordered]@{name='two-logical';logical_processors=2;modes=@('vanilla','assisted')}
 )
+if ($TwoLogicalOnly -and $SingleLogicalOnly) { throw 'Choose one CPU tier' }
 if ($TwoLogicalOnly) { $profiles = @($profiles | Where-Object { $_.logical_processors -eq 2 }) }
+if ($SingleLogicalOnly) { $profiles = @([ordered]@{name='one-logical';logical_processors=1;modes=@('vanilla','assisted')}) }
 if (-not $Execute) {
-    [ordered]@{schema='worldgen-assist.constrained-server-plan.v1';players=2;dimension='overworld';warmup_runs=1;measured_repeats=3;profiles=$profiles;primary_proxy='server 9x9 NOISE completion; client-visible 81-chunk receipt is measured separately'} | ConvertTo-Json -Depth 6
+    [ordered]@{schema='worldgen-assist.constrained-server-plan.v1';players=2;dimension='overworld';view_distance=$ViewDistance;server_jvm_processors=$ServerJvmProcessors;measure_full_view=[bool]$MeasureFullView;warmup_runs=1;measured_repeats=3;profiles=$profiles;primary_proxy='server target-region NOISE/FULL completion and separately measured client receipt'} | ConvertTo-Json -Depth 6
     exit 0
 }
 
@@ -29,6 +37,10 @@ $results = @()
 $issues = @()
 $runtimeSafe = $true
 $jarHash = $null
+. (Join-Path $PSScriptRoot 'WorldgenMeasurementRegion.ps1')
+$measurementRadius=if($MeasureFullView){$ViewDistance}else{4}
+$measurementShape=if($MeasureFullView){'view'}else{'square'}
+$expectedChunks=@(Get-WorldgenMeasurementOffsets $measurementRadius $measurementShape).Count
 function Get-MeasuredCoordinateSignature([string]$CaseRoot) {
     $log = Get-Content -LiteralPath (Join-Path $CaseRoot 'remote-evidence/latest.log') -Raw
     $repeats = @()
@@ -55,7 +67,7 @@ function Invoke-Quiet([string[]]$Arguments,[string]$OutputPath,[string]$ErrorPat
     try {
         if(-not $process.Start()){throw 'Could not start PowerShell child'}
         $stdout=$process.StandardOutput.ReadToEndAsync();$stderr=$process.StandardError.ReadToEndAsync()
-        if(-not $process.WaitForExit(1800000)){$process.Kill($true);$process.WaitForExit(30000)|Out-Null;throw 'Child exceeded 30-minute limit'}
+        if(-not $process.WaitForExit(4200000)){$process.Kill($true);$process.WaitForExit(30000)|Out-Null;throw 'Child exceeded 70-minute limit'}
         $stdout.GetAwaiter().GetResult() | Set-Content -LiteralPath $OutputPath
         $stderr.GetAwaiter().GetResult() | Set-Content -LiteralPath $ErrorPath
         return $process.ExitCode
@@ -84,6 +96,14 @@ try {
             if (-not $runtimeSafe) { $results += [ordered]@{tier=$profile.name;mode=$mode;status='SKIPPED';reason='Prior scenario cleanup safety was not proved';path=$caseRoot};continue }
             New-Item -ItemType Directory -Force -Path $caseRoot | Out-Null
             $arguments = @('-NoProfile','-ExecutionPolicy','Bypass','-File',$runner,'-Dimension','overworld','-Mode',$mode,'-Players','2','-Purpose','performance','-CacheEntries','128','-Prediction','true','-ValidationCells','8','-Seed','8675309','-ServerLogicalProcessors',[string]$profile.logical_processors,'-OutputRoot',$caseRoot)
+            $arguments += @('-ViewDistance',[string]$ViewDistance)
+            $arguments += @('-ServerJvmProcessors',[string]$ServerJvmProcessors)
+            if($MeasureFullView){$arguments += '-MeasureFullView'}
+            if($QuietRemoteTrace){$arguments += '-QuietRemoteTrace'}
+            $requestedBackend=if($mode -eq 'assisted'){$AssistedNoiseBackend}else{$VanillaNoiseBackend}
+            $arguments += @('-NoiseBackend',$requestedBackend)
+            $arguments += @('-WindowProfile',$WindowProfile)
+            $arguments += @('-RemoteApplicationProfile',$RemoteApplicationProfile)
             $started = Get-Date
             $exitCode = Invoke-Quiet $arguments (Join-Path $caseRoot 'batch-run.log') (Join-Path $caseRoot 'batch-error.log')
             $resultPath = Join-Path $caseRoot 'scenario-result.json'
@@ -92,6 +112,23 @@ try {
                 try {
                     $scenario = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
                     $runtimeSafe = [bool]$scenario.cleanup_safe
+                    $configuration=Get-Content -LiteralPath (Join-Path $caseRoot 'remote-evidence/scenario-config.json') -Raw|ConvertFrom-Json
+                    $jvmCpu=Get-Content -LiteralPath (Join-Path $caseRoot 'remote-evidence/server-jvm-cpu-limit.json') -Raw|ConvertFrom-Json
+                    if($jvmCpu.requested_active_processor_count -ne $ServerJvmProcessors){throw 'Server JVM processor limit differs from requested limit'}
+                    if($ServerJvmProcessors -gt 0 -and $jvmCpu.observed_available_processors -ne $ServerJvmProcessors){throw 'Actual JVM processor count differs from requested limit'}
+                    if($ServerJvmProcessors -gt 0 -and $jvmCpu.arguments -notmatch ('-XX:ActiveProcessorCount='+$ServerJvmProcessors+'\b')){throw 'JVM processor limit argument is missing'}
+                    if($configuration.view_distance -ne $ViewDistance){throw 'Server view distance differs from requested distance'}
+                    if([bool]$configuration.quiet_remote_trace -ne [bool]$QuietRemoteTrace){throw 'Remote tracing differs from requested mode'}
+                    $backend=Get-Content -LiteralPath (Join-Path $caseRoot 'remote-evidence/noise-backend-config.json') -Raw|ConvertFrom-Json
+                    if($backend.noise_backend -ne $requestedBackend){throw 'Terrain backend differs from requested candidate'}
+                    $window=Get-Content -LiteralPath (Join-Path $caseRoot 'remote-evidence/pipeline-window-config.json') -Raw|ConvertFrom-Json
+                    $application=Get-Content -LiteralPath (Join-Path $caseRoot 'remote-evidence/remote-application-config.json') -Raw|ConvertFrom-Json
+                    if($application.profile -ne $RemoteApplicationProfile -or [bool]$application.ready_surface_only -ne ($RemoteApplicationProfile -eq 'ready') -or $application.base_wait_ms -ne 100 -or $application.maximum_wait_ms -ne 200){throw 'Remote application profile differs from requested candidate'}
+                    if($window.profile -ne $WindowProfile -or $window.owner_window -ne $(if($WindowProfile -eq 'wide'){16}else{4}) -or $window.total_window -ne $(if($WindowProfile -eq 'wide'){32}else{8}) -or $window.lookahead -ne 0){throw 'Remote window profile differs from requested candidate'}
+                    foreach($owner in 0..1){
+                        $savedOption=@(Select-String -LiteralPath (Join-Path $caseRoot "clients/owner-$owner/client/options.txt") -Pattern '^renderDistance:(\d+)$')
+                        if($savedOption.Count -ne 1 -or [int]$savedOption.Matches[0].Groups[1].Value -ne $ViewDistance){throw 'Actual saved client render distance differs from request'}
+                    }
                     $cpuPath = Join-Path $caseRoot 'remote-evidence/server-cpu-limit.json'
                     if (Test-Path -LiteralPath $cpuPath -PathType Leaf) {
                         $cpu = Get-Content -LiteralPath $cpuPath -Raw | ConvertFrom-Json
@@ -137,7 +174,7 @@ finally {
     if ($null -ne $lock) { $lock.Dispose(); Remove-Item -LiteralPath $lockPath -Force -ErrorAction SilentlyContinue }
     if (Test-Path -LiteralPath $runRoot -PathType Container) {
         $complete=@($results | Where-Object {$_.mode -eq 'pair' -and $_.status -eq 'COMPLETE'}).Count
-        $summary=[ordered]@{schema='worldgen-assist.constrained-server-benchmark.v1';status=if($issues.Count -eq 0 -and $complete -eq $profiles.Count){'COMPLETE'}else{'INCOMPLETE'};artifact_sha256=$jarHash;client_visible_wait_measured=($issues.Count -eq 0 -and $complete -eq $profiles.Count);server_region_ready_definition='Elapsed from scripted relocation until both owners have completed the 9x9 NOISE region on the server; excludes client chunk delivery';client_receipt_definition='Elapsed from each client receiving the repeat BEGIN message until both clients have loaded all 81 chunks in their 9x9 region';results=$results;issues=$issues;run_root=$runRoot}
+        $summary=[ordered]@{schema='worldgen-assist.constrained-server-benchmark.v1';status=if($issues.Count -eq 0 -and $complete -eq $profiles.Count){'COMPLETE'}else{'INCOMPLETE'};artifact_sha256=$jarHash;view_distance=$ViewDistance;server_jvm_processors=$ServerJvmProcessors;measurement_shape=$measurementShape;measurement_radius=$measurementRadius;expected_chunks_per_owner=$expectedChunks;client_visible_wait_measured=($issues.Count -eq 0 -and $complete -eq $profiles.Count);server_region_ready_definition='Elapsed from scripted relocation until both owners complete the configured NOISE target region; excludes client delivery';client_receipt_definition='Elapsed from each client receiving the repeat BEGIN message until both clients load every chunk in the configured target region; excludes rendering';results=$results;issues=$issues;run_root=$runRoot}
         $summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $runRoot 'summary.json') -Encoding utf8
         Write-Output "CONSTRAINED_SERVER_BENCHMARK status=$($summary.status) summary=$(Join-Path $runRoot 'summary.json')"
         if ($summary.status -ne 'COMPLETE') { exit 1 }

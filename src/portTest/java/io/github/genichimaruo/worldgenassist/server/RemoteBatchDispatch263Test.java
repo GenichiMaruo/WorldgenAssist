@@ -54,11 +54,19 @@ class RemoteBatchDispatch263Test {
 	}
 	@Test void batchCodecRejectsOversizeAndDuplicateJobsAndRoundTripsExactly() {
 		var identity = new TerrainJobIdentity(WorldgenProtocolVersion.CURRENT, UUID.randomUUID(), DIMENSION, 0, 0, FINGERPRINT);
-		var job = job(identity); var batch = new TerrainJobBatchPayload(List.of(job));
+		var job = job(identity);
+		var surface = new TerrainDensityJob(new TerrainJobIdentity(WorldgenProtocolVersion.CURRENT, UUID.randomUUID(),
+			DIMENSION, 1, 0, FINGERPRINT), 8675309L, true, DIMENSION, -64, 384, 1, 1, TerrainWorkKind.SURFACE_FIELDS);
+		var grid = new TerrainDensityJob(new TerrainJobIdentity(WorldgenProtocolVersion.CURRENT, UUID.randomUUID(),
+			DIMENSION, -1, 0, FINGERPRINT), 8675309L, true, DIMENSION, -64, 384, 1, 1, TerrainWorkKind.GRID_AND_SURFACE);
+		var batch = new TerrainJobBatchPayload(List.of(job, surface, grid));
 		var buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
 		try {
 			TerrainJobBatchPayload.CODEC.encode(buffer, batch);
 			assertEquals(batch, TerrainJobBatchPayload.CODEC.decode(buffer));
+			buffer.clear(); TerrainJobRequestPayload.CODEC.encode(buffer, new TerrainJobRequestPayload(surface));
+			buffer.setByte(buffer.writerIndex()-1, 255);
+			assertThrows(IllegalArgumentException.class, () -> TerrainJobRequestPayload.CODEC.decode(buffer));
 			buffer.clear(); buffer.writeVarInt(TerrainJobBatchPayload.MAX_JOBS + 1);
 			assertThrows(IllegalArgumentException.class, () -> TerrainJobBatchPayload.CODEC.decode(buffer));
 		} finally { buffer.release(); }

@@ -1,5 +1,356 @@
 # World Generation Pipeline Notes
 
+## Candidate L: yield a pending chunk while independent work continues
+
+K's exact-JAR same-backend view32 pair csb-20261003-085104-175 completed:
+FULL284.325 ->308.269s (+8.42%), receipt302.373 ->324.980s (+7.48%), CPU
+598.141 ->647.047s (+8.18%), all three completion/receipt repeats slower.
+Actual grids2733/2461/2732, zero late stores across43,114 completed positions.
+Distance10's small gain did not carry into distance32.
+
+No MOD/Mixin change for L. RemoteWorldgenManager.generate already checks
+cached output first; with ready_surface_only=false a pending prediction goes
+through awaitDemand(...).handle(...).thenCompose(...), and only a successful
+bounded result installs the density field before scheduling local terrain.
+Otherwise the original local continuation runs. AdaptiveDemandWait schedules
+a deadline; it does not join/get or block a generation/server/network thread.
+The server can process independent chunks while the owner computes the grid.
+Fixture profile overlap selects this existing path explicitly, base100ms and
+max200ms, keeping protocol6, owner16/global32/client16 and cooperative backend.
+This changes the time at which TERRAIN's future completes, not its dependency
+order, world authority or tickets. All harness changes precede the focused
+correctness/performance batch. Completed remote-overlap-gate-20261003-094940-125:
+1,813 matching shared chunks and actual bounded wait plus grid consumption for
+both owners. Matching view10 FULL -6.66%, receipt -7.20%, CPU -9.65%; all three
+FULL/CPU repeats improved, only two receipt repeats. Demand wait fell back
+27/13/30 times, distinct from zero generation failures/job timeout counters.
+Actual grids1480/1282/1375; zero late stores across7,145 completed positions.
+The exact unchanged JAR/profile view32 pair csb-20261003-100930-620 completed:
+FULL298.622 ->293.005s (-1.88%), receipt314.194 ->309.659s (-1.44%), CPU
+624.859 ->583.500s (-6.62%), tick p95 +3.64%. FULL/receipt improved two of
+three repeats, CPU all three. Actual grids9541/8908/9064, bounded wait
+fallbacks158/225/173, zero late stores across43,084 completed positions.
+Each repeat completed10,658 terrain tasks and3,461 receipts per owner;
+JAR/source/settings/coordinates match. No extra build/unit/correctness tests.
+The modest fixed-order result does not establish stable/general acceleration.
+Density intermediates were consumed widely, but remaining server terrain,
+surface/block conversion and later stages still limit completion; a waited
+chunk can also hold its dependent neighborhood. Their individual costs in
+this view32 run were not profiled. Defaults remain unchanged.
+
+Generated26.3 scheduling was rechecked: ChunkMap.runGenerationTask submits a
+short dispatcher message, calls task.runUntilWait and registers future.thenRun
+to resume. ChunkTaskDispatcher.scheduleForExecution completes its message
+future after message.run returns, then polls other tasks. ChunkGenerationTask
+waitForScheduledLayer uses getNow and returns an incomplete layer future.
+Thus the same task/dependent layer waits, while independent tasks can advance;
+this does not guarantee that a critical neighborhood has independent ready work.
+
+## Candidate K: supply more work across measured round-trip latency
+
+Recovery gate remote-window-gate-20261003-083305-914 is COMPLETE: fresh
+Fabric correctness1,803 matching shared chunks, both windows16 and clean
+fixture disconnects. Matching cooperative view10 csb-20261003-083838-402:
+FULL40.544 ->39.341s (-2.97%); receipt46.534 ->45.122s (-3.03%);
+CPU102.656 ->96.938s (-5.57%). Two of three FULL/receipt repeats improved.
+Actual grids778/667/729 from894/946/834 sent; raw cache hits are different.
+This is a small descriptive gain under an explicit wide profile, not a
+default/general improvement claim. The same exact JAR's view32 pair completed
+with matching cooperative backend and the same window profile on both sides.
+
+First remote-window-gate-20261003-034557-843: five tests/three builds passed,
+normal correctness runtime passed, assisted runtime recorded both owners'
+applied output but shutdown failed; comparison/performance NOT_RUN. Exact
+Fabric dev.12 SHA97187A759E3AE7D2DA74E00BB50AF3EC70FD7AAF15248D7AAE8DEFEB5CC1672D.
+Read-only stop diagnostic: generation tasks0, only one owner disconnect, tickets
+still present. Generated PlayerList.removeAll's mutable indexed loop plus
+synchronous onDisconnect removal can skip an owner. Fixture shutdown now
+observes each owned client disconnect individually after measurements. This
+does not alter the generation method or performance window. Runtime recovery
+must use fresh matching source/harness cases, exact unchanged JAR; unit/build
+reuse retains the original evidence identity.
+
+The old owner4/global8 window and approximately 2.5ms client computation versus
+27–29ms result RTT can leave helper compute idle. Dev.12 exposes bounded
+owner_window and client.job_window overrides, retains normal defaults, and
+tests owner16/global32/client16. Refills may queue up to the configured owner
+window instead of two validation entries; original total reservations,
+adaptive growth/backoff, cancellation and lifecycle fences still apply.
+No stage reorder, extra ticket, new Mixin or network wait. Initial view10 data
+show a small descriptive gain; view32 was slower as recorded above. Protocol6 stays
+unchanged. Lookahead default0 restores
+nearest-first after dev.11 failed to improve either CPU2 or CPU1 completion.
+
+dev.11 csb-20261003-031726-969 is complete at actual logical/JVM1, cooperative
+both modes. NOISE +3.63%, FULL +1.07%, receipt -0.23%, CPU -1.77%. NOISE and
+FULL are separate metrics; the benchmark summary's region_ready_ms is NOISE.
+Existing H JFR material-rule density only occupies about 2.5–2.8% inclusive
+CPU samples, so a larger material offload is not prioritized from that record.
+
+## Candidate J: later demand works correctly, no view10 speed gain
+
+Completed gate generation-lookahead-gate-20261003-024234-087: two tests,
+three builds and 1,813 matching shared Fabric chunks / zero mismatch. The
+same-backend pair csb-20261003-024820-512 (actual logical/JVM2, view10) completed
+all repeats: FULL 39,978.974 -> 41,151.292 ms (+2.93%); receipt 46,174.2811 ->
+47,115.7074 (+2.04%); CPU 97,312.5 -> 100,578.125 (+3.36%). Cached grid use
+444/347/388 from 661/605/543 sent jobs. More adoption did not offset costs.
+The server's reference cached full density volume measured 2.5603ms in A's
+local diagnostic; this is not a timing for the current remote server. Completed
+measurement used one actual logical/JVM CPU to test a more constrained server,
+unchanged dev.11 JAR and matching cooperative backend: FULL +1.07%, receipt
+-0.23%. Fewer processors limit
+concurrency; they do not simulate a particular older CPU's instructions/clock.
+
+Dev.10's complete same-backend view10 test still showed FULL +1.37%, receipt
++1.53%, CPU -0.90%, with mean job RTT median 29.42 ms. Actual cached grids
+used 377/309/351 out of 610/559/495 requests; all 1,682 terrain tasks and both
+owners' 385 receipts completed per repeat. Direct request admission works but
+does not establish a speedup. Generated ChunkTaskPriorityQueue pops the lowest
+queue level first and ChunkMap uses holder.getQueueLevel. Our distance ordering
+approximates immediate demand, so a request for the same head can lose the
+race even with a shorter reply. Candidate J prioritizes later observations
+within each owner's bounded queue: rotate up to sixteen candidates, preserving
+at least four candidates beyond the offset, then append the immediate head.
+The full list remains fair between owners and no candidate is dropped by this
+rotation. Actual local stage/task order stays vanilla-compatible. No extra
+generation, ticket or server wait is introduced. Property
+worldgen_assist.remote.prefetch_lookahead / WORLDGEN_ASSIST_REMOTE_PREFETCH_LOOKAHEAD
+accepts 0..64; default16, control0. Queue/cache/job caps remain unchanged.
+
+## Candidate I: remove a client frame turn (dev.10, Fabric verified)
+
+The dev.9 same-backend view32 comparison is COMPLETE: cooperative/no-assistance
+FULL 289,001.270 ms, receipt 304,766.7000 ms, versus assistance 301,262.651 /
+318,581.2107 ms (+4.24%/+4.53%). Server parallelism accounts for the combined
+gain. Matched-backend JFR cpu-profile-20261003-014354-350 recorded 8,861/8,975
+execution samples. Inclusive density 24.51%/21.92%, assistance management
+0.49%/1.25%, validation two assisted samples. Categories overlap; this is one
+instrumented repeat, not elapsed CPU attribution. DensityVolume.indexOfBlock
+callers are mainly authoritative material/ore rules, not remote grid copying.
+
+Dev.10 captures accepted connection, dimension, private density session and
+reply sender on the client main thread. Fully decoded Fabric requests go from
+Connection to the existing bounded worker queue, without the render-thread
+receiver turn. Queue saturation still returns BUSY; total/per-owner server
+limits are unchanged. Worker admission, cancellation and context revocation
+are serialized; no computation runs under the admission lock. A complete
+four-job batch either uses this route or retains the original receiver route.
+Respawn suspends old admission and cancels outstanding attempts before vanilla
+schedules the transition. Main-thread handleRespawn TAIL publishes the new
+context. Connection close/protocol change revoke only the captured connection.
+Native requests retain the original route. This hypothesis improves result
+lead time, not the amount of work represented by each returned grid.
+
+Scenario controllers now capture live stdout independently of midnight log
+rotation and retain original rolling logs. The two-check PS5 console gate and
+the completed dev.9 JFR pair verified live reads and end-of-process persistence.
+
+## Candidate H: bounded cooperative terrain workers (dev.9, view10 complete)
+
+The dev.8 JFR pair `cpu-profile-20261002-213032-205` completed with the
+unchanged dev.8 JAR. Deep computational analysis excludes NativeMethodSample
+waits: 5,745 vanilla and 5,849 assisted measured-window ExecutionSamples.
+About 84%/82% of those samples came from one Worker-Main thread. Inclusive
+surface processing was ~30%/29%, block fill ~27%/26%, density samplers
+~24%/21%; categories overlap and these are not absolute CPU durations.
+Validation appeared in only two assisted samples. One diagnostic repeat
+cannot establish a stable cost percentage or a speed improvement.
+
+Generated Fabric 26.3 Util.maxAllowedExecutorThreads clamps processors-1
+to at least one. The measured JVM with availableProcessors=2 therefore has
+one ordinary background worker. The next explicit cooperative backend reuses
+the existing bounded local terrain executor, automatically selects min(2,CPU)
+workers (at least one), and permits four queued tasks per worker. Explicit
+worker/queue overrides remain authoritative; default backend is still vanilla.
+It submits independent vanilla buildTerrain suppliers while the normal
+background executor can continue other stages. No chunk's stage dependencies
+or server authority change, no duplicate execution, no wait on admission;
+full/stopped executor falls back normally. Local backend lifecycle registration
+and tick saturation sampling include cooperative mode.
+
+The new gate compares vanilla backend without remote assistance against
+cooperative backend with remote assistance. Any resulting gain belongs to
+the combined scheduler/assistance candidate, not client offload alone. Two
+focused tests cover policy bounds/overrides and concurrent independent density
+scopes with worker reuse; three builds and the two-owner correctness pair
+precede one matched view10 speed pair. Gate cooperative-terrain-gate-20261002-233308-926
+passed both tests, three builds, 1,803 shared digests / zero mismatch and
+both-owner grid use, with real local peak >=2. The exact dev.9 view10 pair
+csb-20261002-233926-431 improved FULL/receipt medians 10.43%/10.76% across
+three complete repeats, while CPU increased 19.68% and tick p95 51.46%.
+Bounded admission returned 608 terrain tasks to the normal executor without
+generation failure. Recovered same-JAR view32 comparison completed with matching
+workload/settings/coordinates: FULL/receipt medians -9.26%/-9.15%, CPU +20.72%
+and tick p95 29.8794 -> 48.6834 ms. Both owners received all 3,461 chunks per
+repeat. It is a combined scheduling/assistance gain; cooperative/no-assistance
+ablation completed and found assistance slower by 4.24%/4.53%. The original midnight-log failure and first recovery
+wrapper failure remain INCOMPLETE, separate from valid runtime/comparison data.
+Required validation timing is restored even in quiet traces; request counts
+come from retained job.sent source=prefetch and unavailable quiet ingress
+counts are null, not zero. Protocol remains 6.
+
+## Candidate G: increase useful lead time (2026-10-02)
+
+Fabric dev.8's focused gate proved early-load observations and both-owner grid
+use with 1,803 shared digests / zero mismatch. The two view10 performance cases
+completed, but quiet tracing removed the required validation timing, leaving
+the original gate incomplete. Recorded FULL/receipt medians were +4.54%/+1.94%
+and CPU +11.97%; this candidate does not support speedup. See TEST_RESULTS_LATEST
+for exact hashes and artifacts. JFR CPU diagnosis with the unchanged JAR is
+pending; do not infer that all remaining cost is network latency.
+
+Candidate F's actual two-CPU distance-32 pair was slower: FULL +3.47%,
+receipt +3.33%. About 3,000 jobs per repeat yielded only 372-436 cache uses.
+G observes a completed EMPTY/sub-TERRAIN load before structure/biome work,
+while skipping loaded completed terrain and obsolete world instances.
+Balanced metadata capacity can replace a same-owner farther hint with a
+closer one without reducing another owner's allocation. Existing structure
+observations remain a fallback. This changes no generation tickets/order
+and does not wait for a client.
+
+Grid verification still chooses eight distinct secret values, but aquifer
+surface points no longer trigger all 769 surface computations. Material
+points keep their original 16x16 repeated-add float volume. A controlled
+quiet trace flag removes routine ingress/decode/validation/duplicate logs,
+while job sent/result/application, cache stores and warnings stay available.
+Correctness and previous diagnostic gates retain detailed tracing. The new
+candidate has no measured improvement yet.
+
+## Shutdown investigation (2026-10-02)
+
+The first candidate F batch failed clean assisted shutdown after correctness
+generation. MinecraftServer.stopServer drains ChunkMap.hasWork with ticket
+deactivation and source.tick before waitUntilNextTick. A thread stack alone
+cannot identify which work flag remains. Local dev.7 schedules read-only
+server-thread diagnostics after 15 seconds of shutdown to distinguish
+unfinished generation/save dependencies, tickets and dispatcher work.
+The batch failure is retained and no performance result is inferred from it.
+
+## Candidate F: retire work before refilling (2026-10-02, Fabric verified)
+
+Candidate D's complete assisted log recorded 996 of 1,541 cache saves after
+the corresponding NOISE completion, and 299 saves at cache capacity. Those
+results cannot help an already generated chunk. Candidate F marks the exact
+owner/epoch/context key at actual execution, consumes only ready output,
+cancels remaining attempts, and refills other observed work. Completion
+clears pending work and cache atomically against cache-write callbacks.
+Started-key metadata is bounded to 16,384 entries, expires after the job
+timeout, never extends on reads, and clears on owner/world invalidation.
+A nonblocking server-thread TERRAIN-holder query prevents new requests for
+already generated chunks. No extra generation or tickets are introduced.
+Grid validation checks eight secret single-point bulk queries instead of
+128 values; input grid alignment avoids the final block interpolation's
+repeated-add rounding dependency. Full bit tests cover every grid point.
+This remains sampled verification for explicitly trusted raw-seed workers.
+The dev.7 focused gate verified zero late cache saves, two-owner equality
+and a small distance-10 FULL/receipt improvement (-2.30%/-2.00%). Full view
+32 was slower (+3.47%/+3.33%); general speedup and a fix for the retained dev.6
+intermittent shutdown failure are not established.
+
+## Candidate E: offload interpolation inputs (2026-10-02, Fabric verified)
+
+Generated 26.3 NoiseRouterData defines Overworld finalDensity as nonlinear
+operations on one postProcess interpolator and four NOODLE interpolators,
+plus Beardifier. Their outer cell sizes are all 4x8x4. The new bounded work
+kind sends those five 5x49x5 input grids plus surface fields instead of
+98,304 final-density floats. The server still executes InterpolatedFunction's
+unchanged float repeated-add interpolation, min/squeeze/range selection,
+aquifer/block assignment, carvers, material rules, features and lighting.
+Only ready independently validated output can enter an eligible task;
+there is no response wait. Original input samplers handle missing/outside
+queries. Graph metadata uses weak identity keys to avoid hashing a deep
+settings graph for every chunk; state templates are reused, not job-specific.
+This is a hypothesis awaiting the focused batched validation, not a speed claim.
+
+## Ready surface work in the generation queue (2026-10-02, candidate D pending)
+
+Surface work no longer holds a TERRAIN continuation waiting for a client. An
+eligible chunk carries one single-use opportunity for its generation supplier.
+The supplier claims only cache data already independently validated at execution
+time, checking owner epoch, fingerprint, kind, shape and settings/state before
+installation. No ready result means immediate original sampling. Pending work
+can finish into the existing bounded cache, but cannot replace running terrain.
+No extra terrain ticket, polling loop or network wait is introduced. Each
+opportunity is removed when the generation future finishes; the finally-restored
+thread scope clears installed data after success/failure. Completion logs identify
+actual queued consumption as application=queued_ready. DENSITY work keeps its
+previous bounded wait and fallback path; ready_surface_only=false selects the
+candidate C surface wait control. Remote policy/raw-seed gates still apply.
+
+Client executor queues allow twice the computing-thread count, while hello
+advertises twice the thread count including running tasks. This leaves bounded
+slack for old tasks that sent responses before returning to the executor. The
+server's existing global/owner reservations remain unchanged. A focused executor
+test holds both old workers in this handoff, admits the advertised fresh window,
+proves the next excess job is rejected and cancellation frees queued capacity.
+
+## Candidate C resource utilization (2026-10-02, verification pending)
+
+Player ownership for already-observed generation includes the square terrain
+dependency radius derived from ChunkLevel's TERRAIN and ENTITY_TICKING ticket
+levels (26.3: viewDistance+4). Delivery remains the original circular view.
+Prefetch cleanup uses the same generation boundary. Observations still never
+advance a Minecraft stage or create an extra ticket. Existing global/per-owner
+quotas, source fingerprints, cancellation and local fallback remain in place.
+Client hello advertises its existing running plus bounded queue slots (normally
+two computing threads plus two waiting jobs); cancellation removes queued tasks
+immediately. Computational thread count is unchanged. The experimental server
+runner can pass -XX:ActiveProcessorCount alongside CPU affinity and requires
+the server's startup diagnostic to report that actual availableProcessors count.
+Historical affinity-only runs retain their original condition and evidence.
+
+## Surface-field development candidate (2026-10-02, Fabric gate passed)
+
+Generated 26.3 buildTerrain constructs and closes one NoiseChunk inside its
+background supplier, then executes doFill, buildSurface and generateCarvers.
+The new thread scope supplies two bounded surface density intermediates to that
+chunk's caching sampler set before aquifer construction. Aquifer grid centers
+span chunk +/-16 plus random offsets 0..9; its surface offsets extend -3..1
+chunks in X and -1..1 in Z. Quart quantization yields the bounded 27x19 grid
+at chunk minimum minus (64,32), four-block spacing. Constructor max-surface
+sampling is an 11x11 subset. MaterialRuleContext lazily samples a 16x1x16
+chunkSurfaceLevel volume. Its point and shifted sub-volume queries retain
+vanilla sampling because interpolated float arithmetic can differ from the
+original full volume. Nonmatching state/settings/geometry/functions fall back.
+The field never substitutes final block mutations. Wire/raw data shrinks from
+98,304 values to 769, with typed jobs/caches and protocol 5; runtime consumption
+is recorded as work_kind and remote_samples on job.complete. Correctness and
+speed are gated separately by Run-SurfaceDensityGate.ps1.
+
+## Validation-cost candidate (2026-10-02, focused gate passed)
+
+The unpublished alpha.6 candidate retains protocol 4 and the existing secret
+random groups (128 values each), identity, owner, deadline and fallback gates.
+Previously each selected column recomputed the entire height with internal
+density caches disabled. Preparation now first determines each selected
+column's required prefix, retains its original minimum Y for exact float
+interpolation, and uses an invocation-private cached sampler and buffer pool.
+The pool is returned in a finally block, including cancellation/failure.
+Eight groups still check 1,024 exact float values. No worker data is used to
+produce expected values or to choose their positions.
+
+Hypothesis: eliminate repeated density-DAG work and unused vertical samples
+to reduce authoritative preparation CPU and its queue. This does not move
+surface, carvers, aquifers, features, lighting or final world state to clients.
+The first focused gate compares exact full volumes in three vanilla noise
+settings plus a 48-block geometry, then measures old uncached columns, the
+candidate and vanilla's cached full volume descriptively. The installed
+two-owner correctness pair precedes a matched full-distance performance pair;
+all steps run sequentially after implementation. Speedup is not yet established.
+
+
+## Distance-32 measurement boundary (2026-10-02)
+
+The focused benchmark measures all 3,461 coordinates in the generated 26.3
+`ChunkTrackingView.isWithinDistance(..., false)` region at distance 32 for each
+of two owners. Neighbor delivery margin is outside this target. Server and
+client distances are both 32; installed clients use CUSTOM graphics preset
+because FANCY resets distance to 16. The batch waits for measured client receipt
+before advancing to another fresh location. This changes measurement only;
+the alpha.5 density-assistance pipeline is unchanged. See VALIDATION_MATRIX.md
+for the bounded runtime pair and TEST_RESULTS_LATEST.md for completed evidence.
+
 ## Alpha.5 release scope
 
 Alpha.5 packages the candidate pipeline below. Final JAR contents match saved

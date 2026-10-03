@@ -16,6 +16,8 @@ import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityJob;
+import io.github.genichimaruo.worldgenassist.common.TerrainWorkKind;
+import io.github.genichimaruo.worldgenassist.common.SurfaceDensityData;
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityResult;
 import io.github.genichimaruo.worldgenassist.common.WorldgenContextFingerprint;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobFailurePayload;
@@ -56,6 +58,18 @@ final class ClientTerrainDensityComputer {
 		WorldgenAssist.LOGGER.info("[CAWG] job.client_prepared id={} preparation_ms={} contexts={}",
 			job.identity().jobId(), (System.nanoTime() - prepareStarted) / 1_000_000.0, session.size());
 		RandomState randomState = prepared.state();
+		if (job.workKind() == TerrainWorkKind.GRID_AND_SURFACE) {
+			if (!SurfaceDensityData.supports(job.noiseSettings(), settings.value()) || !io.github.genichimaruo.worldgenassist.common.GridDensityData.supports(settings.value())) {
+				throw new RejectedJobException(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT);
+			}
+			return io.github.genichimaruo.worldgenassist.common.GridDensityData.sample(job, randomState, settings.value());
+		}
+		if (job.workKind() == TerrainWorkKind.SURFACE_FIELDS) {
+			if (!SurfaceDensityData.supports(job.noiseSettings(), settings.value())) {
+				throw new RejectedJobException(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT);
+			}
+			return SurfaceDensityData.sample(job, randomState, settings.value());
+		}
 		ClientDensitySampler.Sample sample = new ClientDensitySampler(
 			job.identity().chunkX(),
 			job.identity().chunkZ(),

@@ -6,7 +6,9 @@
   "mixins": [
     "ChunkAccessRemoteDensityMixin",
     "ChunkStatusTasksMixin",
+    "ChunkMapLoadOpportunityMixin263",
     "NoiseBasedChunkGeneratorMixin",
+    "NoiseChunkSurfaceSamplerMixin263",
     "ServerChunkCacheRemoteWaitMixin263",
     "MinecraftServerReloadMixin263"
   ],

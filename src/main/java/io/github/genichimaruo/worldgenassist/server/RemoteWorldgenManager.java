@@ -58,6 +58,8 @@ public final class RemoteWorldgenManager {
 	private final ThreadPoolExecutor validationExecutor;
 	private final BoundedRemotePreparation<RemoteDensityValidator.Prepared, TerrainDensityResult> preparation;
 	private final RemotePipelineOptions pipelineOptions = RemotePipelineOptions.current();
+	private final int prefetchLookahead = RemotePipelineOptions.prefetchLookahead();
+	private final int ownerWindow = RemotePipelineOptions.ownerWindow();
 	private final GenerationPrefetchQueue generationCandidates;
 	private final Set<RemoteDensityResultCache.Key> dispatching = ConcurrentHashMap.newKeySet();
 	private final RemoteDensityResultCache resultCache;
@@ -68,12 +70,18 @@ public final class RemoteWorldgenManager {
 	private final Map<RemoteDensityResultCache.Key, PredictionAttempt> predictedJobs = new ConcurrentHashMap<>();
 	private final AtomicLong cacheGeneration = new AtomicLong();
 	private final Object resultStateLock = new Object();
+	private final StartedTerrain<RemoteDensityResultCache.Key> startedTerrain;
 	private final SecureRandom validationRandom = new SecureRandom();
 	private long predictionTicks;
 	private volatile List<PlayerChunkDemand> demands = List.of();
 	private final Map<UUID, Long> ownerGenerations = new ConcurrentHashMap<>();
 	private final AtomicLong nextOwnerGeneration = new AtomicLong();
 	private final boolean diagnostics = Boolean.getBoolean("worldgen_assist.remote.diagnostics");
+	private final boolean traceJobs = Boolean.parseBoolean(System.getProperty("worldgen_assist.remote.trace_jobs", Boolean.toString(diagnostics)));
+	private final LongAdder loadHints = new LongAdder();
+	private void trace(String format,Object... arguments) {
+		if(traceJobs)WorldgenAssist.LOGGER.info(format,arguments);
+	}
 	private final LongAdder noOwnerFallbacks = new LongAdder();
 	private final LongAdder ineligibleFallbacks = new LongAdder();
 	private final LongAdder noCapacityFallbacks = new LongAdder();
@@ -82,13 +90,17 @@ public final class RemoteWorldgenManager {
 	private final LongAdder prefetchSent = new LongAdder();
 	private final LongAdder prefetchUsed = new LongAdder();
 	private final LongAdder demandWaitExpired = new LongAdder();
+	private final LongAdder lateResultsDiscarded = new LongAdder();
 	private volatile MinecraftServer server;
 
 	private RemoteWorldgenManager(RemoteWorldgenConfig config, RemoteJobSender sender) {
 		this.config = config;
 		this.coordinator = new RemoteJobCoordinator(config, sender);
 		this.resultCache = new RemoteDensityResultCache(config.cacheEntries(), config.jobTimeout().toNanos());
+		this.startedTerrain = new StartedTerrain<>(16_384, config.jobTimeout().toNanos());
 		this.generationCandidates = new GenerationPrefetchQueue(config.maxInFlightJobs() * 16);
+		WorldgenAssist.LOGGER.info("[CAWG] prefetch.policy lookahead={} capacity={}", prefetchLookahead, config.maxInFlightJobs() * 16);
+		WorldgenAssist.LOGGER.info("[CAWG] pipeline.window owner={} total={} refill_watermark={}", ownerWindow, config.maxInFlightJobs(), RemotePipelineOptions.refillWatermark(config.maxInFlightJobs(), ownerWindow));
 		this.validationExecutor = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
 			new ArrayBlockingQueue<>(config.maxInFlightJobs()), task -> {
 				Thread thread = new Thread(task, "CAWG-RemoteValidation"); thread.setDaemon(true); return thread;
@@ -133,19 +145,39 @@ public final class RemoteWorldgenManager {
 		Supplier<CompletableFuture<ChunkAccess>> localFallback
 	) {
 		RemoteWorldgenManager manager = instance;
-		return manager == null
-			? invokeFallback(localFallback)
-			: manager.generate(context, step, chunks, chunk, localFallback);
+		if (manager == null) return invokeFallback(localFallback);
+		long generation=manager.cacheGeneration.get();
+		var result=manager.generate(context,step,chunks,chunk,localFallback);
+		if (!manager.config.remoteExecutionEnabled()) return result;
+		return result.whenComplete((generated,error)->{
+			if (generation!=manager.cacheGeneration.get()) return;
+			manager.discardAhead(context.level().dimension().identifier(),chunk.getPos(),generation);
+			manager.requestPrefetchDispatch();
+		});
 	}
 
 	public static void observeGeneration(WorldGenContext context, ChunkAccess chunk) {
+		observeCandidate(context,chunk,false);
+	}
+	public static boolean observesChunkLoads() {
+		RemoteWorldgenManager manager=instance;
+		return manager!=null && manager.config.remoteExecutionEnabled() && manager.pipelineOptions.prefetch()
+			&& manager.config.cacheEntries()>0;
+	}
+	public static void observeChunkLoaded(WorldGenContext context,ChunkAccess chunk) {
+		if(chunk.getPersistedStatus().isBefore(net.minecraft.world.level.chunk.status.ChunkStatus.TERRAIN))
+			observeCandidate(context,chunk,true);
+	}
+	private static void observeCandidate(WorldGenContext context,ChunkAccess chunk,boolean fromLoad) {
 		RemoteWorldgenManager manager = instance;
 		if (manager == null || !manager.config.remoteExecutionEnabled() || !manager.pipelineOptions.prefetch()
+			|| context.level().getServer()!=manager.server
 			|| manager.config.cacheEntries() == 0 || chunk.isOldNoiseGeneration() || chunk.getBelowZeroRetrogen() != null
 			|| context.generator().getClass() != net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator.class) return;
 		ChunkPos pos = chunk.getPos();
-		PlayerChunkDemand.select(manager.demands, context.level().dimension().identifier(), pos.x(), pos.z())
+		PlayerChunkDemand.selectGeneration(manager.demands, context.level().dimension().identifier(), pos.x(), pos.z())
 			.ifPresent(demand -> {
+				if(fromLoad)manager.loadHints.increment();
 				manager.generationCandidates.offer(demand, pos.x(), pos.z(),
 					manager.cacheGeneration.get(), manager.ownerGenerations.getOrDefault(demand.ownerId(), -1L),
 					System.nanoTime() + manager.config.jobTimeout().toNanos());
@@ -218,7 +250,7 @@ public final class RemoteWorldgenManager {
 				return;
 			}
 			try {
-				WorldgenAssist.LOGGER.info("[CAWG] job.result_ingress id={} path={} ingress_queue_ms={} claim_ms={}",
+				trace("[CAWG] job.result_ingress id={} path={} ingress_queue_ms={} claim_ms={}",
 					envelope.identity().jobId(), path, (handlerStarted - receivedNanos) / 1_000_000.0,
 					(System.nanoTime() - handlerStarted) / 1_000_000.0);
 				if (path.equals("network")) decodeResult(ownerId, envelope, receivedNanos, currentConnection);
@@ -275,6 +307,8 @@ public final class RemoteWorldgenManager {
 	}
 
 	public void onServerStarting(MinecraftServer currentServer) {
+			if (diagnostics) WorldgenAssist.LOGGER.info("[CAWG] server.cpu_context available_processors={}",
+				Runtime.getRuntime().availableProcessors());
 			demands = List.of();
 			ownerGenerations.clear();
 			server = currentServer;
@@ -293,6 +327,22 @@ public final class RemoteWorldgenManager {
 	}
 
 	public void onServerStopping() {
+			if (diagnostics) {
+			MinecraftServer stopping=server;
+			Thread dump = new Thread(() -> {
+				try { Thread.sleep(15_000L); }
+				catch (InterruptedException error) { Thread.currentThread().interrupt(); return; }
+				if (stopping!=null && server == stopping) {
+					stopping.schedule(stopping.wrapRunnable(() -> ShutdownWorkDiagnostic.record(stopping)));
+					for (var thread : java.lang.management.ManagementFactory.getThreadMXBean().dumpAllThreads(true, true)) {
+						WorldgenAssist.LOGGER.warn("[CAWG] shutdown.thread_dump thread={} state={} owner={} stack={}",
+							thread.getThreadName(), thread.getThreadState(), thread.getLockOwnerName(),
+							java.util.Arrays.toString(thread.getStackTrace()));
+					}
+				}
+			}, "CAWG-ShutdownDiagnostic");
+			dump.setDaemon(true); dump.start();
+			}
 			demands = List.of();
 			ownerGenerations.clear();
 			int cancelled = coordinator.shutdown();
@@ -339,12 +389,12 @@ public final class RemoteWorldgenManager {
 				logTimeout(expired, "server_tick");
 			}
 			if (diagnostics && ++diagnosticTicks % 200L == 0L) {
-				WorldgenAssist.LOGGER.info("[CAWG] scheduler.summary ticks=200 no_owner={} ineligible={} no_capacity={} submitted={} pending={} decoder_queue={} validation_queue={} pipeline_pending={} candidates={} prefetch_sent={} prefetch_used={} demand_wait_expired={}",
+				WorldgenAssist.LOGGER.info("[CAWG] scheduler.summary ticks=200 no_owner={} ineligible={} no_capacity={} submitted={} pending={} decoder_queue={} validation_queue={} pipeline_pending={} candidates={} prefetch_sent={} prefetch_used={} demand_wait_expired={} late_results_discarded={} load_hints={}",
 					noOwnerFallbacks.sumThenReset(), ineligibleFallbacks.sumThenReset(),
 					noCapacityFallbacks.sumThenReset(), submittedJobs.sumThenReset(),
 					coordinator.pendingCount(), resultDecoder.getQueue().size(), validationExecutor.getQueue().size(),
 					preparation.size(), generationCandidates.size(), prefetchSent.sumThenReset(),
-					prefetchUsed.sumThenReset(), demandWaitExpired.sumThenReset());
+						prefetchUsed.sumThenReset(), demandWaitExpired.sumThenReset(), lateResultsDiscarded.sumThenReset(),loadHints.sumThenReset());
 			}
 			if (config.predictionEnabled() && ++predictionTicks % config.predictionIntervalTicks() == 0L) {
 				for (PlayerChunkDemand demand : demands) { predictForWorker(currentServer, demand.ownerId()); }
@@ -364,7 +414,7 @@ public final class RemoteWorldgenManager {
 				&& d.dimension().equals(key.dimension()) && (entry.getValue().source().equals("prediction")
 					? Math.max(Math.abs((long)d.chunkX() - key.chunkX()), Math.abs((long)d.chunkZ() - key.chunkZ()))
 						<= d.viewDistance() + config.predictionLeadChunks() + 8
-					: d.includes(key.dimension(), key.chunkX(), key.chunkZ())))) cancelAhead(key, entry.getValue());
+					: d.includesGeneration(key.dimension(), key.chunkX(), key.chunkZ())))) cancelAhead(key, entry.getValue());
 		}
 		resultCache.removeMatching(key -> !currentCacheKey(key) || demands.stream().noneMatch(d ->
 			d.ownerId().equals(key.ownerId()) && d.dimension().equals(key.dimension())
@@ -376,14 +426,14 @@ public final class RemoteWorldgenManager {
 		if (!config.remoteExecutionEnabled() || !pipelineOptions.prefetch() || config.cacheEntries() == 0) return;
 		// A little queued work keeps remote workers supplied; existing reservations
 		// still enforce global/per-owner capacity. Stop before server queues fill.
-		int refillWatermark = Math.min(2, config.maxInFlightJobs());
+		int refillWatermark = RemotePipelineOptions.refillWatermark(config.maxInFlightJobs(), ownerWindow);
 		if (resultDecoder.getQueue().size() >= refillWatermark || validationExecutor.getQueue().size() >= refillWatermark) return;
 		coordinator.withJobBatch(() -> dispatchCandidateBatch(currentServer, refillWatermark));
 	}
 
 	private void dispatchCandidateBatch(MinecraftServer currentServer, int refillWatermark) {
 		Set<UUID> fullOwners = new java.util.HashSet<>();
-		for (var candidate : generationCandidates.ordered(demands, System.nanoTime())) {
+		for (var candidate : generationCandidates.ordered(demands, System.nanoTime(), prefetchLookahead)) {
 			if (validationExecutor.getQueue().size() >= refillWatermark) break;
 			if (fullOwners.contains(candidate.owner()) || !generationCandidates.contains(candidate)) continue;
 			var pos = candidate.position();
@@ -404,6 +454,7 @@ public final class RemoteWorldgenManager {
 	}
 
 	private boolean submitAhead(ServerLevel level, UUID owner, ChunkPos pos, String source, boolean reserveForDemand) {
+		if (((ReadyTerrainLookup)level.getChunkSource()).worldgenAssist$terrainReady(pos.x(),pos.z())) return true;
 		var eligible = RemoteWorldgenEligibility.evaluatePrediction(level);
 		if (eligible.isEmpty()) return false;
 		var context = eligible.get();
@@ -425,7 +476,9 @@ public final class RemoteWorldgenManager {
 			return false;
 		}
 		var settings = context.settings().unwrapKey().orElseThrow().identifier();
-		var key = createCacheKey(owner, level, pos, fingerprint, settings, context.noise());
+		var key = createCacheKey(owner, level, pos, fingerprint, settings, context.noise(),
+			io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(settings, context.settings().value()));
+		if (startedTerrain.contains(key,System.nanoTime())) return true;
 		if (hasCachedResult(key) || predictedJobs.containsKey(key)) return true;
 		if (resultCache.size() + predictedJobs.size() >= config.cacheEntries() || !dispatching.add(key)) return false;
 		var ticket = preparation.reserve(owner, Math.max(1, coordinator.ownerJobLimit(owner)));
@@ -449,8 +502,9 @@ public final class RemoteWorldgenManager {
 				if (error != null) { validated.cancel(false); transferMetrics.remove(remote.job().identity().jobId()); }
 			});
 			if (!currentCacheKey(key)) { cancelAhead(key, attempt); return false; }
+			if (startedTerrain.contains(key,System.nanoTime())) { cancelAhead(key,attempt); return true; }
 			if (source.equals("prefetch")) prefetchSent.increment();
-			WorldgenAssist.LOGGER.info("[CAWG] {}.sent id={} owner={} chunk={},{} samples={}",
+			trace("[CAWG] {}.sent id={} owner={} chunk={},{} samples={}",
 				source, remote.job().identity().jobId(), owner, pos.x(), pos.z(), remote.job().sampleCount());
 			WorldgenAssist.LOGGER.info("[CAWG] job.sent id={} chunk={},{} samples={} timeout_ms={} owner={} source={}",
 				remote.job().identity().jobId(), pos.x(), pos.z(), remote.job().sampleCount(), config.jobTimeout().toMillis(), owner, source);
@@ -475,11 +529,25 @@ public final class RemoteWorldgenManager {
 	}
 
 	private void discardAhead(net.minecraft.resources.Identifier dimension, ChunkPos pos) {
-		resultCache.removeMatching(key -> key.dimension().equals(dimension) && key.chunkX() == pos.x() && key.chunkZ() == pos.z());
-		for (var entry : predictedJobs.entrySet()) {
-			var key = entry.getKey();
-			if (key.dimension().equals(dimension) && key.chunkX() == pos.x() && key.chunkZ() == pos.z())
-				cancelAhead(key, entry.getValue());
+		discardAhead(dimension,pos,-1L);
+	}
+	private void discardAhead(net.minecraft.resources.Identifier dimension, ChunkPos pos, long expectedGeneration) {
+		java.util.List<java.util.Map.Entry<RemoteDensityResultCache.Key,PredictionAttempt>> discarded=new java.util.ArrayList<>();
+		synchronized(resultStateLock) {
+			if(expectedGeneration>=0&&expectedGeneration!=cacheGeneration.get())return;
+			generationCandidates.remove(new GenerationPrefetchQueue.Position(dimension,pos.x(),pos.z()));
+			for (var entry:predictedJobs.entrySet()) {
+				var key=entry.getKey();
+				if (key.dimension().equals(dimension)&&key.chunkX()==pos.x()&&key.chunkZ()==pos.z()) {
+					entry.getValue().abandoned().set(true);
+					if(predictedJobs.remove(key,entry.getValue()))discarded.add(entry);
+				}
+			}
+			resultCache.removeMatching(key -> key.dimension().equals(dimension) && key.chunkX() == pos.x() && key.chunkZ() == pos.z());
+		}
+		for(var entry:discarded) {
+			var attempt=entry.getValue();attempt.result().cancel(false);attempt.validation().cancel(false);
+			coordinator.cancelJob(attempt.ownerId(),attempt.job().identity());
 		}
 	}
 
@@ -493,7 +561,7 @@ public final class RemoteWorldgenManager {
 			long prepareStarted = System.nanoTime();
 			var prepared = RemoteDensityValidator.prepare(remote.job(), pipelineOptions.prepareValidation()
 				? config.validationSampleCells() : 0, randomState, settings, noise, validationRandom);
-			WorldgenAssist.LOGGER.info("[CAWG] job.validation_ready id={} source={} prepare_queue_ms={} prepare_ms={}",
+			trace("[CAWG] job.validation_ready id={} source={} prepare_queue_ms={} prepare_ms={}",
 				remote.job().identity().jobId(), source, (prepareStarted - queued) / 1_000_000.0,
 				prepared.prepareNanos() / 1_000_000.0);
 			return prepared;
@@ -533,7 +601,7 @@ public final class RemoteWorldgenManager {
 		boolean baseline = !pipelineOptions.prefetch() && !pipelineOptions.prepareValidation();
 		long base = baseline ? config.jobTimeout().toMillis() : pipelineOptions.demandWaitMillis();
 		boolean adaptive = !baseline && pipelineOptions.adaptiveDemandWait();
-		WorldgenAssist.LOGGER.info("[CAWG] demand.wait id={} adaptive={} budget_ms={} maximum_ms={}",
+		trace("[CAWG] demand.wait id={} adaptive={} budget_ms={} maximum_ms={}",
 			job.identity().jobId(), adaptive, demandWait.initialMillis(owner, requestStarted, base, adaptive),
 			adaptive ? AdaptiveDemandWait.maximumMillis(base) : base);
 		return demandWait.await(owner, requestStarted, base, adaptive, prepared,
@@ -557,6 +625,7 @@ public final class RemoteWorldgenManager {
 			prefetchDispatchQueued.set(null);
 			demandWait.clear();
 			cached = resultCache.clear();
+			startedTerrain.clear();
 			metrics = transferMetrics.size();
 			predictions = predictedJobs.size();
 			transferMetrics.clear();
@@ -596,7 +665,7 @@ public final class RemoteWorldgenManager {
 			);
 			PendingTerrainJobRegistry.ResponseStatus status = coordinator.completeClaimedResult(ownerId, result);
 			if (status == PendingTerrainJobRegistry.ResponseStatus.ACCEPTED) {
-				WorldgenAssist.LOGGER.info(
+				trace(
 						"[CAWG] job.result_decoded id={} encoding={} raw_bytes={} encoded_bytes={} decode_ms={} decode_queue_ms={}",
 					envelope.identity().jobId(),
 					envelope.encoding(),
@@ -698,7 +767,7 @@ public final class RemoteWorldgenManager {
 		coordinator.recordValidated(ownerId);
 		ResultTransferMetrics metrics = transferMetrics.remove(job.identity().jobId());
 		logResultReceived(job, result, metrics, startedNanos, source);
-		WorldgenAssist.LOGGER.info(
+		trace(
 			"[CAWG] prediction.complete id={} chunk={},{} total_ms={}",
 			job.identity().jobId(),
 			job.identity().chunkX(),
@@ -746,7 +815,7 @@ public final class RemoteWorldgenManager {
 		if (!config.remoteExecutionEnabled()) {
 			return invokeFallback(localFallback);
 		}
-		PlayerChunkDemand demand = PlayerChunkDemand.select(demands, context.level().dimension().identifier(),
+		PlayerChunkDemand demand = PlayerChunkDemand.selectGeneration(demands, context.level().dimension().identifier(),
 			chunk.getPos().x(), chunk.getPos().z()).orElse(null);
 		if (demand == null) {
 			noOwnerFallbacks.increment(); discardAhead(context.level().dimension().identifier(), chunk.getPos());
@@ -776,7 +845,8 @@ public final class RemoteWorldgenManager {
 				chunk.getPos(),
 				fingerprint,
 				noiseSettings,
-				eligibleContext.noise()
+				eligibleContext.noise(),
+				io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(noiseSettings, eligibleContext.settings().value())
 			);
 			AheadAvailability ahead = availableAhead(cacheKey);
 			Optional<TerrainDensityResult> cached = ahead.cached();
@@ -796,8 +866,12 @@ public final class RemoteWorldgenManager {
 				return applyRemoteDensity(chunk, job, result, cacheKey, null, eligibleContext, localFallback, startedNanos, "cache");
 			}
 			PredictionAttempt prediction = ahead.attempt();
+			if (cacheKey.workKind() != io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.DENSITY
+				&& pipelineOptions.readySurfaceOnly() && pipelineOptions.prefetch()) {
+				return generateWithReadySurface(chunk, cacheKey, demand, eligibleContext, localFallback, startedNanos);
+			}
 			if (prediction != null) {
-				WorldgenAssist.LOGGER.info(
+				trace(
 					"[CAWG] prediction.join id={} owner={} chunk={},{}",
 					prediction.job().identity().jobId(),
 					prediction.ownerId(),
@@ -826,7 +900,7 @@ public final class RemoteWorldgenManager {
 			}
 			if (pipelineOptions.adaptiveDemandWait() && (pipelineOptions.prefetch() || pipelineOptions.prepareValidation())
 				&& !demandWait.shouldSubmitDirect(demand.ownerId(), pipelineOptions.demandWaitMillis(), hasAheadWork(demand.ownerId()))) {
-				WorldgenAssist.LOGGER.info("[CAWG] demand.local chunk={},{} reason=latency_budget owner={}",
+				trace("[CAWG] demand.local chunk={},{} reason=latency_budget owner={}",
 					chunk.getPos().x(), chunk.getPos().z(), demand.ownerId());
 				return invokeFallback(localFallback);
 			}
@@ -907,6 +981,49 @@ public final class RemoteWorldgenManager {
 		}).thenCompose(future -> future);
 	}
 
+	/** Let vanilla enter its executor immediately. Claim only output already
+	 * validated when the queued terrain supplier actually begins. */
+	private CompletableFuture<ChunkAccess> generateWithReadySurface(ChunkAccess chunk, RemoteDensityResultCache.Key key,
+		PlayerChunkDemand demand, RemoteWorldgenEligibility.EligibleContext context,
+		Supplier<CompletableFuture<ChunkAccess>> local, long started) {
+		RemoteDensityTarget target = (RemoteDensityTarget)chunk;
+		var settings = context.settings().value();
+		var state = context.level().getChunkSource().randomState();
+		long seed = context.level().getSeed();
+		boolean structures = context.level().getServer().getWorldGenSettings().options().generateStructures();
+		var opportunity = new RemoteDensityOpportunity(() -> {
+			RemoteDensityField field=null;
+			synchronized (resultStateLock) {
+				if (!currentCacheKey(key)) return null;
+				startedTerrain.mark(key,System.nanoTime());
+				generationCandidates.remove(new GenerationPrefetchQueue.Position(key.dimension(),key.chunkX(),key.chunkZ()));
+				var cached = resultCache.takeResult(key);
+				if (cached.isPresent()) {
+				var result = cached.orElseThrow();
+				var job = new TerrainDensityJob(result.identity(), seed, structures, key.noiseSettings(), key.minY(), key.height(),
+					1, 1, key.workKind());
+				field = new RemoteDensityField(job, result, settings, state);
+				target.worldgenAssist$installRemoteDensity(field);
+				prefetchUsed.increment();
+				}
+			}
+			PredictionAttempt pending=predictedJobs.get(key);
+			if(pending!=null)cancelAhead(key,pending);
+			requestPrefetchDispatch();
+			return field;
+		}, (field, elapsed, error) -> {
+			if (error == null) WorldgenAssist.LOGGER.info(
+				"[CAWG] job.complete id={} source=cache apply_ms={} total_ms={} work_kind={} remote_samples={} grid_samples={} application=queued_ready",
+				field.jobId(), elapsed / 1_000_000.0, (System.nanoTime() - started) / 1_000_000.0,
+				field.workKind(), field.remoteSamplesServed(), field.gridSamplesServed());
+		});
+		target.worldgenAssist$installRemoteOpportunity(opportunity);
+		generationCandidates.offer(demand, chunk.getPos().x(), chunk.getPos().z(), key.generation(), key.ownerGeneration(),
+			System.nanoTime() + config.jobTimeout().toNanos());
+		requestPrefetchDispatch();
+		return invokeFallback(local).whenComplete((result, error) -> target.worldgenAssist$clearRemoteOpportunity(opportunity));
+	}
+
 	private static TerrainDensityJob createJob(
 		TerrainJobIdentity identity,
 		RemoteWorldgenEligibility.EligibleContext eligibleContext,
@@ -920,7 +1037,8 @@ public final class RemoteWorldgenManager {
 			eligibleContext.noise().minY(),
 			eligibleContext.noise().height(),
 			1,
-			1
+			1,
+			io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(noiseSettings, eligibleContext.settings().value())
 		);
 	}
 
@@ -937,7 +1055,8 @@ public final class RemoteWorldgenManager {
 			speculative.noise().minY(),
 			speculative.noise().height(),
 			1,
-			1
+			1,
+			io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(noiseSettings, speculative.settings().value())
 		);
 	}
 
@@ -947,7 +1066,8 @@ public final class RemoteWorldgenManager {
 		ChunkPos chunkPos,
 		WorldgenContextFingerprint fingerprint,
 		net.minecraft.resources.Identifier noiseSettings,
-		NoiseSettings noise
+		NoiseSettings noise,
+		io.github.genichimaruo.worldgenassist.common.TerrainWorkKind workKind
 	) {
 		return new RemoteDensityResultCache.Key(
 			cacheGeneration.get(),
@@ -961,7 +1081,8 @@ public final class RemoteWorldgenManager {
 			1,
 			1,
 			ownerId,
-			ownerGenerations.getOrDefault(ownerId, -1L)
+			ownerGenerations.getOrDefault(ownerId, -1L),
+			workKind
 		);
 	}
 
@@ -982,6 +1103,7 @@ public final class RemoteWorldgenManager {
 				ownerGenerations.put(ownerId, nextOwnerGeneration.incrementAndGet());
 			}
 			resultCache.removeOwner(ownerId);
+			startedTerrain.removeMatching(key->ownerId.equals(key.ownerId()));
 			demandWait.removeOwner(ownerId);
 			predictedJobs.keySet().removeIf(key -> ownerId.equals(key.ownerId()));
 			demands = demands.stream().filter(demand -> !ownerId.equals(demand.ownerId())).toList();
@@ -1020,6 +1142,9 @@ public final class RemoteWorldgenManager {
 			if (!currentCacheKey(cacheKey)) {
 				return false;
 			}
+			if (startedTerrain.contains(cacheKey,System.nanoTime())) {
+				lateResultsDiscarded.increment();return false;
+			}
 			resultCache.put(cacheKey, result);
 			WorldgenAssist.LOGGER.info(
 				"[CAWG] cache.store chunk={},{} samples={} entries={} capacity={} generation={} source={}",
@@ -1048,13 +1173,15 @@ public final class RemoteWorldgenManager {
 	) {
 		ResultTransferMetrics metrics = transferMetrics.remove(job.identity().jobId());
 		try {
-			RemoteDensityField densityField = new RemoteDensityField(job, result);
+			RemoteDensityField densityField = new RemoteDensityField(job, result, eligibleContext.settings().value(),
+				eligibleContext.level().getChunkSource().randomState());
 			RemoteDensityTarget target = (RemoteDensityTarget) chunk;
 			synchronized (resultStateLock) {
 				if (!currentCacheKey(cacheKey)) {
 					throw new IllegalStateException("Remote density context was invalidated before application");
 				}
 				target.worldgenAssist$installRemoteDensity(densityField);
+				startedTerrain.mark(cacheKey,System.nanoTime());
 			}
 			// Direct results already have a waiting chunk; retaining another full
 			// density volume would only consume memory. Prediction owns cache writes.
@@ -1066,11 +1193,12 @@ public final class RemoteWorldgenManager {
 				if (error == null) {
 					if (ownerId != null && source.equals("remote")) coordinator.recordValidated(ownerId);
 					WorldgenAssist.LOGGER.info(
-						"[CAWG] job.complete id={} source={} apply_ms={} total_ms={}",
+						"[CAWG] job.complete id={} source={} apply_ms={} total_ms={} work_kind={} remote_samples={} grid_samples={}",
 						job.identity().jobId(),
 						source,
 						(System.nanoTime() - applyStartedNanos) / 1_000_000.0,
-						(System.nanoTime() - startedNanos) / 1_000_000.0
+						(System.nanoTime() - startedNanos) / 1_000_000.0,
+						job.workKind(), densityField.remoteSamplesServed(), densityField.gridSamplesServed()
 					);
 				}
 			});

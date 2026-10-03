@@ -27,6 +27,7 @@ public record NoiseStageBackendConfig(Mode mode, int workerThreads, int queuedTa
 
 		return switch (value.trim().toLowerCase(Locale.ROOT)) {
 			case "local" -> Mode.LOCAL;
+			case "cooperative" -> Mode.COOPERATIVE;
 			case "delegate" -> Mode.DELEGATE;
 			case "vanilla" -> Mode.VANILLA;
 			default -> Mode.VANILLA;
@@ -61,6 +62,15 @@ public record NoiseStageBackendConfig(Mode mode, int workerThreads, int queuedTa
 		}
 	}
 
+	static NoiseStageBackendConfig resolve(String modeValue, String workersValue, String queueValue, int processors) {
+		Mode mode=parseMode(modeValue);
+		boolean automatic=workersValue==null || workersValue.isBlank();
+		boolean defaultQueue=queueValue==null || queueValue.isBlank();
+		return new NoiseStageBackendConfig(mode,
+			mode==Mode.COOPERATIVE && automatic ? Math.max(1,Math.min(2,processors)) : parseWorkerThreads(workersValue),
+			mode==Mode.COOPERATIVE && defaultQueue ? 4 : parseQueuedTasksPerWorker(queueValue));
+	}
+
 	private static NoiseStageBackendConfig load() {
 		String modeValue = configuredValue(MODE_SYSTEM_PROPERTY, MODE_ENVIRONMENT_VARIABLE);
 		String workersValue = configuredValue(WORKERS_SYSTEM_PROPERTY, WORKERS_ENVIRONMENT_VARIABLE);
@@ -68,11 +78,7 @@ public record NoiseStageBackendConfig(Mode mode, int workerThreads, int queuedTa
 			QUEUE_PER_WORKER_SYSTEM_PROPERTY,
 			QUEUE_PER_WORKER_ENVIRONMENT_VARIABLE
 		);
-		return new NoiseStageBackendConfig(
-			parseMode(modeValue),
-			parseWorkerThreads(workersValue),
-			parseQueuedTasksPerWorker(queuePerWorkerValue)
-		);
+		return resolve(modeValue,workersValue,queuePerWorkerValue,Runtime.getRuntime().availableProcessors());
 	}
 
 	private static String configuredValue(String systemProperty, String environmentVariable) {
@@ -83,7 +89,8 @@ public record NoiseStageBackendConfig(Mode mode, int workerThreads, int queuedTa
 	public enum Mode {
 		VANILLA("vanilla"),
 		DELEGATE("delegate"),
-		LOCAL("local");
+		LOCAL("local"),
+		COOPERATIVE("cooperative");
 
 		private final String id;
 
@@ -94,5 +101,6 @@ public record NoiseStageBackendConfig(Mode mode, int workerThreads, int queuedTa
 		public String id() {
 			return id;
 		}
+		public boolean usesLocalWorkers() { return this==LOCAL || this==COOPERATIVE; }
 	}
 }

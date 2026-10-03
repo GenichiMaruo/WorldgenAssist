@@ -85,17 +85,21 @@ public final class RemoteJobCoordinator {
 	}
 
 	public RemoteJobCoordinator(RemoteWorldgenConfig config, RemoteJobSender sender) {
+		this(config, sender, RemotePipelineOptions.ownerWindow());
+	}
+	RemoteJobCoordinator(RemoteWorldgenConfig config, RemoteJobSender sender, int ownerWindow) {
 		this(
 			config.remoteExecutionEnabled(),
-			new WorkerRegistry(Math.min(4, config.maxInFlightJobs())),
+			new WorkerRegistry(Math.min(ownerWindow, config.maxInFlightJobs())),
 			new PendingTerrainJobRegistry(
 				config.maxInFlightJobs(),
-				Math.min(4, config.maxInFlightJobs()),
+				Math.min(ownerWindow, config.maxInFlightJobs()),
 				config.jobTimeout(),
 				TERMINAL_RETENTION
 			),
 			sender
 		);
+		if (ownerWindow < 1 || ownerWindow > WorkerHelloPayload.MAX_PARALLEL_JOBS) throw new IllegalArgumentException("Owner window must be 1..64");
 	}
 
 	RemoteJobCoordinator(
