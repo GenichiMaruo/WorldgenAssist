@@ -41,7 +41,16 @@ export async function publishRelease({ repository, tag, projectId, token, github
         url = new URL(location, url).href;
         continue;
       }
-      if (!response.ok) throw new Error(`${label}: HTTP ${response.status}`);
+      if (!response.ok) {
+        // Keep the API's rejection reason, but never echo credentials or an
+        // unbounded response into Actions logs. Do not retry a failed POST.
+        let detail = await response.text().catch(() => '');
+        for (const secret of [token, githubToken, projectId]) {
+          if (secret) detail = detail.replaceAll(secret, '***');
+        }
+        detail = detail.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 1600);
+        throw new Error(`${label}: HTTP ${response.status}${detail ? `; ${detail}` : ''}`);
+      }
       return { response, url };
     }
     throw new Error(`${label}: too many redirects`);
