@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { publishRelease } from '../publish-curseforge.mjs';
 
-function fixture({ stage = 'alpha', corrupt = false, missingVersion = false, redirectOutsideCF = false, typeName = '26.3' } = {}) {
+function fixture({ stage = 'alpha', corrupt = false, missingVersion = false, missingEnvironment = false, redirectOutsideCF = false, typeName = '26.3' } = {}) {
   const repository = 'GenichiMaruo/WorldgenAssist';
   const version = `0.1.0${stage ? '-' + stage + '.5' : ''}+mc26.3`;
   const tag = 'v' + version;
@@ -21,6 +21,10 @@ function fixture({ stage = 'alpha', corrupt = false, missingVersion = false, red
     calls.push({ url, options });
     if (options.method === 'POST') {
       posted.push({ file: options.body.get('file'), metadata: JSON.parse(options.body.get('metadata')) });
+      // Match the real API requirement that caused the alpha.6 rejection.
+      if (!posted.at(-1).metadata.gameVersions.some(id => [106, 107].includes(id))) {
+        return new Response(JSON.stringify({ errorCode: 1021, errorMessage: 'You must select at least one version from the environment group of versions' }), { status: 400 });
+      }
       return json({ id: 1000 + posted.length });
     }
     if (url.startsWith('https://api.github.com/')) return json(release);
@@ -39,6 +43,7 @@ function fixture({ stage = 'alpha', corrupt = false, missingVersion = false, red
       { id: 999, name: '26.3', gameVersionTypeID: 1 },
       { id: 102, name: 'Fabric' }, { id: 103, name: 'Forge' },
       { id: 104, name: 'NeoForge' }, { id: 105, name: 'Java 25' },
+      ...(!missingEnvironment ? [{ id: 106, name: 'Client' }, { id: 107, name: 'Server' }] : []),
     ]);
   };
   return { options: { repository, tag, projectId: '1234567', token: 'private-cf-test-token', githubToken: 'private-github-test-token', mode: 'publish', fetchImpl }, calls, posted };
@@ -48,7 +53,7 @@ test('publishes exactly three verified installable JARs with correct loader and 
   const state = fixture();
   const report = await publishRelease(state.options);
   assert.equal(state.posted.length, 3);
-  assert.deepEqual(state.posted.map(entry => entry.metadata.gameVersions), [[101, 105, 102], [101, 105, 103], [101, 105, 104]]);
+  assert.deepEqual(state.posted.map(entry => entry.metadata.gameVersions), [[101, 105, 106, 107, 102], [101, 105, 106, 107, 103], [101, 105, 106, 107, 104]]);
   assert.deepEqual(state.posted[0].metadata.relations.projects, [{ slug: 'fabric-api', type: 'requiredDependency' }]);
   assert.equal(state.posted[1].metadata.relations, undefined);
   assert(state.posted.every(entry => entry.metadata.releaseType === 'alpha' && !entry.file.name.includes('sources')));
@@ -56,8 +61,8 @@ test('publishes exactly three verified installable JARs with correct loader and 
   assert(state.calls.filter(call => call.url.startsWith('https://github.com/')).every(call => !call.options.headers?.Authorization));
 });
 
-test('checksum or Minecraft metadata failure blocks all uploads, including a single-loader resume', async () => {
-  for (const failure of [{ corrupt: true }, { missingVersion: true }]) {
+test('checksum, Minecraft or environment metadata failure blocks all uploads, including a single-loader resume', async () => {
+  for (const failure of [{ corrupt: true }, { missingVersion: true }, { missingEnvironment: true }]) {
     const state = fixture(failure);
     await assert.rejects(publishRelease({ ...state.options, loader: 'fabric' }), /Checksum mismatch|version label unavailable/);
     assert.equal(state.posted.length, 0);

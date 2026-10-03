@@ -110,7 +110,9 @@ export async function publishRelease({ repository, tag, projectId, token, github
   };
   const minecraftId = versionId(plan.minecraft, true);
   const java = versions.filter(version => version.name === 'Java 25');
-  const common = [minecraftId, ...(java.length === 1 ? [java[0].id] : [])];
+  // This mod runs on both sides. CurseForge requires at least one environment
+  // label in addition to the Minecraft/Java/loader labels (API error 1021).
+  const common = [minecraftId, ...(java.length === 1 ? [java[0].id] : []), versionId('Client'), versionId('Server')];
   const report = { tag, mode, minecraft: plan.minecraft, releaseType: plan.type, files: [] };
   for (const file of plan.files) {
     file.metadata = {
