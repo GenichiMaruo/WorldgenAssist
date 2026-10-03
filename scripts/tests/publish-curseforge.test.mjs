@@ -83,3 +83,19 @@ test('a CurseForge redirect cannot send credentials to another service', async (
   assert(!state.calls.some(call => call.url.startsWith('https://example.com/')));
   assert.equal(state.posted.length, 0);
 });
+
+test('an upload rejection retains the API reason, redacts credentials and stops without retry', async () => {
+  const state = fixture();
+  const fetchImpl = async (url, options) => {
+    if (options?.method !== 'POST') return state.options.fetchImpl(url, options);
+    state.posted.push(options);
+    return new Response(JSON.stringify({ errorMessage: 'Invalid game version', token: state.options.token,
+      githubToken: state.options.githubToken, project: state.options.projectId }), { status: 400 });
+  };
+  await assert.rejects(publishRelease({ ...state.options, fetchImpl }), error => {
+    assert.match(error.message, /HTTP 400.*Invalid game version/);
+    for (const secret of [state.options.token, state.options.githubToken, state.options.projectId]) assert(!error.message.includes(secret));
+    return true;
+  });
+  assert.equal(state.posted.length, 1);
+});
