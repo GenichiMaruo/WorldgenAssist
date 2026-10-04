@@ -1,5 +1,154 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## AE completed physical result (2026-10-04)
+
+Gate192943-120/session11949 exited0;csb193315-115 COMPLETE,vanilla-first.
+Four lifecycle methods/three builds/profile and1,803 shared format2 digests/zero
+mismatch passed;679/702 actual complete applications. Fabric SHA256
+20E4554CBB515F218895D5E516A76F0D0B9642DBC39A5D0995C20AE255406CDC,
+Forge21F9B4A15BEF74609CCF18421B77A97F99FD5F9C810D2EDE0298F7CF7DF01976,
+NeoForge6495E33027BAD973A302001D2D061EC0EBFF9B3452069E2C3506D07F5E6E3B7D.
+FULL96.677->91.026s,107.272->108.878s,103.847->105.331s:only1/3 faster,
+paired median+1.43%. Receipt102.435->96.575s,113.280->115.316s,
+109.420->110.431s:only1/3 faster,paired+0.92%. CPU401.547->349.391s,
+448.531->378.875s,423.844->378.641s:all lower,paired-12.99%.
+Tick p95+4.02%,two higher/one lower. Equal coordinates/settings/JAR/work,
+31,974 completed tasks per condition,all owners3461 receipts/repeat,issues empty,
+failures/job timeouts0,wait fallbacks152/221/145,apply rejections0. Actual full
+applications7967/8982/7482,audited978/1140/956,unaudited7197/8309/6833.
+No overall acceleration or beta conclusion; removed queue time is not saved
+critical-path time. Whole client peaks2.913/2.885GB,join/warmup included.
+Offline existing-recording JFR:private complete audit13.81%,biome creation6.73%,
+application4.21% inclusive shares,overlapping/not durations. This supports
+investigating how to distribute verification CPU rather than more queue edits.
+Earlier active/unrun records below retain their original chronology.
+
+## AE preparation queue bypass (implementation complete; unrun)
+
+AD gate185823-501/session7352 exited0; csb190158-874 COMPLETE,assisted-first.
+Two cache methods/three builds/profile and1,813 shared format2 digests/zero
+mismatch passed;703/683 full applications in correctness. Fabric SHA256
+51EB7729DF1AD8DD2DE3A79B57C5D8D40215CF8F3C77762AE792CB34D48333A6,
+Forge40B840B44383BC9CA6D35308ACC1419CC9DE97F636E51A6BF6099B0BF4747153,
+NeoForge4B82B52C66457BB1396C98524E25B110B7BEF6D956CE3880703D6996F14E0561.
+FULL98.480->87.911s,107.885->100.309s,104.536->102.252s,all faster,
+paired-7.02%. Receipt104.059->93.496s,114.264->106.896s,110.057->108.067s,
+all faster,paired-6.45%. CPU395.531->349.469s,451.484->376.094s,
+420.094->376.516s,all lower,paired-11.65%. Tick p95 all higher,paired+6.24%.
+Equal coordinates/settings/JAR and31,974 completed tasks per condition,
+all owners3461 receipts/repeat,issues empty,failures/job timeouts0,wait fallbacks
+208/289/234. Full applications8074/8933/7434,audits991/1150/963,
+unaudited7276/8287/6801,application rejection0. Acceptance is not application.
+
+512-entry cache: final server5997 hits/12564 misses (~32.3%),client17195/21001
+and19477/21903 (~45.0/47.1%). Whole client process peak working sets2.898/2.942GB
+(join/warmup included; not repeat-isolated). Existing-recording JFR private
+compute14.35%,original biome creation7.04%,application3.26% inclusive samples,
+overlapping and not CPU durations. No substantial latency gain or beta basis.
+
+AD diagnostic correctness logs reveal unaudited constant preparation still
+queued behind full recomputation:1,444 accepted unaudited replies,queue median
+23.294ms,p95 206.276ms,318 over100ms. Audited217 median28.781ms,p95 299.511ms.
+This is the full diagnostic correctness window, not quiet performance repeats;
+source hash and method retained in correctness/validation-queue-analysis.json.
+
+AE dev.14/protocol11 gives only those unaudited complete jobs an immediate
+prepared path through the same admission ticket. Remote wait/comparison still
+holds capacity; cancellation/late replies and duplicate starts retain bounds.
+Audited and old intermediate jobs remain on the owned CPU executor. Original
+comparison, token/current-context acceptance, deadlines and application checks
+are shared unchanged. First2 full audits then private1/8 remain unchanged.
+Four affected preparation lifecycle methods,three builds,fresh two-owner parity
+then physical view32 vanilla-first form one sequential batch after all edits.
+No cache/digest/codec/fragment retest. All AE evidence is unrun; no new release.
+
+AE gate192943-120/session11949 is now active:four selected lifecycle methods,
+three builds/profile and fresh Fabric parity1,803 shared format2 digests/zero
+mismatch passed. Actual full applications679/702; audited/unaudited acceptance
+and application-refusal gates passed. Diagnostic correctness queue analysis:
+unaudited1,307 accepted replies median0.0119ms/p95 0.0358ms,none over100ms;
+audited172 median0.4105ms/p95 103.264ms. This confirms constant preparation no
+longer waits behind CPU audits, not a performance-repeat speed claim.
+Physical vanilla-first view32 continues in csb193315-115. Source/version/runtime
+inputs frozen until this exact session is terminal; no competing runtime.
+
+## AD private biome cache capacity (implementation complete; unrun)
+
+AC gate182458-534/session11932 exited0, csb182835-338 COMPLETE,vanilla-first.
+Six affected methods/three builds/profile and fresh1,792 format2 digests with
+zero mismatch/1,371 full applications passed. FULL97.360->88.290s,
+109.557->103.428s,106.768->99.667s, all faster, paired-6.65%.
+Receipt102.807->93.513s,115.597->108.946s,112.202->104.817s,all faster,
+paired-6.58%. CPU397.734->356.359s,439.250->380.094s,413.313->371.953s,
+all lower,paired-10.40%;tick p95 all higher,paired+4.50%. Equal work/settings/
+coordinates/JAR,31,974 tasks per condition,all owners3461 receipts/repeat,
+issues empty,task failures/timeouts0,wait fallbacks253/316/207,apply rejection0.
+Actual full applications7758/8890/7528, audited995/1104/930,unaudited6992/8214/6938.
+No substantial latency improvement over AB or beta conclusion.
+
+AC existing-recording JFR: private full computation14.45%,original biome
+creation7.64%,biome digest absent from top150 inclusive methods. Original biome
+creation includes actual server BIOMES and private audits; it is not all
+removable. Inclusive shares overlap/are not CPU durations. Cache summaries
+show server hits2467/misses16949 (~12.7%) with64 entries; client summaries
+likewise~12-13%. Client compute17.56/19.02/18.32ms exceeded AB's separate15-17ms;
+different order/batch does not establish causality. Peak client working set
+2.896/2.463GB (whole run incl join/warmup, not repeat-isolated memory).
+
+AD dev.13 retains protocol11/contextv2/digestv2/full audit policy, increases
+private BIOMES LRU cap64->512 per owned computer to cover a wider frontier.
+No new live-world cache, worker thread, ticket, job limit or audit reduction.
+At most64 audit computers/three contexts per client worker remain; larger
+retained memory is a tradeoff and must be checked against measured working set.
+Two existing affected private cache isolation/eviction/invalidation/bounds
+methods,three necessary builds,fresh parity and physical view32 assisted-first
+pair form one sequential batch after all implementation. No unchanged digest/
+codec/fragment/protocol retest. All AD results are unrun; AC remains distinct.
+
+AD gate185823-501/session7352 is active:two affected cache methods and all
+three builds/profile passed; fresh vanilla correctness runtime passed, assisted
+parity running before assisted-first view32. Source/version/runtime inputs
+frozen until this exact batch is terminal; no competing runtime.
+
+## AC biome reuse / bulk digest candidate (implementation complete; unrun)
+
+AB was saved in commit34b3d85, without publishing a new release. AC dev.12 /
+protocol11 addresses AB's recorded private biome creation8.87% and biome-window
+digest7.17% inclusive shares (overlap; not directly additive CPU savings).
+Private owned computers cache at most64 original BIOMES-only chunks, copying
+center sections before all terrain writes; no live-world chunk is cached.
+Generator/RandomState identity or minY/height changes clear private input cache.
+Audit computers (at most64) are keyed by owner/epoch/dimension/context and revoked
+on reload/disconnect/quarantine. Original full audit calculations remain; first
+two full comparisons and probability1/8 are unchanged. Sparse cache-summary
+logs every128 successful private computations expose actual hits/misses/bounds.
+
+Biome-window digestv2 binds sorted actual palette names (including unused),
+center/vertical geometry and every one of the nine chunks' quart voxels as
+window-local uint16 codes. A single bounded sample buffer replaces repeated
+name-string/hash updates. No registry numeric IDs or live biome hash cache.
+Complete contextv2/protocol11 prevents old digest semantics mixing with new.
+
+Six affected methods: two private cache isolation/eviction/invalidation tests,
+two biome digest palette-order/unused-entry/voxel/geometry tests, two existing
+protocol/domain methods. Then three necessary builds, fresh two-owner format2
+parity and physical view32 vanilla-first/overlap/deep32/64/lookahead0 in one
+sequential batch after all implementation. No unchanged fragment/codec retest
+or broad matrix. All AC results are unrun; AB results below remain distinct.
+
+AC gate182458-534/session11932 is active:all six affected methods passed,
+all three builds/profile passed. Fresh physical two-owner parity precedes
+view32 performance. Source/version/runtime inputs are frozen until terminal.
+No AC parity/performance result exists yet; no competing runtime/native test.
+
+AC fresh Fabric parity completed:1,792 shared format2 digests/zero mismatch,
+both required application chunks equal,667/704 actual complete applications.
+All audited/unaudited acceptance and application-refusal gates passed.
+Gate182458-534/session11932 continues vanilla-first physical view32 in
+csb182835-338. Fabric SHA256
+F571DF7A5F9035988F919DC526816EC3E3ADF5F282C674A213D0C8140ADA7267.
+No AC performance conclusion yet; keep runtime inputs frozen until terminal.
+
 ## AB complete physical result (2026-10-04)
 
 Gate174336-396/session94343 exited0; csb174644-620 COMPLETE, assisted-first.

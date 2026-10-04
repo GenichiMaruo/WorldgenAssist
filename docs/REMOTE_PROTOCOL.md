@@ -1,5 +1,26 @@
 # Remote Protocol
 
+## AE scheduling checkpoint (dev.14; unchanged protocol11)
+
+AC/AD protocol11 passed fresh Fabric format2 parity (AC1,792/AD1,813 shared
+digests,zero mismatch). AE changes only server preparation scheduling: no new
+packet, digest, context domain, palette, audit draw or response authority.
+Unaudited complete validators bypass the CPU queue while retaining their same
+bounded admission through remote wait and final comparison. Old paths and full
+audits keep the owned executor. AE evidence and native full runtime are unrun.
+Earlier unrun statuses below are historical implementation records.
+
+## AC candidate (dev.12/protocol11; unverified)
+
+The complete result body/envelope/state palette is unchanged, but its32-byte
+biome-window field now uses digestv2: domain/center/geometry, sorted actual
+palette names with counts/length framing, then all nine chunks' quart voxels
+as big-endian uint16 codes in z/x/qz/qx/y order. Codes index that sorted name
+list, never numeric registry IDs. Unused palette entries and all voxel values
+remain bound. Bulk hashing is not sampled verification. Complete context domain
+is v2. Both peers must use11; protocol10 is rejected explicitly. AC tests and
+runtime are unrun; prior AA/AB protocol10 evidence retains original identities.
+
 ## Complete terrain (AA dev.10 / AB dev.11, protocol10)
 
 AA transport passed17 affected/3 Forge fragment methods,three builds and fresh

@@ -80,4 +80,54 @@ class RemotePreparation263Test {
 			assertEquals(0, pipeline.size());
 		} finally { exit.countDown(); executor.shutdownNow(); }
 	}
+
+	@Test void preparedReplyBypassesBlockedPreparationWithoutReleasingItsRemoteSlot() {
+		ArrayDeque<Runnable> queue = new ArrayDeque<>();
+		var pipeline = new BoundedRemotePreparation<Integer, Integer>(2, queue::add);
+		UUID auditOwner = UUID.randomUUID(), readyOwner = UUID.randomUUID();
+		var auditing = pipeline.reserve(auditOwner, 1);
+		var auditRemote = CompletableFuture.completedFuture(9);
+		var auditAnswer = auditing.start(() -> 9, auditRemote, (a,b) -> a);
+		var ready = pipeline.reserve(readyOwner, 1);
+		var remote = new CompletableFuture<Integer>();
+		AtomicInteger comparisons = new AtomicInteger();
+		var answer = ready.startPrepared(7, remote, (actual, expected) -> {
+			comparisons.incrementAndGet(); assertEquals(expected, actual); return actual;
+		});
+		assertSame(answer, ready.start(() -> fail("Duplicate preparation"), remote, (a,b) -> fail("Duplicate comparison")));
+		assertSame(answer, ready.startPrepared(8, remote, (a,b) -> fail("Duplicate ready comparison")));
+		assertEquals(1, queue.size()); assertEquals(2, pipeline.size());
+		assertNull(pipeline.reserve(readyOwner, 1)); assertFalse(answer.isDone());
+		remote.complete(7);
+		assertEquals(7, answer.join()); assertEquals(1, comparisons.get());
+		assertEquals(1, pipeline.size()); assertFalse(auditAnswer.isDone());
+		queue.remove().run(); assertEquals(9, auditAnswer.join()); assertEquals(0, pipeline.size());
+	}
+
+	@Test void preparedCancellationAndFailuresReleaseOnceAndIgnoreLateReplies() {
+		var pipeline = new BoundedRemotePreparation<Integer, Integer>(1, task -> fail("Ready preparation used executor"));
+		UUID owner = UUID.randomUUID();
+		var ticket = pipeline.reserve(owner, 1);
+		var remote = new CompletableFuture<Integer>();
+		var cancelled = ticket.startPrepared(2, remote, (a,b) -> fail("Cancelled reply compared"));
+		pipeline.cancelOwner(owner); ticket.cancel();
+		assertTrue(cancelled.isCompletedExceptionally()); assertEquals(0, pipeline.size());
+		var replacement = pipeline.reserve(owner, 1);
+		remote.complete(2); assertEquals(1, pipeline.size());
+		var failedRemote = new CompletableFuture<Integer>();
+		var failed = replacement.startPrepared(3, failedRemote, (a,b) -> fail("Failed reply compared"));
+		failedRemote.completeExceptionally(new IllegalStateException("transport failed"));
+		assertTrue(failed.isCompletedExceptionally()); assertEquals(0, pipeline.size());
+		var invalid = pipeline.reserve(owner, 1);
+		var rejected = invalid.startPrepared(4, CompletableFuture.completedFuture(5), (a,b) -> {
+			throw new IllegalArgumentException("Invalid result");
+		});
+		assertTrue(rejected.isCompletedExceptionally()); assertEquals(0, pipeline.size());
+		ArrayDeque<Runnable> oldQueue = new ArrayDeque<>();
+		var oldPipeline = new BoundedRemotePreparation<Integer, Integer>(1, oldQueue::add);
+		var oldPath = oldPipeline.reserve(owner, 1);
+		var notStarted = oldPath.start(() -> fail("Cancelled queued preparation ran"), new CompletableFuture<>(), (a,b) -> a);
+		assertSame(notStarted, oldPath.startPrepared(6, CompletableFuture.completedFuture(6), (a,b) -> fail("Duplicate switched path")));
+		oldPipeline.cancelAll(); assertEquals(0, oldPipeline.size()); oldQueue.remove().run();
+	}
 }

@@ -73,7 +73,7 @@ public final class WorldgenContextFingerprintFactory {
 	) {
 		DynamicOps<JsonElement> ops = registries.createSerializationContext(JsonOps.INSTANCE);
 		CanonicalDigestWriter writer = new CanonicalDigestWriter();
-		writer.putString("worldgen_assist:complete_terrain_context_v1");
+		writer.putString("worldgen_assist:complete_terrain_context_v2");
 		writer.putString(create(registries, dimension, worldSeed, generateStructures, minY, height, settings).toString());
 		writer.putInt(io.github.genichimaruo.worldgenassist.common.CompleteTerrainPalette.VERSION);
 		writer.putJson(encode(net.minecraft.world.level.biome.BiomeSource.CODEC, ops, biomes, "terrain biome source"));

@@ -42,6 +42,7 @@ final class BoundedRemotePreparation<P, R> {
 		private final CompletableFuture<P> prepared = new CompletableFuture<>();
 		private final CompletableFuture<R> result = new CompletableFuture<>();
 		private FutureTask<Void> task;
+		private boolean started;
 		private boolean running;
 		private boolean preparationExited;
 		private boolean released;
@@ -56,7 +57,8 @@ final class BoundedRemotePreparation<P, R> {
 
 		CompletableFuture<R> start(Supplier<P> prepare, CompletableFuture<R> remote, BiFunction<R, P, R> compare) {
 			synchronized (this) {
-				if (task != null || result.isDone()) return result;
+				if (started || result.isDone()) return result;
+				started = true;
 				task = new FutureTask<>(() -> {
 					try { prepared.complete(prepare.get()); }
 					catch (Throwable error) { prepared.completeExceptionally(error); }
@@ -77,6 +79,25 @@ final class BoundedRemotePreparation<P, R> {
 					}
 				};
 			}
+			combine(remote, compare);
+			try { executor.execute(task); }
+			catch (RuntimeException error) { result.completeExceptionally(error); }
+			return result;
+		}
+
+		/** Constant preparation can bypass CPU work, but admission covers the entire remote wait. */
+		CompletableFuture<R> startPrepared(P value, CompletableFuture<R> remote, BiFunction<R, P, R> compare) {
+			synchronized (this) {
+				if (started || result.isDone()) return result;
+				started = true;
+				preparationExited = true;
+			}
+			prepared.complete(value);
+			combine(remote, compare);
+			return result;
+		}
+
+		private void combine(CompletableFuture<R> remote, BiFunction<R, P, R> compare) {
 			// Fail promptly; thenCombine alone waits for the other input on failure.
 			remote.whenComplete((value, error) -> { if (error != null) result.completeExceptionally(error); });
 			prepared.whenComplete((value, error) -> { if (error != null) result.completeExceptionally(error); });
@@ -86,9 +107,6 @@ final class BoundedRemotePreparation<P, R> {
 			}).whenComplete((value, error) -> {
 				if (error == null) result.complete(value); else result.completeExceptionally(error);
 			});
-			try { executor.execute(task); }
-			catch (RuntimeException error) { result.completeExceptionally(error); }
-			return result;
 		}
 
 		void cancel() { result.completeExceptionally(new CancellationException("Remote preparation invalidated")); }

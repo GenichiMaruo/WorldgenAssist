@@ -2,7 +2,7 @@
 
 ## Scope and sources
 
-The published alpha.6 and current alpha.7-dev.11 candidate target Minecraft Java Edition **26.3** with
+The published alpha.6 and current alpha.7-dev.14 candidate target Minecraft Java Edition **26.3** with
 Fabric Loader **0.19.5** / Fabric API **0.161.0+26.3**, Forge **66.0.3**,
 and NeoForge **26.3.0.13-beta** on Java **25** (verification JDK 25.0.4).
 The earlier 26.2 Fabric alpha.3 remains on `mc/26.2` and is immutable.
@@ -26,6 +26,23 @@ Read the relevant protocol and test documents before changing their paths:
 security boundary and `ALPHA3_PERFORMANCE.md` for measured performance.
 
 ## Non-negotiable behavior
+
+- AE dev.14/protocol11 changes preparation scheduling only. COMPLETE_TERRAIN
+  jobs not selected for independent recomputation prepare their constant
+  shape/identity validator immediately through the same bounded ticket. They
+  retain their slot until reply/comparison/cancellation finishes, bypassing the
+  owned CPU validation queue. A shared started guard prevents duplicate starts
+  across queued and prepared paths. Audited jobs and all intermediate kinds
+  still use the original owned executor. Original first2/private1/8 audit policy,
+  current owner/epoch/deadline checks, decoded domain checks and guarded final
+  application remain. No blocking wait or new executor. Four affected lifecycle
+  methods/three builds/1,803 matching digests passed. Vanilla-first view32
+  FULL+1.43%/receipt+0.92% (only1/3 faster),CPU-12.99% all three lower,
+  tick p95+4.02% (two higher). No speedup/beta; queue removal is not latency gain.
+  AD dev.13 completed2 methods/three builds/1,813 matching digests and physical
+  assisted-first FULL-7.02%/receipt-6.45%/CPU-11.65%,all three improved;
+  tick p95+6.24% all higher. Cache reuse~32% server/45-47% client, working
+  sets~2.90/2.94GB whole run. No substantial speedup or native full runtime.
 
 - AA alpha.7-dev.10/protocol10 adds COMPLETE_TERRAIN, only with work kind
   `complete`, separate `allow_complete_terrain=true`, existing remote-on and
@@ -51,6 +68,22 @@ security boundary and `ALPHA3_PERFORMANCE.md` for measured performance.
   receipt-6.51%/CPU-10.67%, all three improved, tick p95+4.48%. Full consumption
   reached74-84%. No fresh native complete runtime or opposite-order AB evidence.
   Retain exact source/JAR identities; never apply AA/Z performance to AB.
+
+- AC alpha.7-dev.12 uses protocol11 and complete-context/biome-window digestv2.
+  It hashes the sorted actual biome-palette names once, then every quart voxel
+  as a bounded window-local uint16 code in the original traversal order. It
+  retains all nine chunks, geometry and unused palette entries; no sampled
+  biome checks or live-world digest cache. Private computation caches at most
+  64 BIOMES-only chunks per owned computer; center sections are copied before
+  terrain mutation. Generator/RandomState identity or geometry changes clear
+  the cache. At most64 audit computers, keyed by owner/epoch/dimension/context,
+  are reused only on the owned validation executor and cleared on invalidation.
+  First two full audits and private1/8 sampling are unchanged.
+  Checkpoint34b3d85 preserves AB. AC completed six methods/three builds/1,792 matching digests,
+  FULL-6.65%/receipt-6.58%/CPU-10.40% all three improved, tick p95+4.50%.
+  Cache reuse was only~13%. AD dev.13 changes only private cache cap64->512
+  per computer, not protocol/digest/audit/authority/worker/job bounds. Retained
+  memory increases; AD completed evidence is above. No beta.
 
 - The server owns final world state. Following the user's2026-10-03 authorization
   to change the distributed computation method, clients may return bounded

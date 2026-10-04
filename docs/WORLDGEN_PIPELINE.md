@@ -1,5 +1,57 @@
 # World Generation Pipeline Notes
 
+AE completed4 affected methods/three builds/1,803 matching digests, but same-
+region view32 FULL+1.43%/receipt+0.92% only1/3 faster despite CPU-12.99% all
+three lower. Private independent full audits still13.81% inclusive JFR samples.
+No beta or causal speedup claim. Earlier unrun sections are historical records.
+
+## AE constant preparation bypass (dev.14/protocol11; unverified)
+
+Diagnostic AD correctness shows accepted unaudited replies waiting median23ms/
+p95 206ms behind private full audits, although their preparation has no terrain
+CPU work. AE immediately creates their existing constant Prepared validator,
+using BoundedRemotePreparation.Ticket.startPrepared. Shared started guard permits
+exactly one queued or immediate path. Preparation exits immediately, but ticket
+capacity persists through remote wait/comparison; cancellation releases once,
+late results cannot compare or release a replacement. Heavy full audits and all
+old work kinds retain the owned validation executor. Existing decoded bounds,
+current token/owner/context checks and execution-time application still apply.
+No audit-frequency reduction, worker increase or blocking network/server wait.
+Four affected methods/three builds/fresh parity/view32 are unrun. AD completed
+FULL-7.02%/receipt-6.45%/CPU-11.65% all three improved,tick p95+6.24%;not beta.
+
+## AD wider private biome frontier (unverified)
+
+AC completed paired FULL-6.65%/receipt-6.58%/CPU-10.40%,all three improved,
+but only~13% private biome reads reused64-entry caches. AD dev.13/protocol11
+raises the same private LRU to512. Cached canonical inputs remain BIOMES-only,
+center sections copied, generator/state/geometry reset and owner/epoch/context
+invalidation unchanged. Every actual server biome voxel is still scanned.
+No new workers/jobs/tickets/audit-policy change. More retained private memory
+is the tradeoff. Two affected cache methods/builds/parity/view32 are unrun.
+
+## AC bounded private biome reuse and exact bulk digest (unverified)
+
+AB consumed74-84% of complete results and reduced server CPU10.67%, but FULL
+only7.30%. Recorded original private biome creation8.87% and window digest7.17%
+inclusive sample shares motivate AC; shares overlap and are not CPU durations.
+Original bulk float climate computation still creates private BIOMES chunks.
+Each owned computer keeps at most64 canonical BIOMES-only chunks, never runs
+terrain on those cached objects, and copies center sections using verified
+LevelChunkSection.copy(). Generator/state identity or geometry changes clear
+the cache; canceled computation cannot expose a partially mutated center to
+the next task. Client computers remain per-worker/per-context. At most64 server
+audit computers belong to owner/epoch/dimension/fingerprint keys; only its
+existing validation executor computes, lifecycle invalidation revokes entries.
+Full audit selection/comparison is unchanged and independent of client data.
+
+Digestv2 hashes names of the sorted complete actual palette union once, then a
+bounded uint16 code for every9*16*(height/4) voxel in the existing z/x/qz/qx/y
+order. Codes are bound to names, not registry numeric IDs. Position/geometry,
+unused palette entries and every voxel are retained. The actual server biome
+window is still scanned on every application; no live-world biome hash cache.
+Complete contextv2 and protocol11 reject old semantics. All AC gates are unrun.
+
 ## Complete terrain core in development (2026-10-04)
 
 Z completed with two of three paired speed/CPU improvements; see exact evidence

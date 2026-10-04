@@ -1,5 +1,46 @@
 # Mixin Targets
 
+AE three builds and Fabric1,803 matching format2 digests completed. No new
+Minecraft target; native complete runtime remains unverified. Same-region
+physical speed did not improve reliably. Current evidence is TEST_RESULTS_LATEST.
+
+## AE preparation scheduling (dev.14/protocol11; unverified)
+
+No Minecraft symbol, Mixin target or game threading change. Only constant
+unaudited validators bypass the CPU preparation executor; original biome/terrain
+invokers remain on owned computing workers, including independent server audits.
+AD three builds/Fabric1,813 matching format2 digests passed. Fresh AE builds/
+runtime and native complete runtime are unrun. Earlier unrun headings below
+describe implementation-time checkpoints; current evidence is TEST_RESULTS_LATEST.
+
+## AE preparation scheduling (dev.14/protocol11; unverified)
+
+No Minecraft symbol, Mixin target or game threading change. Only constant
+unaudited validators bypass the CPU preparation executor; original biome/terrain
+invokers remain on owned computing workers, including independent server audits.
+AD three builds/Fabric1,813 matching format2 digests passed. Fresh AE builds/
+runtime and native complete runtime are unrun. Earlier unrun headings below
+describe implementation-time checkpoints; current evidence is TEST_RESULTS_LATEST.
+
+## AD private cache capacity (dev.13/protocol11; unverified)
+
+No new game call/Mixin/thread assumption. Same source-verified original
+biome invoker and LevelChunkSection.copy(); only private LRU capacity64->512.
+AC six affected methods/three builds/Fabric1,792 matching format2 digests
+passed. AD fresh builds/runtime pending; native complete runtime is unrun.
+
+## AC private biome reuse (dev.12/protocol11; unverified)
+
+No new Mixin or game executor. Generated26.3 Fabric/Forge/NeoForge
+LevelChunkSection.copy()->LevelChunkSection copies counts and both states.copy()
+and biomes.copy(). Private BIOMES-only canonical chunks stay inside a bounded
+owned cache; a fresh private ProtoChunk receives copied center sections before
+original fill/surface/carver invocations. Neighbor private biome inputs stay
+read-only. Geometry and generator/RandomState identity invalidate private cache.
+Server audit computers are reused only on its existing single owned validation
+executor; authority/cache context keys and lifecycle cleanup remain. AC builds/
+runtime have not run, and native complete runtime remains unverified.
+
 ## AA complete-terrain prototype (registered, not tested)
 
 New PrivateBiomeInvoker263 targets ChunkGenerator's private doCreateBiomes

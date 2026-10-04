@@ -1,4 +1,56 @@
-# Larger terrain offload candidate — AA verified, AB timing pending (2026-10-04)
+# Larger terrain offload candidate — AE preparation scheduling (2026-10-04)
+
+AD completed cache-capacity gate185823-501/csb190158-874:1,813 matching digests,
+paired FULL-7.02%/receipt-6.45%/CPU-11.65%,all three improved,tick p95+6.24%.
+512 entries increase reuse to~32% server/45-47% clients, with whole client peak
+working sets~2.90/2.94GB. Still not substantial acceleration or beta readiness.
+Diagnostic correctness shows unaudited validators unnecessarily queued behind
+full audits (median23ms/p95 206ms,1,444 accepted replies). AE dev.14/protocol11
+immediately prepares only their existing constant validator using the same
+bounded ticket and final comparison. It retains all audit frequencies, authority,
+timeouts, fallback and final application. Four affected lifecycle methods,
+three builds,fresh parity/view32 vanilla-first run after all implementation.
+All AE evidence is unrun; historical pending paragraphs below retain chronology.
+
+## AE current preparation scheduling checkpoint
+
+AD completed cache-capacity gate185823-501/csb190158-874:1,813 matching digests,
+paired FULL-7.02%/receipt-6.45%/CPU-11.65%,all three improved,tick p95+6.24%.
+512 entries increase reuse to~32% server/45-47% clients, with whole client peak
+working sets~2.90/2.94GB. Still not substantial acceleration or beta readiness.
+Diagnostic correctness shows unaudited validators unnecessarily queued behind
+full audits (median23ms/p95 206ms,1,444 accepted replies). AE dev.14/protocol11
+immediately prepares only their existing constant validator using the same
+bounded ticket and final comparison. It retains all audit frequencies, authority,
+timeouts, fallback and final application. Four affected lifecycle methods,
+three builds,fresh parity/view32 vanilla-first run after all implementation.
+All AE evidence is unrun; historical pending paragraphs below retain chronology.
+
+## AE current preparation scheduling checkpoint
+
+AD completed cache-capacity gate185823-501/csb190158-874:1,813 matching digests,
+paired FULL-7.02%/receipt-6.45%/CPU-11.65%,all three improved,tick p95+6.24%.
+512 entries increase reuse to~32% server/45-47% clients, with whole client peak
+working sets~2.90/2.94GB. Still not substantial acceleration or beta readiness.
+Diagnostic correctness shows unaudited validators unnecessarily queued behind
+full audits (median23ms/p95 206ms,1,444 accepted replies). AE dev.14/protocol11
+immediately prepares only their existing constant validator using the same
+bounded ticket and final comparison. It retains all audit frequencies, authority,
+timeouts, fallback and final application. Four affected lifecycle methods,
+three builds,fresh parity/view32 vanilla-first run after all implementation.
+All AE evidence is unrun; historical pending paragraphs below retain chronology.
+
+AC completed paired FULL-6.65%/receipt-6.58%/CPU-10.40%,all three improved,
+but cache reuse~13% and no substantial latency gain. AD dev.13/protocol11 now
+expands only private LRU64->512; two affected methods/three builds/fresh parity/
+view32 assisted-first pair are prepared, all unrun. Increased retained memory
+must be checked; no audit reduction or new generation tasks.
+
+AB completed with paired FULL-7.30%/receipt-6.51%/CPU-10.67% all three improved;
+checkpoint34b3d85 preserves it. AC dev.12/protocol11 now implements bounded
+private BIOMES reuse (copied center) and exact bulk biome digestv2, addressing
+recorded redundant audit work without reducing the audit probability. Six
+affected methods/three builds/fresh parity/view32 pair are prepared, all unrun.
 
 AA completed focused units/builds/Fabric parity and physical view32: all three
 FULL/receipt repeats faster (paired8.21%/8.64%), CPU3.91% higher all three.

@@ -2,6 +2,19 @@
 
 ## Status
 
+AE dev.14/protocol11 retains first2 independent full audits then private1/8,
+all decoded bounds/identity/current epoch/token/deadline and application checks.
+Only constant unaudited preparation bypasses the owned CPU validation queue.
+Admission still lasts through response/comparison; cancellation rejects late
+results. No new disclosure or hostile-client proof. AC/AD Fabric parity passed;
+AE and native full runtime are unrun. Earlier unrun records below are historical.
+
+AC dev.12/protocol11 caches only original private server/client BIOMES inputs,
+never client replies or authoritative world hashes. Terrain mutates a copied
+center, independent audits retain first two then1/8 policy, and every actual
+server biome voxel is still checked via digestv2. All AC verification is unrun.
+This optimization does not improve hostile-client proof or seed secrecy.
+
 AA dev.10 and AB dev.11/protocol10 passed targeted units/builds/Fabric parity.
 Native complete runtime is unrun; no beta or hostile-client safety claim.
 Complete terrain is a separate

@@ -38,6 +38,11 @@ import net.minecraft.world.level.levelgen.densityfunction.DensityVolume;
 public final class PrivateTerrainComputer {
 	private final PalettedContainerFactory containers;
 	private final CompleteTerrainPalette palette;
+	private final PrivateBiomeChunkCache biomeCache = new PrivateBiomeChunkCache(512);
+	private NoiseBasedChunkGenerator cachedGenerator;
+	private RandomState cachedState;
+	private int cachedMinY, cachedHeight;
+	private long completedComputations;
 
 	public PrivateTerrainComputer(HolderLookup.Provider registries) {
 		var biomes = registries.lookupOrThrow(Registries.BIOME);
@@ -69,15 +74,23 @@ public final class PrivateTerrainComputer {
 			throw new IllegalStateException("Private terrain invokers are unavailable");
 		}
 		LevelHeightAccessor height = LevelHeightAccessor.create(job.minY(), job.height());
+		if (cachedGenerator != generator || cachedState != state || cachedMinY != job.minY() || cachedHeight != job.height()) {
+			biomeCache.clear(); cachedGenerator = generator; cachedState = state;
+			cachedMinY = job.minY(); cachedHeight = job.height();
+		}
 		ProtoChunk[][] window = new ProtoChunk[3][3];
 		Set<Holder<Biome>> possibleBiomes = new HashSet<>();
 		int centerX = job.identity().chunkX(), centerZ = job.identity().chunkZ();
 		for (int z = 0; z < 3; z++) for (int x = 0; x < 3; x++) {
 			checkCancellation();
-			ProtoChunk chunk = new ProtoChunk(new ChunkPos(centerX + x - 1, centerZ + z - 1),
-				UpgradeData.EMPTY, height, containers, null);
-			biomeAccess.worldgenAssist$invokeCreateBiomes(Blender.empty(), state, chunk);
-			chunk.setPersistedStatus(ChunkStatus.BIOMES);
+			ChunkPos pos = new ChunkPos(centerX + x - 1, centerZ + z - 1);
+			ProtoChunk source = biomeCache.canonical(pos, () -> {
+				ProtoChunk created = new ProtoChunk(pos, UpgradeData.EMPTY, height, containers, null);
+				biomeAccess.worldgenAssist$invokeCreateBiomes(Blender.empty(), state, created);
+				created.setPersistedStatus(ChunkStatus.BIOMES);
+				return created;
+			});
+			ProtoChunk chunk = x == 1 && z == 1 ? PrivateBiomeChunkCache.copyCenter(source, containers) : source;
 			chunk.collectBiomesInPalette(possibleBiomes);
 			window[z][x] = chunk;
 		}
@@ -127,7 +140,11 @@ public final class PrivateTerrainComputer {
 		for (int i = 0; i < offsets.length; i++) offsets[i] = original[i] == null ? new short[0] : original[i].toShortArray();
 		byte[] digest = TerrainBiomeWindow.digest(centerX, centerZ, job.minY(), job.height(),
 			(x, z) -> window[z - centerZ + 1][x - centerX + 1]);
-		return new CompleteTerrainData(job.minY(), job.height(), choices, surface, floor, offsets, digest);
+		CompleteTerrainData result = new CompleteTerrainData(job.minY(), job.height(), choices, surface, floor, offsets, digest);
+		if (++completedComputations % 128 == 0) io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
+			"[CAWG] private_biome_cache computations={} hits={} misses={} entries={}",
+			completedComputations, biomeCache.hits(), biomeCache.misses(), biomeCache.size());
+		return result;
 	}
 	private static void checkCancellation() {
 		if (Thread.currentThread().isInterrupted()) throw new CancellationException("Private terrain interrupted");

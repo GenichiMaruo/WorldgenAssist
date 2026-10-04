@@ -1,5 +1,43 @@
 # Validation matrix
 
+## AE prepared bypass gate (implementation complete; unrun)
+
+Run-CompleteTerrainGate -Execute -PreparedBypass -ViewDistance32
+-ConditionOrder vanilla-first selects four RemotePreparation263Test methods:
+two existing queued/running cancellation and admission methods, plus two ready
+path tests proving progress ahead of blocked CPU preparation, quota retention,
+duplicate path exclusion, cancellation/late/error cleanup. The unchanged density
+sampling test in that class is not selected. Three loader builds then fresh
+two-owner complete format2 parity and same physical view32 overlap/deep32/64/
+lookahead0 pair run sequentially after all edits. No cache/codec/digest/fragment
+retests or broad matrix. Source/JAR/runtime inputs freeze for the whole batch.
+AD completed2 affected methods/three builds/1,813 matching digests and same-region
+FULL-7.02%/receipt-6.45%/CPU-11.65% all three improved;tick p95+6.24%;not beta.
+
+## AD cache capacity gate (implementation complete; unrun)
+
+Run-CompleteTerrainGate -Execute -LargerBiomeCache -ViewDistance32
+-ConditionOrder assisted-first runs only2 PrivateBiomeCache263Test methods,
+three loader builds,fresh two-owner complete format2 parity,then same physical
+view32 overlap/deep32/64/lookahead0 pair. Private LRU cap512, client4 workers,
+global64/owner32, audit first2 then1/8 remain bounded. Check hit/miss summaries
+and existing process working-set evidence. No unchanged protocol/digest/fragment
+methods or broad matrix. Exact current source/JAR snapshots required.
+
+## AC private biome / digest gate (implementation complete; unrun)
+
+Run-CompleteTerrainGate -Execute -BiomeCache -ViewDistance32
+-ConditionOrder vanilla-first selects six methods in one sequential batch:
+PrivateBiomeCache263Test (2),TerrainBiomeWindow263Test (2),BlockDensity263Test
+.shapeBoundsKindIsolationAndSigns and TerrainDecision263Test
+.operatorGateCodesAndTypedCacheAreBounded. Cache mutation isolation/eviction/
+context clear, digest exact voxels/palette/unused entries/geometry, protocol11
+and old10 rejection are affected. Three builds, fresh two-owner format2 parity
+with audited/unaudited complete acceptance and no application rejection, then
+physical view32 overlap/deep32/64/lookahead0. Same four client workers/condition.
+Unchanged wire-body/fragment methods retain original AA evidence. No matrix.
+Native complete runtime/opposite-order AC are deferred until a promising result.
+
 ## AB complete timing gate (implementation complete; unrun)
 
 Run-CompleteTerrainGate -Execute -BoundedWait -ViewDistance32 selects only five

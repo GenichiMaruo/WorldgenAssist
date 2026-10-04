@@ -5,7 +5,7 @@ param([switch]$Execute,[switch]$LocalOnly,[ValidateRange(2,32)][int]$ViewDistanc
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
     [ValidateSet('wide','deep')][string]$WindowProfile='wide',
     [ValidateSet('vanilla-first','assisted-first')][string]$ConditionOrder='vanilla-first',
-    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing')][string]$TestProfile='transport',
+    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation')][string]$TestProfile='transport',
     [string]$ReuseBuildEvidence,[string]$ReuseCorrectnessEvidence)
 # Finish all implementation first; affected units/builds/runtime/performance are sequential.
 Set-StrictMode -Version Latest
@@ -37,6 +37,24 @@ if($TestProfile -eq 'complete'){
 if($TestProfile -eq 'complete-timing'){
     if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Complete timing requires fresh affected build and overlap correctness evidence'}
     $selections=@('io.github.genichimaruo.worldgenassist.server.AdaptiveDemandWait263Test');$expectedTests=5
+}
+if($TestProfile -eq 'complete-biomes'){
+    if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Complete biome changes require fresh affected build and overlap correctness evidence'}
+    $selections=@('io.github.genichimaruo.worldgenassist.common.PrivateBiomeCache263Test',
+        'io.github.genichimaruo.worldgenassist.common.TerrainBiomeWindow263Test',
+        'io.github.genichimaruo.worldgenassist.server.BlockDensity263Test.shapeBoundsKindIsolationAndSigns',
+        'io.github.genichimaruo.worldgenassist.server.TerrainDecision263Test.operatorGateCodesAndTypedCacheAreBounded');$expectedTests=6
+}
+if($TestProfile -eq 'complete-capacity'){
+    if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Complete cache capacity requires fresh affected build and overlap correctness evidence'}
+    $selections=@('io.github.genichimaruo.worldgenassist.common.PrivateBiomeCache263Test');$expectedTests=2
+}
+if($TestProfile -eq 'complete-preparation'){
+    if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Complete prepared bypass requires fresh affected build and overlap correctness evidence'}
+    $selections=@('io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.comparisonWaitsForBothInputsAndQueueCancellationReleasesAdmission',
+        'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.runningCancelledPreparationKeepsItsSlotUntilInvocationExits',
+        'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedReplyBypassesBlockedPreparationWithoutReleasingItsRemoteSlot',
+        'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedCancellationAndFailuresReleaseOnceAndIgnoreLateReplies');$expectedTests=4
 }
 if($TestProfile -eq 'scheduling'){$selections=@('io.github.genichimaruo.worldgenassist.server.RemoteAwareScheduling263Test');$expectedTests=3}
 if($TestProfile -eq 'prefetch'){$selections=@('io.github.genichimaruo.worldgenassist.server.GenerationPrefetch263Test');$expectedTests=6}

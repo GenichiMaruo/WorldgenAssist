@@ -74,6 +74,8 @@ public final class RemoteWorldgenManager {
 	private final StartedTerrain<RemoteDensityResultCache.Key> startedTerrain;
 	private final SecureRandom validationRandom = new SecureRandom();
 	private final CompleteTerrainAuditPolicy<CompleteAuditContext> completeAudits;
+	/** Only the owned validation executor computes; lifecycle mutations use resultStateLock. */
+	private final Map<CompleteAuditContext, io.github.genichimaruo.worldgenassist.common.PrivateTerrainComputer> completeAuditComputers = new java.util.HashMap<>();
 	private long predictionTicks;
 	private volatile List<PlayerChunkDemand> demands = List.of();
 	private final Map<UUID, Long> ownerGenerations = new ConcurrentHashMap<>();
@@ -653,7 +655,7 @@ public final class RemoteWorldgenManager {
 			ticket.cancel(); coordinator.cancelJob(remote.ownerId(), remote.job().identity());
 			return CompletableFuture.failedFuture(error);
 		}
-		var result = ticket.start(() -> {
+		java.util.function.Supplier<RemoteDensityValidator.Prepared> prepare = () -> {
 			long prepareStarted = System.nanoTime();
 			RemoteDensityValidator.Prepared prepared;
 			if (completeTerrain) {
@@ -661,8 +663,7 @@ public final class RemoteWorldgenManager {
 				io.github.genichimaruo.worldgenassist.common.CompleteTerrainData expected = null;
 				if (audit.requiresFullAudit()) {
 					var generator = RemoteWorldgenEligibility.noiseDelegate(level.getChunkSource().getGenerator());
-					expected = new io.github.genichimaruo.worldgenassist.common.PrivateTerrainComputer(level.registryAccess())
-						.compute(remote.job(), generator, randomState);
+					expected = completeAuditComputer(key, audit, level).compute(remote.job(), generator, randomState);
 				}
 				prepared = RemoteDensityValidator.Prepared.completeTerrain(remote.job(), expected, System.nanoTime() - prepareStarted);
 			} else prepared = RemoteDensityValidator.prepare(remote.job(), pipelineOptions.prepareValidation()
@@ -671,7 +672,8 @@ public final class RemoteWorldgenManager {
 				remote.job().identity().jobId(), source, (prepareStarted - queued) / 1_000_000.0,
 				prepared.prepareNanos() / 1_000_000.0);
 			return prepared;
-		}, remote.result(), (density, prepared) -> {
+		};
+		java.util.function.BiFunction<TerrainDensityResult, RemoteDensityValidator.Prepared, TerrainDensityResult> compare = (density, prepared) -> {
 			if (!currentCacheKey(key)) throw new java.util.concurrent.CancellationException("Obsolete validation context");
 			long compareStarted = System.nanoTime();
 			try {
@@ -694,7 +696,20 @@ public final class RemoteWorldgenManager {
 				quarantineWorker(remote.ownerId(), remote.job().identity().jobId(), source, "density_mismatch");
 				throw error;
 			}
-		});
+		};
+		CompletableFuture<TerrainDensityResult> result;
+		try {
+			// Unaudited complete jobs have no CPU preparation. Do not queue their
+			// constant shape/identity validator behind independently computed audits.
+			// The same admitted ticket, comparison and final authority checks remain.
+			result = completeTerrain && !audit.requiresFullAudit()
+				? ticket.startPrepared(prepare.get(), remote.result(), compare)
+				: ticket.start(prepare, remote.result(), compare);
+		} catch (RuntimeException error) {
+			if (audit != null) completeAudits.cancel(audit);
+			ticket.cancel(); coordinator.cancelJob(remote.ownerId(), remote.job().identity());
+			return CompletableFuture.failedFuture(error);
+		}
 		long remaining = Math.max(1L, config.jobTimeout().toNanos() - (System.nanoTime() - started));
 		result.orTimeout(remaining, TimeUnit.NANOSECONDS).whenComplete((density, error) -> {
 			if (audit != null) completeAudits.cancel(audit);
@@ -706,6 +721,26 @@ public final class RemoteWorldgenManager {
 			requestPrefetchDispatch();
 		});
 		return result;
+	}
+	private io.github.genichimaruo.worldgenassist.common.PrivateTerrainComputer completeAuditComputer(
+		RemoteDensityResultCache.Key key, CompleteTerrainAuditPolicy.Token<CompleteAuditContext> audit, ServerLevel level) {
+		CompleteAuditContext context = new CompleteAuditContext(key.ownerId(), key.ownerGeneration(),
+			key.generation(), key.dimension(), key.contextFingerprint());
+		synchronized (resultStateLock) {
+			if (!currentCacheKey(key) || !completeAudits.current(audit)) throw new java.util.concurrent.CancellationException("Obsolete audit context");
+			var existing = completeAuditComputers.get(context);
+			if (existing != null) return existing;
+		}
+		// Registry/codec construction stays outside the shared authority lock.
+		var created = new io.github.genichimaruo.worldgenassist.common.PrivateTerrainComputer(level.registryAccess());
+		synchronized (resultStateLock) {
+			if (!currentCacheKey(key) || !completeAudits.current(audit)) throw new java.util.concurrent.CancellationException("Obsolete audit context");
+			var existing = completeAuditComputers.get(context);
+			if (existing != null) return existing;
+			if (completeAuditComputers.size() >= 64) throw new java.util.concurrent.CancellationException("Audit computer limit");
+			completeAuditComputers.put(context, created);
+			return created;
+		}
 	}
 
 	private CompletableFuture<TerrainDensityResult> awaitDemand(CompletableFuture<TerrainDensityResult> prepared,
@@ -735,6 +770,7 @@ public final class RemoteWorldgenManager {
 		synchronized (resultStateLock) {
 			generation = cacheGeneration.incrementAndGet();
 			completeAudits.clear();
+			completeAuditComputers.clear();
 			prefetchDispatchQueued.set(null);
 			demandWait.clear();
 			cached = resultCache.clear();
@@ -1228,6 +1264,7 @@ public final class RemoteWorldgenManager {
 		synchronized (resultStateLock) {
 			Long previous = ownerGenerations.remove(ownerId);
 			completeAudits.invalidateMatching(context -> ownerId.equals(context.owner()));
+			completeAuditComputers.keySet().removeIf(context -> ownerId.equals(context.owner()));
 			if (retainConnection && previous != null) {
 				ownerGenerations.put(ownerId, nextOwnerGeneration.incrementAndGet());
 			}
