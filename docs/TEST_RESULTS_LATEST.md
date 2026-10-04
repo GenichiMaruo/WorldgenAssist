@@ -6,8 +6,11 @@ All three alpha.7/protocol12 builds passed metadata-only comparison against
 the AG dev.16 artifacts: Fabric202/Forge196/NeoForge189 classes, all other
 resources and source entries unchanged. No repeat runtime/unit/performance
 tests were run. See releases/v0.1.0-alpha.7+mc26.3-verification.md for public
-and original candidate hashes. Publication is pending; the AG measurements
-below remain associated with the original runtime artifacts.
+and original candidate hashes. GitHub prerelease403078605/tagalpha.7 is published
+at commit46e9ad1; all11 uploaded assets were downloaded and SHA256 matched.
+CurseForge run37212747861 completed successfully,verified3/uploaded3. Upload
+acceptance is confirmed; independent moderation/public listing was not checked.
+The AG measurements below remain associated with the original runtime artifacts.
 
 ## AG completed structural shaping (2026-10-04; dev.16/protocol12)
 

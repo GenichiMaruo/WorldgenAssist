@@ -1,5 +1,20 @@
 # Mixin Targets
 
+## Candidate FEATURES boundary (2026-10-05; not registered)
+
+All three generated26.3 sources contain static
+ChunkStatusTasks.generateFeatures(WorldGenContext,ChunkStep,StaticCache2D,
+ChunkAccess):CompletableFuture,erased descriptor
+`(Lnet/minecraft/world/level/chunk/status/WorldGenContext;Lnet/minecraft/world/level/chunk/status/ChunkStep;Lnet/minecraft/util/StaticCache2D;Lnet/minecraft/world/level/chunk/ChunkAccess;)Ljava/util/concurrent/CompletableFuture;`.
+Fabric source line133,Forge/NeoForge144. Original body constructs WorldGenRegion,
+calls original decoration synchronously,then border ticks and completedFuture.
+ChunkMap189/192 and ChunkTaskDispatcher88-92 confirm its consecutive dispatcher.
+This is a source-verified candidate only; no Mixin is registered for this change.
+Any future wrapper must retain original task body,completion/failure/dependency
+semantics and coordinated fallback. Native hooks/custom decoration cannot be
+assumed safe. Neighbor write radius1 is not the whole shared-state footprint.
+See WORLDGEN_PIPELINE.md and FEATURE_PIPELINE_EXPERIMENT.md before implementing.
+
 ## AG shaping accessor verified (dev.16/protocol12)
 
 Seven affected methods/three builds/Fabric gate225828-933 and fresh native

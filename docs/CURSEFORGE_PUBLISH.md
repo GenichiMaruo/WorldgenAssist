@@ -5,6 +5,20 @@ GitHubでリリースを公開すると、`Publish to CurseForge` が起動し�
 同じCurseForgeプロジェクトへ送ります。再ビルド・Minecraftの再テストは行わず、
 ソースJAR・テストログ・ワールドは送信対象外です。
 
+## 最新の公開確認（2026-10-05）
+
+alpha.7公開イベントで[自動デプロイ37212747861](https://github.com/GenichiMaruo/WorldgenAssist/actions/runs/37212747861)
+が起動し、成功しました。ログの`verified=3 uploaded=3`で3ローダーの照合と投稿受理を
+確認しました。再ビルドや手動の再投稿は行っていません。CurseForge側の審査・公開一覧は
+独立には確認していません。GitHubの11添付物は、公開前に再取得してハッシュ照合済みです。
+
+## 最新の公開確認（2026-10-05）
+
+alpha.7公開イベントで[自動デプロイ37212747861](https://github.com/GenichiMaruo/WorldgenAssist/actions/runs/37212747861)
+が起動し、成功しました。ログの`verified=3 uploaded=3`で3ローダーの照合と投稿受理を
+確認しました。再ビルドや手動の再投稿は行っていません。CurseForge側の審査・公開一覧は
+独立には確認していません。GitHubの11添付物は、公開前に再取得してハッシュ照合済みです。
+
 ## 設定
 
 GitHubの **Settings → Environments → curseforge** を使用します。

@@ -8,8 +8,17 @@ only exact loader version metadata differs from tested dev.16; all classes,
 Mixins, other resources and source entries match. Original runtime evidence
 keeps its candidate hashes. No new runtime tests are required for packaging.
 Public hashes and measured limits are in releases/v0.1.0-alpha.7+mc26.3-verification.md.
-Publication is pending; update this status only after verifying external state.
+Published GitHub prerelease id403078605/tagv0.1.0-alpha.7+mc26.3,commit46e9ad1.
+All11 uploaded assets were downloaded and SHA256 matched before publication.
+CurseForge run37212747861 completed successfully: verified3/uploaded3. This
+proves upload acceptance,not a separate moderation/public-listing check.
 The goal of substantial acceleration/beta remains unmet.
+
+Next source-verified hypothesis: synchronous FEATURES occupies the consecutive
+worldgen dispatcher on all three26.3 loaders. See FEATURE_PIPELINE_EXPERIMENT.md.
+No feature scheduling implementation or its tests have run. Preserve original
+stage futures,neighbor order and shared structure state; noise-only parity is
+insufficient for any feature scheduler change.
 
 ## AG completed structural shaping (dev.16/protocol12; not beta)
 
@@ -74,7 +83,7 @@ Historical audit statements below describe default server mode.
 
 ## Scope and sources
 
-The published alpha.6 and current alpha.7-dev.16 candidate target Minecraft Java Edition **26.3** with
+The published alpha.7 (tested as dev.16) targets Minecraft Java Edition **26.3** with
 Fabric Loader **0.19.5** / Fabric API **0.161.0+26.3**, Forge **66.0.3**,
 and NeoForge **26.3.0.13-beta** on Java **25** (verification JDK 25.0.4).
 The earlier 26.2 Fabric alpha.3 remains on `mc/26.2` and is immutable.

@@ -1,5 +1,28 @@
 # World Generation Pipeline Notes
 
+## Next hypothesis: serial FEATURES dispatcher (2026-10-05; unimplemented)
+
+Generated26.3 Fabric/Forge/NeoForge ChunkMap.java189/192 create one
+ConsecutiveExecutor(executor,"worldgen") and use it for ChunkTaskDispatcher.
+The dispatcher's scheduleForExecution88-92 runs each message through that
+executor; it polls again after the message group completes. Original
+ChunkStatusTasks.generateFeatures(Fabric133/Forge+Neo144) synchronously calls
+applyBiomeDecoration and Blender.generateBorderTicks before returning a
+completed future. Thus this synchronous work occupies the consecutive worldgen
+message stream; offloaded terrain alone does not remove it.
+
+FEATURES has STRUCTURE_STARTS requirement radius8,TERRAIN radius1 and block
+write radius1 in ChunkPyramid. WorldGenRegion exposes cached neighbors and
+checks its write radius. Radius1 alone does not prove independent execution:
+reads and shared StructureStart/piece mutation must also be accounted for.
+Retained AG feature samples23.44% are inclusive CPU samples,not serialized
+wall time or a promised speedup. Next experiment is bounded asynchronous
+original FEATURES,then concurrency only for proven disjoint access/state.
+Preserve stage completion and order for conflicts; never run uncoordinated
+local fallback beside an active conflicting worker. FULL-state parity is
+required; existing noise-digest parity cannot validate decoration changes.
+See FEATURE_PIPELINE_EXPERIMENT.md. No changed scheduler or runtime test yet.
+
 ## AG per-chunk shaping completed (dev.16/protocol12; not beta)
 
 Actual ordered server sampler inputs now reach primary/peer/private computation
