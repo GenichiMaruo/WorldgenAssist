@@ -5,7 +5,7 @@ param([switch]$Execute,[switch]$LocalOnly,[ValidateRange(2,32)][int]$ViewDistanc
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
     [ValidateSet('wide','deep')][string]$WindowProfile='wide',
     [ValidateSet('vanilla-first','assisted-first')][string]$ConditionOrder='vanilla-first',
-    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation')][string]$TestProfile='transport',
+    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation','complete-peer')][string]$TestProfile='transport',
     [string]$ReuseBuildEvidence,[string]$ReuseCorrectnessEvidence)
 # Finish all implementation first; affected units/builds/runtime/performance are sequential.
 Set-StrictMode -Version Latest
@@ -56,6 +56,13 @@ if($TestProfile -eq 'complete-preparation'){
         'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedReplyBypassesBlockedPreparationWithoutReleasingItsRemoteSlot',
         'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedCancellationAndFailuresReleaseOnceAndIgnoreLateReplies');$expectedTests=4
 }
+$verification=if($TestProfile -eq 'complete-peer'){'peer'}else{'server'}
+if($TestProfile -eq 'complete-peer'){
+    if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Peer terrain verification requires fresh affected build and overlap correctness evidence'}
+    $selections=@('io.github.genichimaruo.worldgenassist.server.CompleteTerrainPeer263Test',
+        'io.github.genichimaruo.worldgenassist.server.CompleteTerrain263Test.twoSuccessfulInitialAuditsGateFurtherWorkAndPrivateDraws',
+        'io.github.genichimaruo.worldgenassist.server.CompleteTerrain263Test.cancellationEpochInvalidationAndAdmissionNeverAcceptStaleAudits');$expectedTests=5
+}
 if($TestProfile -eq 'scheduling'){$selections=@('io.github.genichimaruo.worldgenassist.server.RemoteAwareScheduling263Test');$expectedTests=3}
 if($TestProfile -eq 'prefetch'){$selections=@('io.github.genichimaruo.worldgenassist.server.GenerationPrefetch263Test');$expectedTests=6}
 if($TestProfile -eq 'admission'){$selections=@('io.github.genichimaruo.worldgenassist.server.QueuedTerrainAdmission263Test','io.github.genichimaruo.worldgenassist.server.RemoteAwareScheduling263Test');$expectedTests=5}
@@ -85,7 +92,7 @@ function Step([string]$Name,[string]$Executable,[string[]]$Arguments,[int]$Secon
 }
 try{
     $lock=[IO.File]::Open((Join-Path $workspace 'test-artifacts/validation-matrix.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
-    foreach($name in @('Run-BlockDensityGate.ps1','Run-WorldgenScenario.ps1','Remote-WorldgenScenarioServer.ps1','Compare-WorldgenScenarioMatrix.ps1','Run-ConstrainedServerBenchmark.ps1')){
+    foreach($name in @('Run-CompleteTerrainGate.ps1','Run-BlockDensityGate.ps1','Run-WorldgenScenario.ps1','Remote-WorldgenScenarioServer.ps1','Compare-WorldgenScenarioMatrix.ps1','Run-ConstrainedServerBenchmark.ps1')){
         $tokens=$null;$parseErrors=$null
         [void][Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $name),[ref]$tokens,[ref]$parseErrors)
         if($parseErrors.Count){throw "$name syntax: $(($parseErrors.Message)-join '; ')"}
@@ -210,7 +217,7 @@ try{
         $cases=@()
         foreach($mode in @('vanilla','assisted')){
             $directory=Join-Path $correct $mode
-            $steps+=Step "correctness-$mode" $pwsh @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-WorldgenScenario.ps1'),'-RemoteHost','gen1c@100.103.102.109','-RemoteRoot','E:/WorldgenAssist/port26.3','-Dimension','overworld','-Mode',$mode,'-Players','2','-Purpose','correctness','-CacheEntries','128','-Prediction','false','-ValidationCells','8','-Seed','8675309','-ServerLogicalProcessors','0','-ServerJvmProcessors','0','-CorrectnessDemandWaitMs','100','-NoiseBackend','cooperative','-WindowProfile',$WindowProfile,'-RemoteApplicationProfile',$RemoteApplicationProfile,'-PrefetchLookahead',[string]$PrefetchLookahead,'-RemoteWorkKind',$RemoteWorkKind,'-OutputRoot',$directory) 1200
+            $steps+=Step "correctness-$mode" $pwsh @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-WorldgenScenario.ps1'),'-RemoteHost','gen1c@100.103.102.109','-RemoteRoot','E:/WorldgenAssist/port26.3','-Dimension','overworld','-Mode',$mode,'-Players','2','-Purpose','correctness','-CacheEntries','128','-Prediction','false','-ValidationCells','8','-Seed','8675309','-ServerLogicalProcessors','0','-ServerJvmProcessors','0','-CorrectnessDemandWaitMs','100','-NoiseBackend','cooperative','-WindowProfile',$WindowProfile,'-RemoteApplicationProfile',$RemoteApplicationProfile,'-PrefetchLookahead',[string]$PrefetchLookahead,'-RemoteWorkKind',$RemoteWorkKind,'-CompleteVerification',$verification,'-OutputRoot',$directory) 1200
             if($steps[-1].status -ne 'PASSED'){throw "Affected runtime failed: $mode"}
             $result=Get-Content -LiteralPath (Join-Path $directory 'scenario-result.json') -Raw|ConvertFrom-Json
             if(-not $result.success -or -not $result.cleanup_safe -or $result.artifact_sha256 -ne $hash){throw 'Runtime cleanup/artifact mismatch'}
@@ -256,14 +263,23 @@ try{
         }
         $owners=Get-Content -LiteralPath (Join-Path $correct 'assisted/remote-evidence/owner-map.json') -Raw|ConvertFrom-Json
         $use=@()
+        $peerUse=@()
+        $peerApplications=@([regex]::Matches($log,'job\.peer_terrain_applied id=(\S+) peer_owner=(\S+)'))
+        if($TestProfile -eq 'complete-peer' -and $log -match 'peer_terrain_mismatch|Independent peer whole-terrain mismatch|worker\.quarantine'){throw 'Peer verification rejected terrain or quarantined a worker'}
         foreach($owner in $owners.PSObject.Properties){
             $jobs=@([regex]::Matches($log,'job\.sent id=(\S+) .*owner='+[regex]::Escape([string]$owner.Value)+'\b')|ForEach-Object {$_.Groups[1].Value}|Where-Object {$applied.Contains($_)})
             if($jobs.Count -eq 0){throw "No actual block-density application for $($owner.Name)"}
             $use+=[ordered]@{owner=$owner.Name;block_density_jobs_applied=$jobs.Count}
+            if($TestProfile -eq 'complete-peer'){
+                $peerJobs=@($peerApplications|Where-Object {$_.Groups[1].Value -in $jobs -and $_.Groups[2].Value -ne [string]$owner.Value})
+                if($peerJobs.Count -eq 0){throw "No distinct peer-verified actual terrain application for $($owner.Name)"}
+                $peerUse+=[ordered]@{owner=$owner.Name;peer_verified_jobs_applied=$peerJobs.Count;whole_terrain_equal=$true}
+            }
         }
+        if($TestProfile -eq 'complete-peer'){[IO.File]::WriteAllText((Join-Path $root 'peer-terrain-use.json'),($peerUse|ConvertTo-Json))}
         [IO.File]::WriteAllText((Join-Path $root 'block-density-use.json'),($use|ConvertTo-Json))
         $lock.Dispose();$lock=$null
-        $steps+=Step 'performance-pair' $pwsh @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-ConstrainedServerBenchmark.ps1'),'-Execute','-PhysicalServer','-ServerFlightRecording','-ViewDistance',[string]$ViewDistance,'-MeasureFullView','-QuietRemoteTrace','-AssistedNoiseBackend','cooperative','-VanillaNoiseBackend','cooperative','-WindowProfile',$WindowProfile,'-ConditionOrder',$ConditionOrder,'-RemoteApplicationProfile',$RemoteApplicationProfile,'-PrefetchLookahead',[string]$PrefetchLookahead,'-RemoteWorkKind',$RemoteWorkKind) 7200
+        $steps+=Step 'performance-pair' $pwsh @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-ConstrainedServerBenchmark.ps1'),'-Execute','-PhysicalServer','-ServerFlightRecording','-ViewDistance',[string]$ViewDistance,'-MeasureFullView','-QuietRemoteTrace','-AssistedNoiseBackend','cooperative','-VanillaNoiseBackend','cooperative','-WindowProfile',$WindowProfile,'-ConditionOrder',$ConditionOrder,'-RemoteApplicationProfile',$RemoteApplicationProfile,'-PrefetchLookahead',[string]$PrefetchLookahead,'-RemoteWorkKind',$RemoteWorkKind,'-CompleteVerification',$verification) 7200
         $output=Get-Content -LiteralPath (Join-Path $root 'performance-pair-out.log') -Raw
         $match=[regex]::Match($output,'CONSTRAINED_SERVER_BENCHMARK status=COMPLETE summary=(?<path>[^\r\n]+)')
         if($steps[-1].status -ne 'PASSED' -or -not $match.Success){throw 'Performance pair incomplete'}
@@ -275,7 +291,7 @@ try{
 finally{
     if($null -ne $lock){$lock.Dispose()}
     $env:JAVA_HOME=$oldJava;$env:Path=$oldPath
-    $summary=[ordered]@{schema='worldgen-assist.block-density-gate.v1';success=($issues.Count -eq 0);local_only=[bool]$LocalOnly;test_profile=$TestProfile;prefetch_lookahead=$PrefetchLookahead;window_profile=$WindowProfile;condition_order=$ConditionOrder;remote_work_kind=$RemoteWorkKind;remote_application_profile=$RemoteApplicationProfile;reused_build_evidence=$reusedEvidence;reused_correctness_evidence=$reusedCorrectness;artifact_sha256=$hash;native_artifacts=$nativeArtifacts;test_selections=$selections;junit=$junit;forge_fragment_junit=$nativeJunit;steps=$steps;issues=@($issues);root=$root;performance_summary=$performancePath}
+    $summary=[ordered]@{schema='worldgen-assist.block-density-gate.v1';success=($issues.Count -eq 0);local_only=[bool]$LocalOnly;test_profile=$TestProfile;prefetch_lookahead=$PrefetchLookahead;window_profile=$WindowProfile;condition_order=$ConditionOrder;remote_work_kind=$RemoteWorkKind;remote_application_profile=$RemoteApplicationProfile;complete_verification=$verification;reused_build_evidence=$reusedEvidence;reused_correctness_evidence=$reusedCorrectness;artifact_sha256=$hash;native_artifacts=$nativeArtifacts;test_selections=$selections;junit=$junit;forge_fragment_junit=$nativeJunit;steps=$steps;issues=@($issues);root=$root;performance_summary=$performancePath}
     $path=Join-Path $root 'summary.json';[IO.File]::WriteAllText($path,($summary|ConvertTo-Json -Depth 8))
     Write-Output "BLOCK_DENSITY_GATE_COMPLETE summary=$path success=$($summary.success)";if(-not $summary.success){exit 1}
 }

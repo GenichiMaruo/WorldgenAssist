@@ -25,6 +25,7 @@ param(
     [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='ready',
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
     [ValidateSet('grid','surface','density','block','decisions','complete')][string]$RemoteWorkKind='grid',
+    [ValidateSet('server','peer')][string]$CompleteVerification='server',
     [string]$RemoteHost = 'gen1c@100.117.255.71',
     [string]$RemoteRoot = 'C:/Users/gen1c/AppData/Local/Temp/WorldgenAssist-20260909/port26.3'
 )
@@ -192,6 +193,7 @@ try {
     $remoteCommand += ' -RemoteApplicationProfile '+$RemoteApplicationProfile
     $remoteCommand += ' -PrefetchLookahead '+$PrefetchLookahead
     $remoteCommand += ' -RemoteWorkKind '+$RemoteWorkKind
+    $remoteCommand += ' -CompleteVerification '+$CompleteVerification
     # Process-scoped policy for our transferred helper; no machine/user policy change.
     $encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($remotePrefix+$remoteCommand));$server=Start-Owned 'ssh.exe' @('-o','BatchMode=yes','-o','ConnectTimeout=15',$RemoteHost,"powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -OutputFormat Text -EncodedCommand $encoded");$serverErr=$server.StandardError.ReadToEndAsync()
     $ready=[DateTime]::UtcNow.AddSeconds(240)
@@ -282,6 +284,7 @@ try {
     $result.remote_application_profile = $RemoteApplicationProfile
     $result.prefetch_lookahead = $PrefetchLookahead
     $result.remote_work_kind = $RemoteWorkKind
+    $result.complete_verification = $CompleteVerification
     $result.client_worker_threads = if($RemoteWorkKind -eq 'complete'){4}else{2}
     if($Purpose -eq 'correctness'){$path=Join-Path $output 'remote-evidence/correctness.json';$result.correctness=if(Test-Path -LiteralPath $path){Get-Content -LiteralPath $path -Raw|ConvertFrom-Json}else{[ordered]@{required_applied_chunks=@();noise_digests=@()}}}else{$path=Join-Path $output 'remote-evidence/performance.json';$result.performance=if(Test-Path -LiteralPath $path){Get-Content -LiteralPath $path -Raw|ConvertFrom-Json}else{[ordered]@{warmup_runs=1;measured_repeats=3;measured=@()}}}
     $result.scenario_client_load=$clientLoad

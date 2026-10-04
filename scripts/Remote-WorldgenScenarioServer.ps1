@@ -24,7 +24,8 @@ param(
     [ValidateSet('standard','wide','deep')][string]$WindowProfile='standard',
     [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='ready',
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
-    [ValidateSet('grid','surface','density','block','decisions','complete')][string]$RemoteWorkKind='grid'
+    [ValidateSet('grid','surface','density','block','decisions','complete')][string]$RemoteWorkKind='grid',
+    [ValidateSet('server','peer')][string]$CompleteVerification='server'
 )
 
 # Remote half of the all-dimension trusted-raw scenario.  It owns only the
@@ -398,7 +399,8 @@ try {
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_WORK_KIND'] = $RemoteWorkKind
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_ALLOW_TERRAIN_DECISIONS'] = ($RemoteWorkKind -eq 'decisions').ToString().ToLowerInvariant()
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_ALLOW_COMPLETE_TERRAIN'] = ($RemoteWorkKind -eq 'complete').ToString().ToLowerInvariant()
-    [ordered]@{selected_work_kind=$RemoteWorkKind;terrain_decisions_allowed=($RemoteWorkKind -eq 'decisions');complete_terrain_allowed=($RemoteWorkKind -eq 'complete');complete_audit_policy='first_two_successful_then_private_one_in_eight'} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'remote-work-kind-config.json')
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_COMPLETE_VERIFICATION'] = $CompleteVerification
+    [ordered]@{selected_work_kind=$RemoteWorkKind;terrain_decisions_allowed=($RemoteWorkKind -eq 'decisions');complete_terrain_allowed=($RemoteWorkKind -eq 'complete');complete_verification=$CompleteVerification;complete_initial_audits=2;complete_server_audit_denominator=8;complete_peer_audit_denominator=64;complete_audit_policy=if($CompleteVerification -eq 'peer'){'first_two_successful_per_owner_then_private_one_in_64_if_distinct_trusted_peer_available_otherwise_one_in_8;peer_admission_race_forces_server_full_audit;every_peer_result_requires_entire_agreement'}else{'first_two_successful_then_private_one_in_eight'}} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'remote-work-kind-config.json')
     [ordered]@{profile=$RemoteApplicationProfile;ready_surface_only=($RemoteApplicationProfile -eq 'ready');base_wait_ms=if($PipelineProfile -eq 'current'){30000}elseif($Purpose -eq 'correctness'){$CorrectnessDemandWaitMs}else{100};maximum_wait_ms=if($PipelineProfile -eq 'current'){30000}elseif($Purpose -eq 'correctness'){[Math]::Min(1000,$CorrectnessDemandWaitMs*2)}else{200}} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'remote-application-config.json')
     [ordered]@{profile=$WindowProfile;owner_window=[int]$start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_OWNER_WINDOW'];total_window=[int]$start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT'];lookahead=$PrefetchLookahead} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'pipeline-window-config.json')
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_CACHE_ENTRIES'] = [string]$CacheEntries; $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREDICTION'] = $predictionEnabled.ToString().ToLowerInvariant(); $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_VALIDATION_SAMPLE_CELLS'] = [string]$ValidationCells

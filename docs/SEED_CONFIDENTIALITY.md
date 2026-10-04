@@ -1,5 +1,28 @@
 # Seed Confidentiality
 
+AF peer mode passed5 affected methods/three builds/Fabric1,824 matching digests
+with actual distinct peer applications596/620. This verifies the selected
+trusted-friend fixture,not collusion resistance,hostile safety or seed secrecy.
+Physical CPU-17.10% and modest FULL-4.27%/receipt-3.71% do not establish beta;
+native complete/peer and opposite-order AF remain unrun. Historical unrun
+implementation records follow; operator choices/default server1/8 are explicit.
+
+## AF explicit trust tradeoff (dev.15/protocol11; unrun)
+
+Peer verification is an additional operator opt-in for trusted friends. Both
+owners first pass two independent full server audits; every subsequent peer
+result needs an entire independently assigned second-owner match, with private
+server full audits1/64. Default/no available peer keeps first2/private1/8;
+failed secondary admission forces a server full audit. Mismatch revokes both
+owners, failures/disconnects cancel, and local dual-epoch approval cannot arrive
+via client packets. Bounds/palette/actual biome/height/pre-write checks remain.
+Colluding clients can submit the same wrong unaudited terrain, so agreement is
+NOT cryptographic correctness or hostile/public-server proof. Raw seed still
+leaks to participating clients; default remote-off/seed denial is unchanged.
+Additional verification work can be assigned outside the verifier's view for an
+existing demanded chunk. AF tests/performance are unrun; no beta readiness claim.
+
+
 ## Status
 
 AE dev.14/protocol11 retains first2 independent full audits then private1/8,

@@ -1,5 +1,34 @@
 # Remote Protocol
 
+AF dev.15/protocol11 completed5 affected methods/three builds/Fabric1,824 matching
+digests and actual distinct peer applications for both owners. Physical view32
+paired FULL-4.27%/receipt-3.71%/CPU-17.10% all three improved,tick p95+6.18%.
+No substantial speedup,beta,native complete/peer or opposite-order AF evidence.
+Per-chunk structural shaping transport is only a proposed next hypothesis;
+current complete jobs still require empty Beardifier and unchanged protocol11.
+Unrun paragraphs below retain implementation-time chronology.
+
+## AF distinct-owner verification (dev.15; unchanged protocol11; unrun)
+
+Operator-only process setting `WORLDGEN_ASSIST_REMOTE_COMPLETE_VERIFICATION=peer`
+(or `worldgen_assist.remote.complete_verification`) is an additional complete-
+terrain choice; default/malformed values use server mode. Existing complete/
+allow/remote/trusted_raw gates remain. Requests/envelopes/identity/body/digest
+remain protocol11; server sends a second normal complete assignment with a NEW
+UUID to another current trusted owner. The assigned position can lie outside
+that verifier's view but belongs to existing primary demanded work, never a
+client-chosen coordinate or new world task/ticket. Entire block/height/ordered
+fluid/biome outputs must equal; raw results cannot convey local approval.
+Both owners first pass two server full audits for each epoch/base context.
+Available peers select private1/64 server audits; nonaudited peer work requires
+whole agreement. No available peer retains default private1/8. Admission races
+force a server full audit; failures cancel/fallback and mismatches quarantine
+both owners. Local approval is invalidated by EITHER owner/reload epoch and is
+checked through cache and final preflight. Existing quotas/deadlines remain.
+This is trusted-friend integrity with a collusion limitation, not hostile proof.
+AF affected tests/builds/parity/physical performance are unrun.
+
+
 ## AE scheduling checkpoint (dev.14; unchanged protocol11)
 
 AC/AD protocol11 passed fresh Fabric format2 parity (AC1,792/AD1,813 shared

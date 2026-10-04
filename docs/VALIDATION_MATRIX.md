@@ -1,5 +1,33 @@
 # Validation matrix
 
+AF selected batch gate214306-614/session5870 exited0,csb214650-845 COMPLETE.
+Five affected methods/three builds/profile/Fabric1,824 shared digests all equal,
+actual peer applications596/620; no broader suite rerun. Physical assisted-first
+FULL-4.27%/receipt-3.71%/CPU-17.10% all three improved,tick p95+6.18% all higher.
+Source/JAR/settings/coordinates/work/receipt coverage agree,issues empty.
+This is modest descriptive acceleration,not beta or native complete/peer proof.
+Retain original source/JAR/harness identities; later unrun sections are history.
+
+## AF affected peer verification batch (dev.15/protocol11; unrun)
+
+Finish all implementation, then run only `Run-CompleteTerrainGate -Execute
+-PeerVerification -ViewDistance32 -ConditionOrder assisted-first`. One sequential
+batch selects three peer agreement/dual-epoch/cache/wire-provenance/audit-mode
+methods and the two existing affected audit lifecycle methods, then three loader
+builds (no unchanged fragment tests), physical profile, fresh two-owner Fabric
+correctness pair, and physical view32 remote-off/peer-assisted performance pair.
+Mandatory parity includes all actual applied coordinates/format2 digests,
+server-audited and unaudited acceptance, actual distinct peer application for
+BOTH primary owners, and no apply rejection/mismatch/quarantine. The saved
+remote mode and comparison signature must match. Performance retains one
+excluded warmup/three measured relocations, equal coordinates/tasks/settings,
+3461 receipts per owner/repeat, original64/32 bounds, E-drive weak server, two
+clients on the same strong PC and cooperative backend in BOTH modes. Additional
+peer jobs count toward existing quotas; not a stock-vanilla backend comparison.
+No broader matrix or unrelated lifecycle/codec/cache retesting. All AF gates
+remain unrun. AE completed four methods/three builds/1803 matching digests, but
+FULL+1.43%/receipt+0.92% only1/3 faster despite CPU-12.99%; no beta.
+
 ## AE prepared bypass gate (implementation complete; unrun)
 
 Run-CompleteTerrainGate -Execute -PreparedBypass -ViewDistance32

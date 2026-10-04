@@ -1,5 +1,27 @@
 # Mixin Targets
 
+AF dev.15/protocol11 three builds/Fabric1,824 matching digests completed,using
+the unchanged original private invokers/locks. No native complete/peer runtime
+yet. Proposed structure-shape support is NOT registered or implemented:
+generated Fabric/Forge26.3 Beardifier private pieces:List,junctions:List,
+affectedBox:BoundingBox;NeoForge pieces/junctions protected,same descriptors.
+All three have public(List,List,BoundingBox) constructor and consume ordered
+rigids/junctions and exact affected bounds. NeoForge traversal includes its
+PieceBeardifierModifier hook; capture original output rather than copy traversal.
+Any future accessor/transport/private sampler/applicator change requires fresh
+affected validation. Current AF performance is modest,not beta.
+
+## AF peer verification (dev.15/protocol11; unrun)
+
+No new Minecraft symbol, descriptor, Mixin or executor. Existing generated26.3
+private biome/fill/surface/carver invokers and original buildTerrain section
+locks remain. Only server orchestration adds distinct secondary assignments,
+whole immutable comparison and process-local dual-epoch approval. Cache/field
+and final applicator preflight reject stale approvals before writing. Default
+server audits remain1/8; explicit peer verification has separate1/64 full-audit
+policy plus two-owner whole agreement. New tests/builds/runtime are unrun.
+
+
 AE three builds and Fabric1,803 matching format2 digests completed. No new
 Minecraft target; native complete runtime remains unverified. Same-region
 physical speed did not improve reliably. Current evidence is TEST_RESULTS_LATEST.

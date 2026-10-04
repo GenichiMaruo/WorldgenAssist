@@ -32,6 +32,7 @@ public final class RemoteDensityField {
 	private final io.github.genichimaruo.worldgenassist.common.CompleteTerrainData completeTerrain;
 	private boolean contextMatched;
 	private final TerrainDensityJob job;
+	private final TerrainDensityResult result;
 	private final NoiseGeneratorSettings settings;
 	private final RandomState state;
 	private long remoteSamplesServed;
@@ -61,7 +62,8 @@ public final class RemoteDensityField {
 		height = job.height();
 		cellWidth = job.cellWidth();
 		cellHeight = job.cellHeight();
-		this.job = job; this.settings = settings; this.state = state;
+		this.job = job; this.result = result; this.settings = settings; this.state = state;
+		result.requireCurrentAuthority();
 		if (workKind() == TerrainWorkKind.COMPLETE_TERRAIN) {
 			if (!result.hasCompleteTerrain() || settings == null || state == null
 				|| result.completeTerrain().minY() != minY || result.completeTerrain().height() != height) {
@@ -116,11 +118,14 @@ public final class RemoteDensityField {
 		if (completeTerrain == null || actualState != state || generator.generatorSettings().value() != settings) {
 			throw new IllegalArgumentException("Complete terrain state identity differs");
 		}
-		return CompleteTerrainApplicator.prepare(job, completeTerrain, chunk, generator, actualState, structures, blender, region, possibleBiomes);
+		result.requireCurrentAuthority();
+		return CompleteTerrainApplicator.prepare(job, completeTerrain, chunk, generator, actualState, structures, blender,
+			region, possibleBiomes, result::requireCurrentAuthority);
 	}
 	public void recordCompleteTerrainApplication() {
 		if (completeTerrain == null) throw new IllegalStateException("Not complete terrain");
 		remoteSamplesServed += completeTerrain.blockCount(); decisionSamplesServed += completeTerrain.blockCount();
+		result.recordPeerApplication();
 	}
 	public boolean lastDecisionFluidUpdate() { return lastDecisionFluidUpdate; }
 	/** Called only from doFill's guarded aquifer operation, never from carvers. */

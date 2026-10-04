@@ -5,24 +5,43 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.IntSupplier;
+import java.util.function.IntUnaryOperator;
 
 /** A separately opted-in trusted-friend policy; never substitutes for old cell validation. */
 public final class CompleteTerrainAuditPolicy<K> {
 	public static final int REQUIRED_INITIAL_SUCCESSES = 2;
 	public static final int AUDIT_DENOMINATOR = 8;
+	public static final int PEER_AUDIT_DENOMINATOR = 64;
 	private final int capacity;
-	private final IntSupplier privateRandom;
+	private final IntUnaryOperator privateRandom;
 	private final Map<K, State> contexts = new HashMap<>();
 	private final Map<UUID, Token<K>> pending = new HashMap<>();
 
 	/** privateRandom must return a server-private uniform integer in [0,8). */
 	public CompleteTerrainAuditPolicy(int capacity, IntSupplier privateRandom) {
+		this(capacity, defaultDraw(privateRandom));
+	}
+	private static IntUnaryOperator defaultDraw(IntSupplier privateRandom) {
+		Objects.requireNonNull(privateRandom);
+		return bound -> {
+			if (bound != AUDIT_DENOMINATOR) throw new IllegalArgumentException("Default draw requires bound8");
+			return privateRandom.getAsInt();
+		};
+	}
+	/** Only peer-agreed work may request the separate64 draw; all other work uses8. */
+	public CompleteTerrainAuditPolicy(int capacity, IntUnaryOperator privateRandom) {
 		if (capacity < 1 || capacity > 64) throw new IllegalArgumentException("Invalid audit capacity");
 		this.capacity = capacity; this.privateRandom = Objects.requireNonNull(privateRandom);
 	}
 
 	/** Called after normal job admission. K must contain owner, epoch and complete context. */
 	public synchronized Token<K> select(K context, UUID jobId) {
+		return select(context, jobId, AUDIT_DENOMINATOR);
+	}
+	public synchronized Token<K> select(K context, UUID jobId, int denominator) {
+		if (denominator != AUDIT_DENOMINATOR && denominator != PEER_AUDIT_DENOMINATOR) {
+			throw new IllegalArgumentException("Invalid audit denominator");
+		}
 		Objects.requireNonNull(context); Objects.requireNonNull(jobId);
 		if (!canAdmit(context) || pending.containsKey(jobId)) throw new IllegalStateException("Audit admission full or duplicate");
 		State state = contexts.get(context);
@@ -32,13 +51,25 @@ public final class CompleteTerrainAuditPolicy<K> {
 		}
 		boolean audit = state.successes < REQUIRED_INITIAL_SUCCESSES;
 		if (!audit) {
-			int choice = privateRandom.getAsInt();
-			if (choice < 0 || choice >= AUDIT_DENOMINATOR) throw new IllegalStateException("Invalid private audit draw");
+			int choice = privateRandom.applyAsInt(denominator);
+			if (choice < 0 || choice >= denominator) throw new IllegalStateException("Invalid private audit draw");
 			audit = choice == 0;
 		}
 		Token<K> token = new Token<>(context, jobId, state, audit);
 		pending.put(jobId, token);
 		return token;
+	}
+	public synchronized boolean trusted(K context) {
+		State state = contexts.get(context);
+		return state != null && state.successes >= REQUIRED_INITIAL_SUCCESSES;
+	}
+	/** If peer admission raced with another job, replace its token with a server-full audit. */
+	public synchronized Token<K> requireFullAudit(Token<K> token) {
+		if (!current(token)) throw new IllegalStateException("Obsolete audit token");
+		if (token.audit) return token;
+		Token<K> replacement = new Token<>(token.context, token.jobId, token.state, true);
+		pending.put(token.jobId, replacement);
+		return replacement;
 	}
 	/** Prevent a cold owner from filling the audit queue before its first two results agree. */
 	public synchronized boolean canAdmit(K context) {

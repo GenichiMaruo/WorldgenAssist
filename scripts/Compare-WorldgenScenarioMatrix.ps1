@@ -150,6 +150,7 @@ function MeasurementConditions([object]$Record) {
     }
     $kindPath=Join-Path $directory 'remote-evidence/remote-work-kind-config.json'
     $signature+='remote_work_kind='+$(if(Test-Path -LiteralPath $kindPath){(Get-Content -LiteralPath $kindPath -Raw|ConvertFrom-Json).selected_work_kind}else{'historical-unspecified'})
+    $signature+='complete_verification='+$(if(Test-Path -LiteralPath $kindPath){$kind=Get-Content -LiteralPath $kindPath -Raw|ConvertFrom-Json;if($kind.PSObject.Properties.Name -contains 'complete_verification'){$kind.complete_verification}else{'historical-server'}}else{'historical-unspecified'})
     $signature+='terrain_decisions_allowed='+$(if(Test-Path -LiteralPath $kindPath){[bool](Value (Get-Content -LiteralPath $kindPath -Raw|ConvertFrom-Json) 'terrain_decisions_allowed')}else{$false})
     $signature+='server_flight_recording='+[bool]$(if(Test-Path -LiteralPath $flightPath){(Get-Content -LiteralPath $flightPath -Raw|ConvertFrom-Json).enabled}else{$false})
     for($owner=0;$owner -lt [int](Value $Record.result 'players');$owner++){

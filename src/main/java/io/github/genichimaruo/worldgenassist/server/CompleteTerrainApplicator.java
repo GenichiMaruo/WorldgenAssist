@@ -37,7 +37,7 @@ public final class CompleteTerrainApplicator {
 	/** All rejectable checks and allocations finish before the first section write. */
 	public static Prepared prepare(TerrainDensityJob job, CompleteTerrainData data, ChunkAccess chunk,
 		NoiseBasedChunkGenerator generator, RandomState state, StructureManager structures, Blender blender,
-		WorldGenRegion region, Set<Holder<Biome>> possibleBiomes) {
+		WorldGenRegion region, Set<Holder<Biome>> possibleBiomes, Runnable requireAuthority) {
 		Objects.requireNonNull(job); Objects.requireNonNull(data); Objects.requireNonNull(chunk);
 		Objects.requireNonNull(generator); Objects.requireNonNull(state); Objects.requireNonNull(structures);
 		Objects.requireNonNull(blender); Objects.requireNonNull(possibleBiomes);
@@ -101,7 +101,9 @@ public final class CompleteTerrainApplicator {
 		}
 		ShortArrayList[] offsets = new ShortArrayList[job.height() / 16];
 		for (int i = 0; i < offsets.length; i++) offsets[i] = new ShortArrayList(data.postProcessing(i));
-		return new Prepared(chunk, data, states, packHeights(surface, job.height()), packHeights(floor, job.height()), offsets);
+		var prepared = new Prepared(chunk, data, states, packHeights(surface, job.height()), packHeights(floor, job.height()), offsets);
+		requireAuthority.run();
+		return prepared;
 	}
 
 	private static long[] packHeights(short[] heights, int height) {

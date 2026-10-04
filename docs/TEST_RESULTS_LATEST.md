@@ -1,5 +1,59 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## AF completed peer verification (2026-10-04)
+
+Dev.15/protocol11 gate214306-614/session5870 exited0;csb214650-845 COMPLETE,
+assisted-first. Five affected methods/three builds/physical profile and fresh
+Fabric1,824 shared format2 digests/zero mismatch passed. Actual complete
+applications633/695, including distinct peer verification596/620 for ownersA/B.
+Fabric C559E4BD7F440C7A48E440416A702720B3E120E15D5B0A2E764246BE8F3EE688,
+Forge F7E0CC3471B437EBA1CB59899C035DA793C938C0CC0EB5C5DECA9BDE1C17A697,
+NeoForge DCD8CA99FD763D28166B9DB6DEAAD4065F64998510213FD7D2E94147548587A7.
+
+Physical same-region FULL97.754->87.877s,109.167->104.507s,
+104.080->101.790s,all faster;median paired ratio-4.27%. Receipt103.089->93.238s,
+115.288->111.015s,109.587->106.716s,all faster;paired-3.71%.
+CPU397.281->329.359s,436.125->358.203s,414.641->355.766s,all lower;
+paired-17.10%. Tick p95 all higher,paired+6.18%. Equal source/JAR/settings/
+coordinates and31,974 tasks per condition,all owners3461 receipts/repeat,
+issues empty,failed tasks/job timeouts0. Demand-wait fallbacks358/383/299
+are separate from coordinator job timeouts. Actual complete applications
+8184/8802/8024,peer applications6957/8586/7220;server audited acceptance
+327/168/257,unaudited8060/9119/8054. Peer sent7917/9729/8257;accepted
+peer7111/9032/7451 versus server1276/255/860. Acceptance is not application;
+remaining server mode may be unaudited under its default1/8 policy. Apply
+rejections/quarantines0. Client computation18.778/20.384/19.391ms,whole-process
+peak working sets2.912/2.605GB (join/warmup included). Both clients share one
+strong PC; weak server unrestricted on E,cooperative2 workers/16 queued per
+worker in BOTH conditions,global64/owner32,base100ms/adaptive200ms.
+
+Offline retained JFR:private complete computation4.11%,original biome creation
+6.12%,features22.44%,local terrain workers33.13% of computational samples.
+Inclusive categories overlap and are not durations or saved critical-path time.
+Private audit share declined from AE13.81% in a different batch; not a controlled
+AF-vs-AE latency claim. Reduced verification CPU is real measured progress, but
+this modest speedup is not the requested substantial acceleration or beta proof.
+Native complete/peer runtime and opposite-order AF evidence remain unrun.
+Next hypothesis targets still-local structure-affected terrain, not further
+blind audit reduction. All older active/unrun paragraphs retain chronology.
+
+## AF hypothesis and implementation (dev.15/protocol11; unrun)
+
+Checkpoint50c17d5 preserves AC/AD/AE including failed AE latency hypothesis.
+AE constant validators no longer queued (correctness unaudited p95~0.036ms),
+but physical paired FULL+1.43%/receipt+0.92%,only1/3 faster;CPU-12.99% all lower.
+Original private audits13.81% inclusive JFR share (not duration) motivate
+distributing verification to strong clients. AF adds explicit peer mode:
+distinct current owners, first two server full successes each, whole terrain
+equality, private1/64 server audits with available peer, default/no peer1/8,
+failed admission forces full server audit. Pair failure cancels/fallback;
+mismatch quarantines both. Process-local dual-epoch approval never crosses wire.
+Selected batch is three new affected methods plus two existing audit methods,
+three builds, fresh Fabric two-owner parity with actual peer use for BOTH owners,
+then physical view32 assisted-first equal-work pair, one warmup/three repeats.
+Extra client computation and communication may erase server CPU savings. ALL AF
+tests/builds/runtime/performance are NOT RUN; no speedup, native or beta claim.
+
 ## AE completed physical result (2026-10-04)
 
 Gate192943-120/session11949 exited0;csb193315-115 COMPLETE,vanilla-first.

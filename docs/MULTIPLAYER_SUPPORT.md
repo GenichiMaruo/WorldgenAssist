@@ -1,5 +1,29 @@
 # Player-owned concurrent assistance
 
+AF dev.15/protocol11 completed fresh Fabric two-owner parity1,824 shared digests/
+zero mismatch,actual complete applications633/695 including peer596/620.
+Physical view32 all three FULL/receipt/CPU improved modestly(-4.27%/-3.71%/
+-17.10%),tick p95+6.18%. Both clients are processes on the SAME strong PC,
+weak server unrestricted on E. No beta or native complete/peer coverage yet.
+Unrun paragraphs below are historical implementation records.
+
+## AF additional peer verification assignment (dev.15; unrun)
+
+Primary generation stays owner/view-scoped. Explicit complete peer mode may
+assign verification of that same existing demanded chunk to a different current
+worker in the same dimension, even outside that verifier's view. This changes
+the historical own-view-only assignment rule only for verification. It creates
+no additional world task/ticket and cannot authorize mutations. Each side keeps
+its own connection/job UUID, adaptive lease and original global/per-owner quota.
+Both owners must have two successful independent server full audits of the base
+context. Entire outputs must match; the final result is tied to both epochs.
+Disconnect invalidates dependent cached approvals; pair failures fall back and
+mismatch quarantines both owners. Private1/64 server audits apply only while
+peer mode has an eligible peer; default/no peer retains private1/8. Failed peer
+admission forces a server full audit. Collusion remains a trusted-friend limit.
+Five focused methods/three builds/fresh two-owner parity/view32 are unrun.
+
+
 ## Alpha.5 release scope
 
 Alpha.5 includes the adaptive per-owner pipeline and connection-scoped dispatch

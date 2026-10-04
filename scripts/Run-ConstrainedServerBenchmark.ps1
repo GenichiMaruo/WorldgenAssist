@@ -8,7 +8,8 @@ param([switch]$Execute, [switch]$TwoLogicalOnly, [switch]$SingleLogicalOnly,[swi
     [ValidateSet('vanilla-first','assisted-first')][string]$ConditionOrder='vanilla-first',
     [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='ready',
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
-    [ValidateSet('grid','surface','density','block','decisions','complete')][string]$RemoteWorkKind='grid')
+    [ValidateSet('grid','surface','density','block','decisions','complete')][string]$RemoteWorkKind='grid',
+    [ValidateSet('server','peer')][string]$CompleteVerification='server')
 
 # Six isolated two-owner scenarios in one bounded batch. No production build or
 # unrelated JUnit suite is repeated for this harness-only experiment.
@@ -121,6 +122,7 @@ try {
             $arguments += @('-RemoteApplicationProfile',$RemoteApplicationProfile)
             $arguments += @('-PrefetchLookahead',[string]$PrefetchLookahead)
             $arguments += @('-RemoteWorkKind',$RemoteWorkKind)
+            $arguments += @('-CompleteVerification',$CompleteVerification)
             $started = Get-Date
             $exitCode = Invoke-Quiet $arguments (Join-Path $caseRoot 'batch-run.log') (Join-Path $caseRoot 'batch-error.log')
             $resultPath = Join-Path $caseRoot 'scenario-result.json'
@@ -130,6 +132,8 @@ try {
                     $scenario = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
                     $runtimeSafe = [bool]$scenario.cleanup_safe
                     $configuration=Get-Content -LiteralPath (Join-Path $caseRoot 'remote-evidence/scenario-config.json') -Raw|ConvertFrom-Json
+                    $verification=Get-Content -LiteralPath (Join-Path $caseRoot 'remote-evidence/remote-work-kind-config.json') -Raw|ConvertFrom-Json
+                    if($verification.complete_verification -ne $CompleteVerification -or $scenario.complete_verification -ne $CompleteVerification){throw 'Complete verification differs from requested mode'}
                     $jvmCpu=Get-Content -LiteralPath (Join-Path $caseRoot 'remote-evidence/server-jvm-cpu-limit.json') -Raw|ConvertFrom-Json
                     if($jvmCpu.requested_active_processor_count -ne $ServerJvmProcessors){throw 'Server JVM processor limit differs from requested limit'}
                     if($ServerJvmProcessors -gt 0 -and $jvmCpu.observed_available_processors -ne $ServerJvmProcessors){throw 'Actual JVM processor count differs from requested limit'}

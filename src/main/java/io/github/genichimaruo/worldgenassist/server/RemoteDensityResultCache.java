@@ -50,6 +50,7 @@ public final class RemoteDensityResultCache {
 	public synchronized boolean available(Key key) {
 		Entry entry = entries.get(Objects.requireNonNull(key));
 		if (entry == null) return false;
+		if (!entry.result().authorityCurrent()) { entries.remove(key); return false; }
 		if (System.nanoTime() - entry.storedNanos() >= maxAgeNanos) { entries.remove(key); return false; }
 		return true;
 	}
@@ -114,8 +115,9 @@ public final class RemoteDensityResultCache {
 
 	private void pruneExpired() {
 		long now = System.nanoTime();
-		entries.values().removeIf(entry -> now - entry.storedNanos() >= maxAgeNanos);
+		entries.values().removeIf(entry -> now - entry.storedNanos() >= maxAgeNanos || !entry.result().authorityCurrent());
 	}
+	public synchronized void removeStaleAuthority() { pruneExpired(); }
 	private record Entry(TerrainDensityResult result, long storedNanos) { }
 
 	public synchronized void removeOwner(UUID ownerId) {

@@ -1,8 +1,32 @@
 # Repository agent instructions
 
+## AF peer verification candidate (Fabric verified; not beta)
+
+Current candidate is alpha.7-dev.15/protocol11. Explicit server choice
+`WORLDGEN_ASSIST_REMOTE_COMPLETE_VERIFICATION=peer` requires complete terrain,
+its allow flag, remote-on and trusted_raw. Default `server` retains first two
+successful full audits then private1/8. Peer mode admits only a distinct current
+owner already having two successful full audits of the same base context.
+If available, private1/64 draws select server full audits; every remaining
+peer job requires entire immutable terrain equality. Failed admission after
+the64 draw forces a server full audit. Failure/disconnect cancels the pair;
+mismatch quarantines both. Same global/per-owner/preparation bounds remain.
+Approval is process-local, tied to BOTH epochs through cache and final preflight;
+never serialized. Verification may be server-assigned outside the peer's own
+view, for an existing demanded chunk; no world task/ticket is created.
+This is opt-in for trusted friends; collusion/hostile clients remain unproved.
+AF gate214306-614 completed five affected methods/three builds/physical profile,
+1,824 matching format2 digests,peer applications596/620 in correctness. View32
+assisted-first paired FULL-4.27%/receipt-3.71%/CPU-17.10%,all three improved;
+tick p95+6.18% all higher,failures/job timeouts0,apply rejection/quarantine0.
+This modest gain is not substantial acceleration or beta; native complete/peer
+and opposite-order AF remain unrun. See TEST_RESULTS_LATEST for exact identity.
+Historical audit statements below describe default server mode.
+
+
 ## Scope and sources
 
-The published alpha.6 and current alpha.7-dev.14 candidate target Minecraft Java Edition **26.3** with
+The published alpha.6 and current alpha.7-dev.15 candidate target Minecraft Java Edition **26.3** with
 Fabric Loader **0.19.5** / Fabric API **0.161.0+26.3**, Forge **66.0.3**,
 and NeoForge **26.3.0.13-beta** on Java **25** (verification JDK 25.0.4).
 The earlier 26.2 Fabric alpha.3 remains on `mc/26.2` and is immutable.

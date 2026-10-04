@@ -1,5 +1,42 @@
 # World Generation Pipeline Notes
 
+AF dev.15/protocol11 completed5 affected methods/three builds/1,824 matching
+digests with actual peer use596/620. Physical assisted-first FULL-4.27%/
+receipt-3.71%/CPU-17.10% all three improved,tick p95+6.18% all higher. No beta.
+Retained JFR private full audits4.11%,features22.44%,local terrain workers33.13%
+inclusive samples (overlapping,not durations). Next investigate the still-local
+nonempty-Beardifier terrain; generated26.3 public Beardifier(List<Rigid>,
+List<JigsawJunction>,BoundingBox) consumes ordered rigid boxes/terrain adjustment/
+ground delta,source junctionXYZ and exact affected box. Capture the actual
+server-produced sampler, not a reimplementation of structure traversal;
+NeoForge's PieceBeardifierModifier changes traversal. NOT implemented yet.
+Application must bind the same per-chunk shape without turning every shape into
+a new first-two audit cohort; base owner/context audits remain stable.
+Native complete/peer and opposite-order AF are unrun. Older unrun sections
+are historical implementation checkpoints; current truth is TEST_RESULTS_LATEST.
+
+## AF verification on another client (dev.15/protocol11; unrun)
+
+AE eliminated constant validator queue waits but did not improve latency
+reliably. AF assigns a second complete computation to a distinct current trusted
+owner for the same already-demanded chunk. Original private biome/fill/surface/
+carver invokers and EMPTY-Beardifier eligibility are unchanged; no Minecraft
+symbol/threading target changes. The server compares ALL blocks, WG heights,
+ordered duplicate fluid offsets and the complete biome digest without blocking.
+Both owners require two server-full successful audits of the base context.
+Default verification stays server/private1/8. Explicit peer mode uses private
+1/64 when a trusted peer has capacity, plus whole peer equality for all other
+such work. Failed peer admission forces a full server audit; no peer retains
+normal1/8. A failed pair falls back locally; mismatch revokes both owners.
+Process-local approval carries both owner/reload epochs through cache and final
+pre-write checks, never through wire. Peer application is credited exactly once.
+Global64/owner32 selected fixture windows and existing preparation limits also
+bound secondary work; no additional world task/ticket or executor is created.
+Additional client computation/traffic may outweigh saved server recomputation;
+measure equal work/coordinates with one warmup and three paired32-view repeats.
+Five affected methods/three builds/Fabric parity/performance remain unrun.
+
+
 AE completed4 affected methods/three builds/1,803 matching digests, but same-
 region view32 FULL+1.43%/receipt+0.92% only1/3 faster despite CPU-12.99% all
 three lower. Private independent full audits still13.81% inclusive JFR samples.

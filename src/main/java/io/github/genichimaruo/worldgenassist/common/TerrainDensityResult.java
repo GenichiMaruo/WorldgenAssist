@@ -14,8 +14,11 @@ public final class TerrainDensityResult {
 	private final float[] terrainSurface;
 	private final CompleteTerrainData completeTerrain;
 	private final long clientComputeNanos;
+	/** Process-local only; decoding never imports authority or callbacks from the wire. */
+	private final LocalApproval localApproval;
 
 	public TerrainDensityResult(TerrainJobIdentity identity, double[] densities, long clientComputeNanos) {
+		localApproval = null;
 		this.identity = Objects.requireNonNull(identity, "identity");
 		Objects.requireNonNull(densities, "densities");
 		if (densities.length < 1 || densities.length > TerrainDensityJob.MAX_TERRAIN_SAMPLE_COUNT) {
@@ -46,6 +49,7 @@ public final class TerrainDensityResult {
 	}
 
 	private TerrainDensityResult(TerrainJobIdentity identity, float[] values, long computeNanos) {
+		localApproval = null;
 		this.identity = Objects.requireNonNull(identity, "identity");
 		Objects.requireNonNull(values, "values");
 		if (values.length < 1 || values.length > TerrainDensityJob.MAX_TERRAIN_SAMPLE_COUNT
@@ -66,6 +70,7 @@ public final class TerrainDensityResult {
 		return new TerrainDensityResult(identity, codes, surface, computeNanos);
 	}
 	private TerrainDensityResult(TerrainJobIdentity identity, byte[] codes, float[] surface, long computeNanos) {
+		localApproval = null;
 		this.identity = Objects.requireNonNull(identity, "identity");
 		Objects.requireNonNull(codes, "codes"); Objects.requireNonNull(surface, "surface");
 		if (codes.length < 2048 || codes.length > TerrainDensityJob.MAX_SAMPLE_COUNT || codes.length % 2048 != 0
@@ -84,6 +89,10 @@ public final class TerrainDensityResult {
 		return new TerrainDensityResult(identity, data, computeNanos);
 	}
 	private TerrainDensityResult(TerrainJobIdentity identity, CompleteTerrainData data, long computeNanos) {
+		this(identity, data, computeNanos, null);
+	}
+	private TerrainDensityResult(TerrainJobIdentity identity, CompleteTerrainData data, long computeNanos, LocalApproval approval) {
+		localApproval = approval;
 		this.identity = Objects.requireNonNull(identity);
 		completeTerrain = Objects.requireNonNull(data);
 		if (computeNanos < 0 || computeNanos > MAX_CLIENT_COMPUTE_NANOS) throw new IllegalArgumentException("Invalid terrain timing");
@@ -91,6 +100,26 @@ public final class TerrainDensityResult {
 		densities = null; floatDensities = null; terrainCodes = null; terrainSurface = null;
 	}
 	public boolean hasCompleteTerrain() { return completeTerrain != null; }
+	/** The server attaches this only after independent-owner agreement; immutable data is shared. */
+	public TerrainDensityResult withLocalApproval(java.util.function.BooleanSupplier current, Runnable applied) {
+		if (completeTerrain == null || localApproval != null) throw new IllegalStateException("Invalid local approval");
+		return new TerrainDensityResult(identity, completeTerrain, clientComputeNanos,
+			new LocalApproval(Objects.requireNonNull(current), Objects.requireNonNull(applied)));
+	}
+	public boolean hasPeerVerification() { return localApproval != null; }
+	public boolean authorityCurrent() { return localApproval == null || localApproval.current.getAsBoolean(); }
+	public void requireCurrentAuthority() {
+		if (!authorityCurrent()) throw new IllegalArgumentException("Remote peer authority expired");
+	}
+	public void recordPeerApplication() {
+		if (localApproval != null && localApproval.reported.compareAndSet(false, true)) localApproval.applied.run();
+	}
+	private static final class LocalApproval {
+		final java.util.function.BooleanSupplier current;
+		final Runnable applied;
+		final java.util.concurrent.atomic.AtomicBoolean reported = new java.util.concurrent.atomic.AtomicBoolean();
+		LocalApproval(java.util.function.BooleanSupplier current, Runnable applied) { this.current = current; this.applied = applied; }
+	}
 	public CompleteTerrainData completeTerrain() {
 		if (completeTerrain == null) throw new IllegalStateException("Not a complete terrain result");
 		return completeTerrain;

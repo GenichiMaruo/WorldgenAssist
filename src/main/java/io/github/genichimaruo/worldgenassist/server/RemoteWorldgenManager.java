@@ -74,6 +74,7 @@ public final class RemoteWorldgenManager {
 	private final StartedTerrain<RemoteDensityResultCache.Key> startedTerrain;
 	private final SecureRandom validationRandom = new SecureRandom();
 	private final CompleteTerrainAuditPolicy<CompleteAuditContext> completeAudits;
+	private final boolean peerVerification = CompleteTerrainVerificationMode.peerRequested();
 	/** Only the owned validation executor computes; lifecycle mutations use resultStateLock. */
 	private final Map<CompleteAuditContext, io.github.genichimaruo.worldgenassist.common.PrivateTerrainComputer> completeAuditComputers = new java.util.HashMap<>();
 	private long predictionTicks;
@@ -114,7 +115,9 @@ public final class RemoteWorldgenManager {
 				Thread thread = new Thread(task, "CAWG-RemoteValidation"); thread.setDaemon(true); return thread;
 			}, new ThreadPoolExecutor.AbortPolicy());
 		this.preparation = new BoundedRemotePreparation<>(config.maxInFlightJobs(), validationExecutor);
-		this.completeAudits = new CompleteTerrainAuditPolicy<>(config.maxInFlightJobs(), () -> validationRandom.nextInt(8));
+		this.completeAudits = new CompleteTerrainAuditPolicy<>(config.maxInFlightJobs(), (int bound) -> validationRandom.nextInt(bound));
+		WorldgenAssist.LOGGER.info("[CAWG] complete.verification mode={} initial_audits=2 server_denominator=8 peer_denominator=64",
+			peerVerification ? "peer" : "server");
 		this.timeoutWatchdog = Executors.newSingleThreadScheduledExecutor(task -> {
 			Thread thread = new Thread(task, "CAWG-RemoteTimeout");
 			thread.setDaemon(true);
@@ -647,14 +650,49 @@ public final class RemoteWorldgenManager {
 		long queued = System.nanoTime();
 		var randomState = level.getChunkSource().randomState();
 		boolean completeTerrain = remote.job().workKind() == io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.COMPLETE_TERRAIN;
-		CompleteTerrainAuditPolicy.Token<CompleteAuditContext> audit;
+		CompleteTerrainAuditPolicy.Token<CompleteAuditContext> selected = null;
+		PeerAttempt admittedPeer = null;
 		try {
-			audit = completeTerrain ? completeAudits.select(new CompleteAuditContext(remote.ownerId(), key.ownerGeneration(),
-				key.generation(), key.dimension(), key.contextFingerprint()), remote.job().identity().jobId()) : null;
+			PeerOffer offer = completeTerrain ? peerOffer(key) : null;
+			selected = completeTerrain ? completeAudits.select(auditContext(key), remote.job().identity().jobId(),
+				offer == null ? CompleteTerrainAuditPolicy.AUDIT_DENOMINATOR : CompleteTerrainAuditPolicy.PEER_AUDIT_DENOMINATOR) : null;
+			if (offer != null && !selected.requiresFullAudit()) {
+				admittedPeer = admitPeer(remote, offer);
+				if (admittedPeer == null) selected = completeAudits.requireFullAudit(selected);
+			}
 		} catch (RuntimeException error) {
+			if (selected != null) completeAudits.cancel(selected);
+			if (admittedPeer != null) cancelPeer(admittedPeer);
 			ticket.cancel(); coordinator.cancelJob(remote.ownerId(), remote.job().identity());
 			return CompletableFuture.failedFuture(error);
 		}
+		final var audit = selected;
+		final var peer = admittedPeer;
+		CompletableFuture<TerrainDensityResult> incoming = remote.result();
+		try {
+		if (peer != null) {
+			var peerKey = peer.key();
+			incoming = CompleteTerrainPeerVerifier.agree(remote,
+				new RemoteJobCoordinator.Submission(peer.remote().ownerId(), peer.remote().job(), peer.checked()),
+				() -> currentCacheKey(key) && currentCacheKey(peerKey),
+				() -> {
+					if (currentCacheKey(key) && currentCacheKey(peerKey)) {
+						coordinator.recordValidated(peerKey.ownerId());
+						WorldgenAssist.LOGGER.info("[CAWG] job.peer_terrain_applied id={} peer_owner={}",
+							remote.job().identity().jobId(), peerKey.ownerId());
+					}
+				}, error -> {
+					quarantineWorker(remote.ownerId(), remote.job().identity().jobId(), "peer", "peer_terrain_mismatch");
+					quarantineWorker(peerKey.ownerId(), peer.remote().job().identity().jobId(), "peer", "peer_terrain_mismatch");
+				});
+		}
+		} catch (RuntimeException error) {
+			if (audit != null) completeAudits.cancel(audit);
+			if (peer != null) cancelPeer(peer);
+			ticket.cancel(); coordinator.cancelJob(remote.ownerId(), remote.job().identity());
+			return CompletableFuture.failedFuture(error);
+		}
+		final var incomingResult = incoming;
 		java.util.function.Supplier<RemoteDensityValidator.Prepared> prepare = () -> {
 			long prepareStarted = System.nanoTime();
 			RemoteDensityValidator.Prepared prepared;
@@ -675,6 +713,7 @@ public final class RemoteWorldgenManager {
 		};
 		java.util.function.BiFunction<TerrainDensityResult, RemoteDensityValidator.Prepared, TerrainDensityResult> compare = (density, prepared) -> {
 			if (!currentCacheKey(key)) throw new java.util.concurrent.CancellationException("Obsolete validation context");
+			density.requireCurrentAuthority();
 			long compareStarted = System.nanoTime();
 			try {
 				var metrics = completeTerrain || pipelineOptions.prepareValidation() ? prepared.compare(density)
@@ -686,8 +725,9 @@ public final class RemoteWorldgenManager {
 				synchronized (resultStateLock) {
 					if (completeTerrain) {
 						if (!currentCacheKey(key) || !completeAudits.accept(audit)) throw new java.util.concurrent.CancellationException("Full audit authority expired");
-						WorldgenAssist.LOGGER.info("[CAWG] job.full_terrain_accepted id={} audited={} blocks={}",
-							remote.job().identity().jobId(), audit.requiresFullAudit(), density.densityCount());
+						WorldgenAssist.LOGGER.info("[CAWG] job.full_terrain_accepted id={} audited={} blocks={} verification={}",
+							remote.job().identity().jobId(), audit.requiresFullAudit(), density.densityCount(),
+							density.hasPeerVerification() ? "peer" : "server");
 					}
 					if (currentCacheKey(key)) demandWait.recordReady(remote.ownerId(), System.nanoTime() - started);
 				}
@@ -703,17 +743,20 @@ public final class RemoteWorldgenManager {
 			// constant shape/identity validator behind independently computed audits.
 			// The same admitted ticket, comparison and final authority checks remain.
 			result = completeTerrain && !audit.requiresFullAudit()
-				? ticket.startPrepared(prepare.get(), remote.result(), compare)
-				: ticket.start(prepare, remote.result(), compare);
+				? ticket.startPrepared(prepare.get(), incomingResult, compare)
+				: ticket.start(prepare, incomingResult, compare);
 		} catch (RuntimeException error) {
 			if (audit != null) completeAudits.cancel(audit);
+			if (peer != null) cancelPeer(peer);
 			ticket.cancel(); coordinator.cancelJob(remote.ownerId(), remote.job().identity());
 			return CompletableFuture.failedFuture(error);
 		}
 		long remaining = Math.max(1L, config.jobTimeout().toNanos() - (System.nanoTime() - started));
 		result.orTimeout(remaining, TimeUnit.NANOSECONDS).whenComplete((density, error) -> {
 			if (audit != null) completeAudits.cancel(audit);
+			if (peer != null) cancelPeer(peer);
 			if (error != null) {
+				incomingResult.cancel(false);
 				ticket.cancel();
 				coordinator.cancelJob(remote.ownerId(), remote.job().identity());
 				transferMetrics.remove(remote.job().identity().jobId());
@@ -722,6 +765,58 @@ public final class RemoteWorldgenManager {
 		});
 		return result;
 	}
+	private CompleteAuditContext auditContext(RemoteDensityResultCache.Key key) {
+		return new CompleteAuditContext(key.ownerId(), key.ownerGeneration(), key.generation(), key.dimension(), key.contextFingerprint());
+	}
+	private PeerOffer peerOffer(RemoteDensityResultCache.Key primary) {
+		if (!peerVerification || !currentCacheKey(primary) || !completeAudits.trusted(auditContext(primary))
+			|| preparation.size() >= config.maxInFlightJobs()) return null;
+		// Verification is assigned by the server; no additional world demand/ticket is created.
+		for (var demand : demands) {
+			UUID owner = demand.ownerId();
+			if (owner.equals(primary.ownerId()) || !demand.dimension().equals(primary.dimension())
+				|| !coordinator.ownerHasCapacity(owner)) continue;
+			var key = new RemoteDensityResultCache.Key(primary.generation(), primary.dimension(), primary.chunkX(), primary.chunkZ(),
+				primary.contextFingerprint(), primary.noiseSettings(), primary.minY(), primary.height(), primary.cellWidth(),
+				primary.cellHeight(), owner, ownerGenerations.getOrDefault(owner, -1L), primary.workKind());
+			if (currentCacheKey(key) && completeAudits.trusted(auditContext(key))) return new PeerOffer(key);
+		}
+		return null;
+	}
+	private PeerAttempt admitPeer(RemoteJobCoordinator.Submission primary, PeerOffer offer) {
+		var key = offer.key();
+		if (!currentCacheKey(key) || !completeAudits.trusted(auditContext(key))) return null;
+		var ticket = preparation.reserve(key.ownerId(), Math.max(1, coordinator.ownerJobLimit(key.ownerId())));
+		if (ticket == null) return null;
+		RemoteJobCoordinator.Submission peer = null;
+		try {
+			var job = primary.job();
+			var admitted = coordinator.trySubmitForOwner(key.ownerId(), key.dimension(), key.chunkX(), key.chunkZ(), key.contextFingerprint(),
+				identity -> new TerrainDensityJob(identity, job.worldSeed(), job.generateStructures(), job.noiseSettings(), job.minY(),
+					job.height(), job.cellWidth(), job.cellHeight(), job.workKind()));
+			if (admitted.isEmpty()) { ticket.cancel(); return null; }
+			peer = admitted.get();
+			var checked = ticket.startPrepared(RemoteDensityValidator.Prepared.completeTerrain(peer.job(), null, 0), peer.result(), (value, prepared) -> {
+				if (!currentCacheKey(key) || !completeAudits.trusted(auditContext(key))) throw new java.util.concurrent.CancellationException("Peer context expired");
+				prepared.compare(value); return value;
+			});
+			UUID peerJobId = peer.job().identity().jobId();
+			checked.whenComplete((value, error) -> transferMetrics.remove(peerJobId));
+			WorldgenAssist.LOGGER.info("[CAWG] job.peer_terrain_sent id={} primary={} owner={} chunk={},{}",
+				peerJobId, job.identity().jobId(), key.ownerId(), key.chunkX(), key.chunkZ());
+			return new PeerAttempt(key, peer, ticket, checked);
+		} catch (RuntimeException error) {
+			ticket.cancel(); if (peer != null) coordinator.cancelJob(key.ownerId(), peer.job().identity()); return null;
+		}
+	}
+	private void cancelPeer(PeerAttempt peer) {
+		peer.ticket().cancel(); coordinator.cancelJob(peer.key().ownerId(), peer.remote().job().identity());
+		transferMetrics.remove(peer.remote().job().identity().jobId());
+	}
+	private record PeerOffer(RemoteDensityResultCache.Key key) { }
+	private record PeerAttempt(RemoteDensityResultCache.Key key, RemoteJobCoordinator.Submission remote,
+		BoundedRemotePreparation<RemoteDensityValidator.Prepared, TerrainDensityResult>.Ticket ticket,
+		CompletableFuture<TerrainDensityResult> checked) { }
 	private io.github.genichimaruo.worldgenassist.common.PrivateTerrainComputer completeAuditComputer(
 		RemoteDensityResultCache.Key key, CompleteTerrainAuditPolicy.Token<CompleteAuditContext> audit, ServerLevel level) {
 		CompleteAuditContext context = new CompleteAuditContext(key.ownerId(), key.ownerGeneration(),
@@ -1269,6 +1364,7 @@ public final class RemoteWorldgenManager {
 				ownerGenerations.put(ownerId, nextOwnerGeneration.incrementAndGet());
 			}
 			resultCache.removeOwner(ownerId);
+			resultCache.removeStaleAuthority();
 			queuedTerrain.removeOwner(ownerId);
 			startedTerrain.removeMatching(key->ownerId.equals(key.ownerId()));
 			demandWait.removeOwner(ownerId);
@@ -1312,7 +1408,7 @@ public final class RemoteWorldgenManager {
 		String source
 	) {
 		synchronized (resultStateLock) {
-			if (!currentCacheKey(cacheKey)) {
+			if (!currentCacheKey(cacheKey) || !result.authorityCurrent()) {
 				return false;
 			}
 			if (startedTerrain.contains(cacheKey,System.nanoTime())) {
