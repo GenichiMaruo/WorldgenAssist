@@ -1,5 +1,14 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## Alpha.7 release packaging (2026-10-05)
+
+All three alpha.7/protocol12 builds passed metadata-only comparison against
+the AG dev.16 artifacts: Fabric202/Forge196/NeoForge189 classes, all other
+resources and source entries unchanged. No repeat runtime/unit/performance
+tests were run. See releases/v0.1.0-alpha.7+mc26.3-verification.md for public
+and original candidate hashes. Publication is pending; the AG measurements
+below remain associated with the original runtime artifacts.
+
 ## AG completed structural shaping (2026-10-04; dev.16/protocol12)
 
 After all implementation, gate225828-933/session59083 exited0,csb230204-612

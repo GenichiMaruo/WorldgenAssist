@@ -6,11 +6,11 @@
 
 | Item | Value |
 | --- | --- |
-| Mod version | `0.1.0-alpha.6+mc26.3` |
+| Mod version | `0.1.0-alpha.7+mc26.3` |
 | Minecraft | Java Edition `26.3` |
-| Git tag | `v0.1.0-alpha.6+mc26.3` |
+| Git tag | `v0.1.0-alpha.7+mc26.3` |
 | Maintenance branch | `mc/26.3` |
-| Distribution JARs | Fabric `worldgen-assist-0.1.0-alpha.6+mc26.3.jar`; Forge and NeoForge have loader-named JARs |
+| Distribution JARs | Fabric `worldgen-assist-0.1.0-alpha.7+mc26.3.jar`; Forge and NeoForge have loader-named JARs |
 
 The mod version and Minecraft target are separate values in `gradle.properties`.
 Local development builds now read `mod_version` from this same file for Fabric,
@@ -24,9 +24,9 @@ prerelease. Install the matching distribution JAR, not the developer
 
 The earlier Minecraft 26.2 Fabric release remains at
 `v0.1.0-alpha.3+mc26.2` on `mc/26.2`. The 26.3 port and validation limits
-are tracked in `PORT_26_3.md` and the alpha.6 verification note. Alpha.4 and
-alpha.5 remain immutable. Alpha.6 uses protocol6; alpha.5 uses4 and alpha.4
-uses3. Update the server and participating clients together.
+are tracked in `PORT_26_3.md` and the release verification notes. Alpha.4,
+alpha.5 and alpha.6 remain immutable. Alpha.7 uses protocol12; alpha.6 uses6,
+alpha.5 uses4 and alpha.4 uses3. Update the server and participating clients together.
 
 `main` carries ongoing work; `mc/26.2` and `mc/26.3` track their Minecraft lines. Published
 tags, releases, and assets are immutable. For a fix after publication, advance
@@ -59,8 +59,8 @@ own `mc/<version>` branch after source, Mixin, dependency, and behavior checks.
 
 ## 日本語
 
-現在の公開版は **`0.1.0-alpha.6+mc26.3`**、Gitタグは
-**`v0.1.0-alpha.6+mc26.3`**、26.3向け保守ブランチは **`mc/26.3`** です。
+現在の公開版は **`0.1.0-alpha.7+mc26.3`**、Gitタグは
+**`v0.1.0-alpha.7+mc26.3`**、26.3向け保守ブランチは **`mc/26.3`** です。
 サーバーと参加クライアントに同じローダー向けの導入用JARを入れます。`-sources.jar` は
 開発者向けです。公開済みのタグや添付物は変更せず、修正時は新しい版にします。
 

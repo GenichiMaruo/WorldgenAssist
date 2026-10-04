@@ -1,5 +1,16 @@
 # Repository agent instructions
 
+## Alpha.7 public packaging checkpoint (2026-10-05)
+
+Source version is now0.1.0-alpha.7+mc26.3/protocol12. AG implementation is
+committed as b91dd29. All three release builds passed byte-entry comparison:
+only exact loader version metadata differs from tested dev.16; all classes,
+Mixins, other resources and source entries match. Original runtime evidence
+keeps its candidate hashes. No new runtime tests are required for packaging.
+Public hashes and measured limits are in releases/v0.1.0-alpha.7+mc26.3-verification.md.
+Publication is pending; update this status only after verifying external state.
+The goal of substantial acceleration/beta remains unmet.
+
 ## AG completed structural shaping (dev.16/protocol12; not beta)
 
 Gate225828-933/session59083 exited0: seven affected methods/three builds/profile,

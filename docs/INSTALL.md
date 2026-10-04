@@ -2,7 +2,70 @@
 
 [English](INSTALL.md) | [日本語](INSTALL.ja.md) · [Overview](../README.md)
 
-## Minecraft 26.3 alpha.6
+## Minecraft 26.3 alpha.7
+
+Use Java25(tested25.0.4) and Minecraft26.3. Choose Fabric0.19.5 + API0.161.0+26.3,
+Forge66.0.3 or NeoForge26.3.0.13-beta. Download the matching distribution JAR
+from [alpha.7](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.7%2Bmc26.3)
+and replace the old mod on the server and every participating client together.
+**Protocol12 is incompatible with previous releases.** Never install source JARs.
+
+| Loader | JAR |
+| --- | --- |
+| Fabric | `worldgen-assist-0.1.0-alpha.7+mc26.3.jar` |
+| Forge | `worldgen-assist-forge-0.1.0-alpha.7+mc26.3.jar` |
+| NeoForge | `worldgen-assist-neoforge-0.1.0-alpha.7+mc26.3.jar` |
+
+Remote assistance is off by default. In-game Options→WorldgenAssist controls
+participation/reconnect and operator server policy/restart. Raw-seed disclosure
+is a separate choice. Complete terrain is limited to eligible stock Overworld
+contexts; existing intermediate paths remain,with prior dimension evidence
+retaining its original versions. Arbitrary generators/client-unavailable
+registries are unsupported. Use trusted test worlds; seed secrecy and peer
+collusion resistance are unresolved. [Verification](releases/v0.1.0-alpha.7+mc26.3-verification.md)
+includes fresh three-loader Overworld correctness,not a full dimension matrix.
+
+### Measured complete-terrain profile
+
+For the explicit view32 profile,start the server from a shell with:
+
+```powershell
+$env:WORLDGEN_ASSIST_REMOTE='true'
+$env:WORLDGEN_ASSIST_REMOTE_SEED_DISCLOSURE='trusted_raw'
+$env:WORLDGEN_ASSIST_NOISE_BACKEND='cooperative'
+$env:WORLDGEN_ASSIST_REMOTE_WORK_KIND='complete'
+$env:WORLDGEN_ASSIST_REMOTE_ALLOW_COMPLETE_TERRAIN='true'
+$env:WORLDGEN_ASSIST_REMOTE_COMPLETE_VERIFICATION='peer'
+$env:WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT='64'
+$env:WORLDGEN_ASSIST_REMOTE_OWNER_WINDOW='32'
+$env:WORLDGEN_ASSIST_REMOTE_CACHE_ENTRIES='128'
+$env:WORLDGEN_ASSIST_REMOTE_PREDICTION='false'
+$env:WORLDGEN_ASSIST_REMOTE_VALIDATION_SAMPLE_CELLS='8'
+$env:WORLDGEN_ASSIST_REMOTE_TIMEOUT_MS='30000'
+$env:WORLDGEN_ASSIST_REMOTE_PREFETCH='true'
+$env:WORLDGEN_ASSIST_REMOTE_PREPARE_VALIDATION='true'
+$env:WORLDGEN_ASSIST_REMOTE_ADAPTIVE_DEMAND_WAIT='true'
+$env:WORLDGEN_ASSIST_REMOTE_DEMAND_WAIT_MS='100'
+$env:WORLDGEN_ASSIST_REMOTE_READY_SURFACE_ONLY='false'
+$env:WORLDGEN_ASSIST_REMOTE_PREFETCH_LOOKAHEAD='0'
+```
+
+Set `view-distance=32` in server.properties and client render distance32.
+On each client,add JVM argument `-Dworldgen_assist.client.worker_threads=4` and
+set environment `WORLDGEN_ASSIST_CLIENT_JOB_WINDOW='32'` before launching,reconnect with
+participation enabled. The two measured clients shared one stronger PC.
+Both modes used two owned terrain workers/16 queued per worker;no CPU/JVM
+limits on the weaker server. Same-region paired FULL-2.24%,receipt-1.74%,
+CPU-20.53%,all3 improved;tick p95+0.32%(two higher). Not beta/a general guarantee.
+Receipt excludes rendering. Job deadline30s; demand wait asynchronous100ms,
+adaptive max200ms,then local fallback. Server verification is default1/8 after
+two initial full audits; optional trusted peer mode uses entire agreement and
+private1/64 draws when a suitable distinct audited peer is available. A peer can
+verify an assigned chunk outside its own view; no additional world ticket.
+No peer/raced admission retains or forces server audit. This is not hostile
+client proof. Removing these shell overrides restores the ordinary profile.
+
+## Historical Minecraft 26.3 alpha.6
 
 Use Minecraft Java Edition **26.3**, Java **25** (tested with 25.0.4), and one
 loader: Fabric Loader **0.19.5** with Fabric API **0.161.0+26.3**, Forge
