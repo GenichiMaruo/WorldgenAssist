@@ -35,6 +35,7 @@ final class RemoteWorldgenEligibility {
 		if (generator == null) {
 			return Optional.empty();
 		}
+		if (!hasCompleteTerrainSource(generator)) return Optional.empty();
 		ServerLevel level = context.level();
 		if (chunk.isOldNoiseGeneration() || chunk.getBelowZeroRetrogen() != null) {
 			return Optional.empty();
@@ -68,6 +69,7 @@ final class RemoteWorldgenEligibility {
 			return Optional.empty();
 		}
 		NoiseBasedChunkGenerator generator = (NoiseBasedChunkGenerator) level.getChunkSource().getGenerator();
+		if (!hasCompleteTerrainSource(generator)) return Optional.empty();
 		Holder<NoiseGeneratorSettings> settings = generator.generatorSettings();
 		if (settings.unwrapKey().isEmpty()) {
 			return Optional.empty();
@@ -91,6 +93,12 @@ final class RemoteWorldgenEligibility {
 			}
 		}
 		return null;
+	}
+	private static boolean hasCompleteTerrainSource(NoiseBasedChunkGenerator generator) {
+		if (!io.github.genichimaruo.worldgenassist.common.CompleteTerrainMode.requested()) return true;
+		return generator.getClass() == NoiseBasedChunkGenerator.class
+			&& generator.getBiomeSource() instanceof net.minecraft.world.level.biome.MultiNoiseBiomeSource source
+			&& source.stable(net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterLists.OVERWORLD);
 	}
 
 	static boolean hasProtocolGeometry(NoiseSettings noise, int minY, int height) {

@@ -1,5 +1,302 @@
 # World Generation Pipeline Notes
 
+## Complete terrain core in development (2026-10-04)
+
+Z completed with two of three paired speed/CPU improvements; see exact evidence
+in TEST_RESULTS_LATEST. PrivateTerrainComputer now constructs only private
+ProtoChunks and calls original private biome/fill/surface/carver methods through
+registered invokers. AA source now connects separate complete-mode requests,
+private client computation, variable compact transport, independent audits and
+execution-time server application. AA Fabric parity and physical view32 passed;
+FULL-8.21%/receipt-8.64% all three faster, CPU+3.91% all three higher. AB dev.11
+passed its separate physical batch: FULL-7.30%/receipt-6.51%/CPU-10.67% all
+three improved, complete consumption74-84%; tick p95+4.48%. No beta, native
+complete runtime or opposite-order confirmation.
+
+Primary26.3 ChunkStatusTasks collects possible surface biomes from all palettes
+in3x3 already-generated BIOMES chunks. WorldGenRegion uses LevelReader's default
+getNoiseBiome: prefer existing BIOMES chunk, otherwise uncached resolver.
+Consequently a point-only climate resolver is insufficient for surface parity:
+MultiNoiseBiomeSource.createResolverForChunk samples six bulk float buffers.
+The new prototype computes all nine biome chunks with original doCreateBiomes,
+uses their clamped quart samples for the zoomed BiomeManager and collects the
+same union. The32-byte TerrainBiomeWindow digest binds all nine vertical quart
+inputs; eventual application must compare it to authoritative existing chunks.
+Carvers retain original uncached source and original seed/index ordering, with
+null WorldGenRegion only on private chunks (avoiding real cached neighbor data).
+
+Original ProtoChunk before TERRAIN has persisted statusBIOMES and WG heightmaps;
+surface/carvers update those maps via setBlockState. Postprocessing is ordered
+per-section ShortList, can contain duplicates and entries that are no longer
+fluid in the final snapshot. New immutable CompleteTerrainData retains exact
+ordered lists and WG relative heights, checks a fixed server-owned50-state
+palette and all counts before allocation. A conservative total4*volume offset
+cap is a refusal/fallback limit, not a claim that vanilla never exceeds it.
+No client-defined palette, block entity or arbitrary registry ID is accepted.
+Protocol10 encodings4/5 now transport its variable body without fixed padding.
+Initial owner/context work is limited to two independent full audits until
+both succeed; subsequent jobs have private1/8 whole-chunk audits. Pending tokens
+are bounded by global in-flight capacity, contexts64, and invalidated on owner/
+epoch/reload cleanup. Audit preparation overlaps client calculation and never
+waits on network/server threads. AA forced complete mode to consume only ready
+output. AB permits explicit overlap mode to use existing asynchronous bounded
+awaitDemand (100ms base, adaptive200ms ceiling in this profile), then original
+executor application or local fallback. Ready profile remains available. No
+thread join or blocking wait is added. Application does two bounded passes:
+complete preflight/height consistency, then section writes with original locks.
+Biome/material/carver registries/source and block tags extend the context hash.
+NoiseStageDigest format2 retains ordered fluid offsets, rather than sorting,
+so the independent original-vanilla pair compares ordering as well as blocks,
+WG heightmaps and duplicate count. Historical format1 evidence remains separate.
+
+## Z: avoid ordering candidates while admission is full (2026-10-04)
+
+Y completed with exact X code and opposite order: FULL-6.86%,receipt-7.08% all
+three faster, CPU+6.31% all three higher. X's CPU reduction did not reproduce.
+X JFR shows dispatchCandidateBatch2.94% and candidate queue2.49% inclusive;
+the dispatcher ordered up to1024 observations even when every owner was full.
+Z alpha.7-dev.9 returns before ordering/request-batch allocation if both metadata
+queues are empty, global/preparation capacity is full or no current demanded
+owner has capacity under its adaptive limit. ownerHasCapacity reads accepted
+worker state/quarantine/synchronous-wait suspension without acquiring a lease.
+These hints do not admit work: trySubmit retains all original sender/owner/global/
+identity/deadline checks. Concurrent capacity change may simply defer until a
+completion callback or the next existing tick; no sleeps/new tasks/tickets.
+Original request dispatcher still refreshes authoritative player demand first,
+and original expiry/owner/context cleanup remains. capacity_skips is diagnostic
+only. Protocol9, sampled validation, seed gates, native senders and Mixins unchanged.
+Three affected tests/builds, physical parity and view32 comparison pending.
+
+## X: register actual queued terrain ahead of observation hints (2026-10-04)
+
+Ready-only work previously offered a generation candidate then entered vanilla's
+terrain executor. The deferred dispatcher could lag behind that runnable, while
+the readiness probe classified its unregistered work LOCAL. X alpha.7-dev.8
+captures only the already passed actual EligibleContext's level/generator/
+settings/noise and complete owner/epoch/fingerprint/work-kind key. A separate
+QueuedTerrainAdmission holds at most max_in_flight snapshots, rejects overflow,
+never extends duplicate deadlines and orders owners round-robin. This metadata
+contains no new tickets, task creation, chunk writes or permission to apply.
+
+The existing coalesced server dispatcher drains these entries before observation
+candidates, in the same coordinator request batches. It rechecks current owner
+epoch/quarantine and selected generation demand, expiration and whether original
+terrain already started. Shared submitPreparedAhead retains cache/global/owner/
+preparation bounds and server-secret verification. The actual snapshot avoids
+another live ready-chunk lookup, prediction eligibility evaluation and key build.
+Registration/packet sending still run on the server; worker/network threads never
+wait. A queued entry is PENDING before registration; READY remains validated cache
+only. Eight bypasses force oldest terrain; all-pending queues compute locally
+immediately. Original execution removes the entry before cache claim/local work;
+completion, owner invalidation and reload clear retained snapshots. The entry
+identity check prevents an old dispatcher snapshot deleting a replacement.
+Protocol9/default gates/validation policy and all Mixin targets are unchanged.
+Focused units/builds/Fabric parity/view32 performance pending one batch.
+X gate140104-921 now passed5 focused methods/three builds and1,813 matching
+Fabric digests. The new lane sent485 jobs, fully applied426; both owners used
+full decisions. View32 csb140421-423 remains running; no X speed claim yet.
+The completed X pair is now FULL-13.93%,receipt-14.04%,CPU-2.80% (median paired
+ratios), all three improved, tick p95+3.66%. Full cache completions~40-50%; early
+cache.hit alone omits queued-ready uses. Actual-stage applications1756/1096/1547
+per measured repeat. See exact logs/offline analysis in TEST_RESULTS_LATEST.
+The prior pending sentences retain checkpoint chronology. Different vanilla
+baselines in separate W/X runs prevent direct incremental-causality attribution.
+Native X correctness running; condition-order confirmation precedes beta judgment.
+Native X142525-576 now completed fresh Forge/NeoForge parity,1,987/1,971 matching
+shared digests,32/145 in-workload full applications and8/28 through the new lane.
+No native performance claim. Y uses exact X JAR/source/settings, vanilla-first,
+reusing original five methods/builds/parity after matching all identities.
+
+W exact V deep32/64 assisted-first comparison completed: same-region FULL-5.29%
+and receipt-5.47% all three, CPU+5.21% all three. Cache use~35-39%; merely enlarging
+the pipeline has not produced a large gain or CPU reduction. Full evidence in
+TEST_RESULTS_LATEST; no beta claim or direct randomized V/W attribution.
+
+## V: earlier actual dependencies and less metadata work (2026-10-04)
+
+U exact T JAR with ready/lookahead0 completed: same-region FULL-13.84% median
+paired ratio, two of three faster; receipt-13.48% all three; CPU-3.75% two lower.
+Client cache completions~31-34% of10,658 terrain tasks/repeat. No beta claim.
+Measured repeat1 JFR candidate queue accounts for2.10% of assisted execution
+samples; manager5.04%, terrain fill23.78%, surface28.57%. Categories overlap.
+V alpha.7-dev.7/protocol9 maintains owner counts instead of recounting every
+saturated offer and caches immutable ordering until candidate mutation, changed
+owner demand/lookahead or first expiry. Admission and final claim rechecks remain.
+
+Generated26.3 ChunkGenerationTask.create already acquires a StaticCache2D of
+holders for the worst EMPTY radius; getRadiusForLayer(TERRAIN,true) reads
+GENERATION_PYRAMID.getStepTo(targetStatus).getAccumulatedRadiusOf(TERRAIN).
+V visits exactly that existing subset at the same ChunkMap RETURN observation.
+TERRAIN targets visit center only; FULL targets visit radius2 (FEATURES adds1,
+LIGHT adds1). Pre-TERRAIN targets and cancelled tasks are ignored; every holder
+must have unknown/pre-TERRAIN persisted status and current owner generation
+demand. The larger EMPTY/structure radius is never offered. No acquire, load,
+ticket, wait, scheduled layer, dependency or world write is added. Existing data
+may be discovered later; actual-stage eligibility discards speculative output.
+task_dependency origins and dependency_hints identify the new route. Fabric,
+Forge and NeoForge generated sources have identical fields/radius/cache reads.
+Six affected methods/builds, actual dependency dispatch/parity and view32
+ready/lookahead0 performance are pending, after all implementation completes.
+V gate124404-025 now passed6 methods, three builds and1,802 matching digests,
+with510/407 actual decision applications and dependency-origin dispatch.
+csb124721-766 COMPLETE: same-region FULL-5.70%/receipt-6.69% all three,
+CPU+4.94% all three, cache use~31-34%. Existing repeat1 JFR candidate queue1.25%
+assisted (U2.10% in a separate run), manager4.27%, terrain23.16%, surface29.25%.
+Reduced metadata cost has not reduced total CPU; no beta basis. Native targeted
+decision/parity batch running after the physical batch; product source fixed.
+Native gate132009-383 now completed Forge1,971/NeoForge1,954 matching digests,
+304/28 full in-workload applications, both-owner use and dependency dispatch.
+Forge successful runtime reused; initial failed fixture gates remain recorded.
+W keeps the exact V code and increases only bounded pipeline windows16/32 to
+32/64 (owner/global; clients32, still2 compute threads each). Existing total
+hard cap64/per-client64, deadline/owner/validation8/cache128/fallback gates stay.
+Physical performance order is reversed to assisted-first; within-run pairs
+remain matching, not a randomized V/W comparison. Fresh parity/performance
+pending; original six tests/builds/native evidence reused without repeat.
+
+## T: use existing task requests before disk and dependency stages (2026-10-04)
+
+Alpha.7-dev.6/protocol9 observes ChunkMap.scheduleGenerationTask RETURN, after
+Minecraft creates/claims its own task but before runGenerationTasks dispatches
+its layers. A TERRAIN-or-later center with null/pre-TERRAIN persisted status is
+an earlier candidate than scheduleChunkLoad completion or STRUCTURE_STARTS.
+Only the actual center is offered, inside current owner generation bounds;
+no guessed neighbors, additional tasks or world tickets. Existing load/stage
+hints remain, capacity/fairness/expiry and dispatch reservations remain. Dedup
+retains first observation/time; job.sent includes hint and candidate_age_ms.
+Disk may reveal existing/old terrain or later structures/blending may exclude
+the candidate: original actual-stage eligibility and execution-time authority
+checks still discard it. No speculative output may overwrite authoritative
+existing world state. Four prefetch methods, three builds and1,802 matching
+terrain digests passed, actual task-hint dispatch verified. View32 same-repeat
+FULL-6.79%/receipt-7.26% in all three; CPU paired median+3.83%, two higher.
+Client cache coverage~22.5%, no failures/timeouts. No beta basis.
+U reuses the exact T JAR and changes only existing lookahead32->0: dispatch
+near queued work first now that S can defer pending work without response waits.
+U completed two-owner parity and full view32 comparison; original T tests/builds
+were reused with matching source/JAR hashes, not represented as fresh checks.
+
+## S: compute independent work while clients compute assigned work (2026-10-04)
+
+Alpha.7-dev.5/protocol9 cooperative mode keeps the original whole buildTerrain
+Runnable, dependency fences and section locks, but selects its bounded queued
+work by availability: READY, LOCAL, PENDING. Cached readiness/prospective job
+presence are hints only; the original execution-time claim still verifies owner,
+epoch/context/deadline. Per-chunk opportunity peek never consumes it. No-cache
+expiry scan of all entries on each hint. Oldest work may be bypassed at most8
+times; all-pending queues compute immediately, never park on a remote future.
+The same owned ForkJoinPool runs at most2 drainers, with original admission
+semaphore covering active+queued commands, permit release on failures and
+vanilla fallback when full/stopped. Lifecycle lock fences enqueue/drainer submit
+against shutdown; each state owns its queue. Cooperative auto queue increases
+4->16 per worker, within existing max16; LOCAL explicit mode retains FIFO/defaults.
+Both measured conditions use these settings. No extra world tickets or mutation
+authority. S passed3 focused methods, three builds and1,792 matching terrain
+digests. Same-repeat view32 FULL-4.56%, receipt-5.38%, all three faster; CPU
+all three higher (paired median+3.28%). Roughly22% of terrain tasks use cached
+client work. This is limited descriptive speedup, not a beta basis.
+
+## R fill and storage hypothesis (2026-10-04)
+
+Alpha.7-dev.4/protocol9 retains private validated code bytes from computation to
+server application; the decoder no longer expands98,304 codes to floats. Result
+construction checks domains once and clones arrays; validation/application may
+skip only the repeated domain scan, never the independent secret samples.
+RemoteDensityField derives the highest non-AIR outcome per column from code1/2,
+which vanilla doFill never writes or postprocesses. The fill loop starts there
+and skips AIR before section lookup. Both WG heightmaps cache firstAvailable-2
+per column: source Heightmap.update immediately returns below/equal that bound;
+refresh after successful updates. Existing state, descending traversal, section
+count maintenance and scheduled nonempty-fluid positions are preserved. No new
+Mixin or dependency/threading target. Runtime/build/performance pending.
+The decision_samples counter denotes complete assigned-prefix coverage; skipped
+AIR outcomes are included, not counted as literal per-block accessor calls.
+
+## N measured; O removes integration overhead (2026-10-03)
+
+N alpha.7-dev.2 Fabric683F21E69BEA4422DCF91AF0F2EFF1EF74D7C66A5392566463DB6F872A02B83B
+gate block-density-gate-20261003-214940-991 passed8 affected methods, three builds
+and1,813 shared terrain digests, zero mismatch. Both owners used724/749 full
+decision chunks. csb-20261003-215314-750 view32 completed: FULL97.685->104.002s
+(+6.47%), receipt102.926->109.374s (+6.26%), CPU458.453->452.297s (-1.34%).
+Only one of three FULL repeats improved. Payload6–7KB, RTT43–45ms, validation
+1.37–1.46ms, decode0.84–0.90ms; zero generation failures/job timeouts.
+First measured JFR window: terrain fill32.14% off/15.70% on; aquifers7.19/2.60%;
+remote management0.34/9.58%; decode/validation threads3.15/3.13% on. N's per-block
+aquifer operation wrapper5.87% inclusive, sampleVolume hook4.95%. Overlapping
+sample categories are neither CPU durations nor end-to-end savings.
+
+O alpha.7-dev.3/protocol9 hypothesis: avoid result integration erasing computation
+savings. Use one chunk-level context/geometry check then the source-verified
+server fill loop; no volatile field lookup/mixin dispatch for each block and no
+98,304-code float buffer. Byte prefix plus769 float suffix reduces raw expansion
+396,292->101,380 bytes. Decode/results use immutable floats; application stores
+98,304 code bytes plus769 floats. Validation amount/secret choice unchanged.
+All world writes, heightmaps, fluid updates, surface/carvers and later stages
+remain on their original server tasks. O gate block-density-gate-20261003-223904-155
+passed13 units,2 Forge fragment units, three builds and1,813 shared terrain
+digests, no mismatch. csb-20261003-224238-620 FULL96.771->100.192s (+3.54%),
+receipt101.971->105.384s (+3.35%), CPU459.594->438.953s (-4.49%). No acceleration.
+Next experiment uses unchanged O code with ready-at-executor-start timing:
+server work enters its executor immediately, captures a validated ready field
+only when the queued supplier starts, and falls back locally otherwise. This
+existing route differs from awaiting remote completion before enqueue. It was
+previously slower for the grid representation; O's smaller integration costs
+require a fresh comparison. Original unit/build evidence retains its own hash.
+
+## Candidate M result and N next experiment (2026-10-03)
+
+M alpha.7-dev.1 Fabric A76EF3B02EF1F902983A03DDD364B8388759F0154DDC3415606F14CC70FE7CF4:
+block-density-gate-20261003-210629-271 COMPLETE;8 affected methods pass,
+three builds,1,814 shared terrain digests/zero mismatch, two owners consume
+full density657/685. csb-20261003-211013-745 COMPLETE but view32 slower:
+FULL95.455 ->118.414s (+24.05%), receipt100.308 ->124.726s (+24.34%),
+CPU447.547 ->507.031s (+13.29%). Client compute3.54–3.55ms; verification
+3.23–3.26ms, encoded54–58KB, RTT69.7–77.9ms, decode1.03–1.10ms. Larger
+transfer and near-client-sized verification erase savings. M stays opt-in control.
+
+N alpha.7-dev.2 transfers seven aquifer decision classes per position and the
+existing surface suffix. User authorized changing distributed work; server
+allows it only with additional operator choice. Only doFill interprets these
+classes, server writes and final world decisions remain; arbitrary block IDs
+are not accepted. Client reproduces the private aquifer and density sampler,
+not live client world data. Carvers' density0 queries remain local. Limited code
+domain improves compressibility while removing fill density plus aquifer work.
+
+Validation keeps1,024 checks but moves them from128-value column prefixes to
+eight actual4x8x4 cells. Verified fillCell starts repeated additions at y0=0
+for each aligned cell. Independent aquifer checks recompute authoritative
+surface prepass; suffix checks remain separate. Actual measured gains/CPU/payload
+and exact terrain parity are pending one affected gate. No beta claim yet.
+
+## Natural slower server baseline and candidate M (2026-10-03)
+
+Alpha.6 Fabric SHA2E98CAA38F6E7FA020B97BC2093F4904C767BA0E50A00D93CF2A5C47355A0D3D
+on the new i7-7700K server (all8 logical processors, no artificial CPU limit)
+and two clients on i7-12700K completed remote-overlap-gate-20261003-202231-068.
+1,813 shared terrain digests matched; both owners actually used wait plus grid.
+Instrumented view32 pair csb-20261003-202550-676 had median FULL99.121s off,
+107.260s on (+8.21%); median CPU446.266s off,447.656s on (+0.31%). No speedup.
+First-measured-window computational JFR sampling (categories overlap, not CPU
+duration): terrain fill31.60% off/22.08% on; density26.27%/15.65%; surface
+27.43%/30.29%; remote management0.39%/3.96%; validation0.17% on. Positive
+noise reduction alone did not shorten completion. RTT about46–49ms versus
+client grid computation2.55–2.59ms; tiny registration/validation do not explain
+the entire slowdown. No causal comparison to the old artificially limited PC.
+
+Candidate M transfers full block-fill density plus the two surface fields.
+Client uses a private cached sampler context and pool; positive density values
+become1.0f only for doFill/Aquifer's verified positive branch, reducing payload
+entropy. Server doFill copies the exact assigned full volume and performs all
+aquifer/block/heightmap/fluid work. Other final-density queries remain canonical
+vanilla samplers. The existing asynchronous bounded demand continuation and
+owner-based prefetch dispatch overlap independent chunks with client work.
+Density validation keeps128-value groups and adds independent surface groups;
+no blanket validation reduction. Goal: remove remaining fill DAG/interpolation
+cost without extending waits. Communication/compression may erase the gain;
+the affected units/builds/two-owner correctness/view32 pair will decide. No
+candidate performance/correctness or beta-readiness claim yet.
+
 ## Candidate L: yield a pending chunk while independent work continues
 
 K's exact-JAR same-backend view32 pair csb-20261003-085104-175 completed:
@@ -1863,3 +2160,14 @@ Fabric's 26.3 `ClientChunkEvents.CHUNK_LOAD` reports a chunk already present in
 `ClientLevel`; the benchmark-only listener records that receipt on the client
 clock after a measured BEGIN chat message. It is an observation of delivery,
 not a change to the server's NOISE stage or chunk installation.
+## 2026-10-03 physical-server timing experiment
+
+P uses the unchanged O/protocol9 fill path with ready-at-executor-start timing:
+FULL/receipt medians improved2.75%/2.78%, but serverCPU increased4.42%.
+Q configures the existing GenerationPrefetchQueue.ordered(..., lookahead32)
+rotation: skip the nearest32 observed candidates per owner initially, then
+retain those candidates at the end. Short queues keep at least four entries
+before rotation. It does not create tickets or new world generation; dispatch
+still obeys actual demand, owner epochs, deadlines and16/32 job windows.
+Q completed1,802 matching terrain digests and a view32 pair: FULL-4.15%,
+receipt-4.46%, CPU+4.02%. Limited improvement, no beta evidence.

@@ -1,5 +1,134 @@
 # Remote Protocol
 
+## Complete terrain (AA dev.10 / AB dev.11, protocol10)
+
+AA transport passed17 affected/3 Forge fragment methods,three builds and fresh
+Fabric parity1,802 digests. AB changes consumption timing only; wire/palette/
+audit policy remain identical. AB runtime is pending, native full runtime unrun.
+
+Work kind5 COMPLETE_TERRAIN uses a fixed version1 server terrain palette with50
+default states, no client-defined IDs/palettes/entities/NBT. It requires explicit
+`complete` work kind and `allow_complete_terrain=true` alongside remote and raw
+seed opt-ins. Result count is16*16*section-aligned height, maximum98,304.
+Encoding ordinals4 COMPLETE_TERRAIN and5 DEFLATE_COMPLETE_TERRAIN begin with
+big-endian32-bit uncompressed body length, followed by body/raw or DEFLATE.
+The length is checked against assigned volume before inflation; dictionaries,
+truncation, overflow and trailing bytes are rejected. Existing encodings0..3
+are unchanged; fixture bounds remain unchanged. Both peers must use10.
+
+Body: palette version, minY, height, block count (four int32),32-byte biome-window
+digest, byte choices in(z*16+x)*height+y order,256+256 relative unsigned-height
+shorts, then one int32 count plus exact ordered uint12 offsets per section.
+Complete geometry/code/height/offset checks precede allocation/application.
+Offsets preserve duplicates and need not be fluid in final choices; conservative
+total4*volume cap refuses larger results. Maximum body885,904 bytes and complete
+encoded bound885,908 bytes. Forge24KB fragments allow variable raw bodies but
+reassembly still constructs/validates the complete envelope. No zero padding.
+
+Independent server whole-chunk audits are mandatory until two successful results
+for an owner/epoch/context, then secretly drawn1/8. Initial admission waits for
+those audits without blocking generation; original local work proceeds. Every
+result retains complete envelope/domain/context/assignment/deadline checks.
+Before mutation, compare actual9-chunk biome inputs and palette union, recompute
+heightmap consistency from final choices, check empty original target and actual
+generator/randomState/settings/empty blending/structure context. The server
+alone writes sections/maps/postprocessing. Features/light remain original.
+This changes trusted-friend sampled integrity explicitly; no public-hostile or
+private-seed claim. Tests/builds/runtime pending the affected batch.
+
+## R internal storage (alpha.7-dev.4, unchanged protocol9)
+
+Wire encodings/counts and all bounds remain identical to O. Packed results now
+own byte prefix and float suffix throughout decode/cache/application. The private
+factory checks every code0..6, aligned prefix geometry, exact769 suffix count,
+finite magnitude/timing bounds and clones both arrays. Only these immutable
+results carry provenance for skipping later duplicate domain scans. Legacy
+double/float results retain complete code validation; all independent secret
+checks still run. Equality/hash and expanded density access preserve value bits,
+including signed-zero suffix. No native fragmentation or authority changes.
+
+## Current candidate O: compact decisions (alpha.7-dev.3, protocol9)
+
+New encoding ordinals2 TERRAIN_CODES /3 DEFLATE_TERRAIN_CODES store the same
+decision prefix as bytes0..6 and the769 suffix values as exact big-endian
+float32 bits. Ordinals0 RAW/1 DEFLATE remain four bytes per value. No work-kind
+ordinal or count semantics change. Full384-height raw length is101,380 rather
+than396,292 bytes. Packed count must imply an aligned8-block full height within
+the original98,304 prefix limit. All code bytes, suffix values, exact expanded
+length, trailing bytes and timings are checked. Both endpoints must use v9.
+Forge fragmentation uses the encoding's exact raw bound and99,073 terrain count
+limit; the unported fixture stays98,304. Result storage is immutable float32
+without double expansion; the legacy double constructor never silently rounds.
+Application retains private code bytes/suffix floats. Assignment, owner, epoch,
+deadline, seed gates and independent sampled validation are unchanged. This is
+trusted-client sampled integrity; no public/untrusted server claim. O's affected
+gate passed correctness and builds; overlap view32 was slower. Protocol9 stays
+unchanged for the next application-timing experiment.
+
+## Candidate N: bounded aquifer decisions (alpha.7-dev.2, protocol8)
+
+Protocol8 adds TERRAIN_DECISIONS_AND_SURFACE. Operator must explicitly choose
+WORLDGEN_ASSIST_REMOTE_WORK_KIND=decisions and
+WORLDGEN_ASSIST_REMOTE_ALLOW_TERRAIN_DECISIONS=true, in addition to the existing
+remote=true/trusted_raw seed disclosure gates. All remain off/denied by default;
+without the new choice the existing supported grid path is retained.
+Both endpoints must update. This extends the intermediate calculation authorized
+by the user2026-10-03, not client authority to send arbitrary block states.
+
+Each block-fill position contains exactly one integer float code0..6:
+0 solid/default-block sentinel;1/2 air;3/4 settings.defaultFluid;5/6 vanilla lava.
+For non-solid pairs, the second code schedules fluid update. All prefix codes
+are checked, including when validation_sample_cells=0. Server doFill alone
+maps codes to these four server-selected outcomes and updates sections/heightmaps/
+postprocessing. Surface/carvers/features/lighting/entity/world ownership stays
+server-side; carvers' aquifer density0 calls remain original. The suffix retains
+the same769 exact surface values and99,073 maximum values/396,292 raw bytes.
+DEFLATE can compress the low-cardinality prefix; no extra packet encoding.
+
+Only eligible registered Overworld/amplified/large_biomes with verified4x8x4
+outer graph, water default fluid and normal debug settings may select this kind.
+Identity/fingerprint/owner/connection/admission/decompression/finite/lifecycle
+fences, quarantine and local fallback stay intact. Arbitrary custom generators
+and other mods changing aquifer semantics are not covered by this evidence.
+
+Validation selects8 server-secret complete4x8x4 cells (1,024 values), plus8
+independent16-value surface groups. Server recomputes final-density and aquifer
+decisions using authoritative samplers and original aquifer surface prepass,
+never client-provided fields. 26.3 InterpolatedFunction.fillCell resets values
+at each cell; aligned cells start y0=0 and preserve repeated-add float bits.
+BLOCK_DENSITY_AND_SURFACE uses aligned checks when its graph is supported;
+old general DENSITY and unsupported-grid full controls keep column prefixes.
+This reduces redundant work without reducing checked values. Sampling still
+does not prove all outputs against a hostile client. Candidate tests pending.
+
+## Candidate M: block-fill density intermediates (alpha.7-dev.1, protocol7)
+
+Server and clients must both use protocol7; published alpha.6 protocol6 is
+unchanged. The fourth work kind BLOCK_DENSITY_AND_SURFACE carries the full
+16 x height x 16 final-density volume followed by the existing 769 exact surface
+values. At height384 the count is99,073, maximum raw terrain payload396,292bytes.
+The unported fixture keeps its separate98,304-value bound. Existing exact
+float32/finite/count/decompression bounds and connection/owner/lifecycle
+admission remain. No block states are returned or applied by clients.
+
+Explicit WORLDGEN_ASSIST_REMOTE_WORK_KIND=block selects this experiment only
+for the existing supported registered Overworld/amplified/large_biomes settings.
+Other settings retain full-density fallback; default grid selection is unchanged.
+Strictly positive block-fill densities become1.0f before bounded DEFLATE encoding.
+26.3 NoiseBasedAquifer returns null and clears fluid-update scheduling for any
+positive density; negative magnitudes and signed zero retain their exact bits.
+Canonical values must never replace other final-density queries. Surface fields
+retain all original bits and the same guarded sampler wrapper.
+
+The server independently prepares eight secret128-value density groups plus
+eight secret16-value surface groups (last group may be shorter). It compares
+canonical expected density bits and exact surface bits. Sample positions stay
+server-private. This is the existing trusted-client sampled validation model,
+not proof of integrity of every value against malicious clients. Preparation can
+overlap client work; final blocks, aquifers, heightmaps, surface rules, carvers,
+features and lighting remain server decisions. Deadline/cancellation/stale-result
+fences and local fallback are unchanged. All testing is pending one affected batch.
+
 The configuration-only L experiment retains the exact dev.12 JAR and
 protocol6. WORLDGEN_ASSIST_REMOTE_READY_SURFACE_ONLY=false (property
 worldgen_assist.remote.ready_surface_only=false) selects the existing bounded

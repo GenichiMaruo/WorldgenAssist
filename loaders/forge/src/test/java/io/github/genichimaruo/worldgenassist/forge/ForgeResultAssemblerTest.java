@@ -3,6 +3,8 @@ package io.github.genichimaruo.worldgenassist.forge;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityResultEnvelope;
 import io.github.genichimaruo.worldgenassist.common.TerrainJobIdentity;
@@ -67,6 +69,47 @@ final class ForgeResultAssemblerTest {
             ForgeResultAssembler.accept(retained, parts.get(1)).encodedDensities());
         assertArrayEquals(resultBytes(parts),
             ForgeResultAssembler.accept(disconnected, parts.getFirst()).encodedDensities());
+    }
+
+    @Test void fullTerrainPackedAndFloatFragmentsRemainBoundedAndRoundTrip() {
+        var identity=result().identity();
+        for(var encoding:List.of(TerrainDensityResultEnvelope.Encoding.TERRAIN_CODES,TerrainDensityResultEnvelope.Encoding.RAW)) {
+            byte[] raw=new byte[TerrainDensityResultEnvelope.rawBytes(99073,encoding)];
+            var source=new TerrainDensityResultEnvelope(identity,99073,encoding,raw,100,200);
+            var parts=ForgeResultFragmentPayload.split(source); UUID owner=UUID.randomUUID();
+            TerrainDensityResultEnvelope complete=null;
+            for(var part:parts.reversed()) {
+                var buffer=new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(),net.minecraft.core.RegistryAccess.EMPTY);
+                try {
+                    ForgeResultFragmentPayload.CODEC.encode(buffer,part);
+                    complete=ForgeResultAssembler.accept(owner,ForgeResultFragmentPayload.CODEC.decode(buffer));
+                    assertEquals(0,buffer.readableBytes());
+                } finally {buffer.release();}
+            }
+            assertEquals(source,complete); assertEquals(99073,complete.decode().densityCount());
+            var first=parts.getFirst();
+            assertThrows(IllegalArgumentException.class,()->new ForgeResultFragmentPayload(identity,99073,encoding,
+                raw.length-1,100,200,0,parts.size(),first.bytes()));
+        }
+    }
+
+    @Test void completeTerrainVariableRawFragmentsPreserveMetadata() {
+        short[][] offsets=new short[24][];
+        for(int i=0;i<offsets.length;i++)offsets[i]=new short[0];
+        offsets[0]=new short[]{12,1,12};
+        var data=new io.github.genichimaruo.worldgenassist.common.CompleteTerrainData(-64,384,new byte[98304],
+            new short[256],new short[256],offsets,new byte[32]);
+        byte[] raw=data.encode();
+        byte[] encoded=java.nio.ByteBuffer.allocate(raw.length+4).putInt(raw.length).put(raw).array();
+        var source=new TerrainDensityResultEnvelope(result().identity(),98304,TerrainDensityResultEnvelope.Encoding.COMPLETE_TERRAIN,encoded,1,2);
+        var parts=ForgeResultFragmentPayload.split(source);
+        assertTrue(parts.size()>1);
+        UUID owner=UUID.randomUUID();TerrainDensityResultEnvelope assembled=null;
+        for(var part:parts.reversed()) assembled=ForgeResultAssembler.accept(owner,part);
+        assertEquals(source,assembled);assertEquals(data,assembled.decode().completeTerrain());
+        int bound=TerrainDensityResultEnvelope.rawBytes(98304,source.encoding());
+        assertThrows(IllegalArgumentException.class,()->new ForgeResultFragmentPayload(source.identity(),98304,
+            source.encoding(),bound+1,1,2,0,(bound+1+23999)/24000,new byte[24000]));
     }
 
     private static byte[] resultBytes(List<ForgeResultFragmentPayload> parts) {

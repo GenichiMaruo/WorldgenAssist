@@ -72,7 +72,7 @@ class SurfaceDensity263Test {
 		var result = new TerrainDensityResult(identity, new double[769], 0);
 		cache.put(surface, result); assertTrue(cache.takeResult(density).isEmpty()); assertSame(result, cache.takeResult(surface).orElseThrow());
 		assertThrows(IllegalArgumentException.class, () -> cache.put(density, result));
-		assertThrows(IllegalArgumentException.class, () -> TerrainWorkKind.fromWire(3));
+		assertThrows(IllegalArgumentException.class, () -> TerrainWorkKind.fromWire(6));
 		assertThrows(IllegalArgumentException.class, () -> new TerrainDensityJob(identity, 0, true, dim, -64, 384, 4, 8, TerrainWorkKind.SURFACE_FIELDS));
 		assertNull(RemoteDensitySamplingScope.current());
 	}

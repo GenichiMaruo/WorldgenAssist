@@ -32,10 +32,11 @@ public record ForgeResultFragmentPayload(
         Objects.requireNonNull(identity, "identity");
         Objects.requireNonNull(encoding, "encoding");
         Objects.requireNonNull(bytes, "bytes");
-        if (densityCount < 1 || densityCount > TerrainDensityJob.MAX_SAMPLE_COUNT)
+        if (densityCount < 1 || densityCount > TerrainDensityJob.MAX_TERRAIN_SAMPLE_COUNT)
             throw new IllegalArgumentException("Invalid density count: " + densityCount);
-        int rawBytes = Math.multiplyExact(densityCount, TerrainDensityResultEnvelope.BYTES_PER_DENSITY);
-        if (totalBytes < 1 || totalBytes > rawBytes || encoding == TerrainDensityResultEnvelope.Encoding.RAW && totalBytes != rawBytes)
+        int rawBytes = TerrainDensityResultEnvelope.rawBytes(densityCount, encoding);
+        if (totalBytes < (encoding.completeTerrain() ? 5 : 1) || totalBytes > rawBytes
+            || !encoding.compressed() && !encoding.completeTerrain() && totalBytes != rawBytes)
             throw new IllegalArgumentException("Invalid encoded result length: " + totalBytes);
         int expectedParts = (totalBytes + MAX_PART_BYTES - 1) / MAX_PART_BYTES;
         if (partCount != expectedParts || partIndex < 0 || partIndex >= partCount)

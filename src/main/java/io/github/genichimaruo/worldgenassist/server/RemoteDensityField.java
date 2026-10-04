@@ -13,6 +13,9 @@ import net.minecraft.world.level.levelgen.RandomState;
 import io.github.genichimaruo.worldgenassist.common.TerrainWorkKind;
 import io.github.genichimaruo.worldgenassist.common.SurfaceDensityData;
 import io.github.genichimaruo.worldgenassist.common.GridDensityData;
+import io.github.genichimaruo.worldgenassist.common.BlockDensityData;
+import io.github.genichimaruo.worldgenassist.common.TerrainDecisionData;
+import net.minecraft.world.level.block.state.BlockState;
 
 public final class RemoteDensityField {
 	private final UUID jobId;
@@ -22,12 +25,19 @@ public final class RemoteDensityField {
 	private final int height;
 	private final int cellWidth;
 	private final int cellHeight;
-	private final double[] densities;
+	private final float[] densities;
+	private final byte[] decisions;
+	private final short[] highestDecision;
+	private final BlockState[] decisionStates;
+	private final io.github.genichimaruo.worldgenassist.common.CompleteTerrainData completeTerrain;
+	private boolean contextMatched;
 	private final TerrainDensityJob job;
 	private final NoiseGeneratorSettings settings;
 	private final RandomState state;
 	private long remoteSamplesServed;
 	private long gridSamplesServed;
+	private long decisionSamplesServed;
+	private boolean lastDecisionFluidUpdate;
 
 	public RemoteDensityField(TerrainDensityJob job, TerrainDensityResult result) {
 		this(job, result, null, null);
@@ -51,26 +61,101 @@ public final class RemoteDensityField {
 		height = job.height();
 		cellWidth = job.cellWidth();
 		cellHeight = job.cellHeight();
-		densities = result.densities();
 		this.job = job; this.settings = settings; this.state = state;
-		for (double value : densities) {
-			if (!Float.isFinite((float)value) || (double)(float)value != value) {
+		if (workKind() == TerrainWorkKind.COMPLETE_TERRAIN) {
+			if (!result.hasCompleteTerrain() || settings == null || state == null
+				|| result.completeTerrain().minY() != minY || result.completeTerrain().height() != height) {
+				throw new IllegalArgumentException("Unsupported complete terrain field context");
+			}
+			completeTerrain = result.completeTerrain();
+			densities = new float[0]; decisions = null; highestDecision = null; decisionStates = null;
+			return;
+		}
+		if (result.hasCompleteTerrain()) throw new IllegalArgumentException("Complete terrain does not match intermediate work kind");
+		completeTerrain = null;
+		boolean decisionKind = workKind() == TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE;
+		int prefix = decisionKind ? BlockDensityData.surfaceOffset(height) : 0;
+		boolean packed = decisionKind && result.hasTerrainCodes(prefix);
+		densities = packed ? result.terrainSurface() : new float[result.densityCount() - prefix];
+		decisions = decisionKind ? (packed ? result.terrainCodes() : new byte[prefix]) : null;
+		highestDecision = decisionKind ? new short[256] : null;
+		decisionStates = decisionKind ? new BlockState[7] : null;
+		if(decisionKind) {
+			if(settings == null || state == null || !TerrainDecisionData.supports(job.noiseSettings(),settings)) {
+				throw new IllegalArgumentException("Unsupported terrain decision field context");
+			}
+			for (int code = 0; code < 7; code++) {
+				decisionStates[code] = code == 0 ? settings.defaultBlock() : TerrainDecisionData.substance(code,settings);
+			}
+		}
+		for (int i = 0; !packed && i < result.densityCount(); i++) {
+			double value = result.densityAt(i);
+			if (!Float.isFinite((float)value) || Double.doubleToRawLongBits((double)(float)value) != Double.doubleToRawLongBits(value)) {
 				throw new IllegalArgumentException("Remote value is not an exact finite float");
 			}
+			if (i < prefix) {
+				if (!TerrainDecisionData.validCode(value)) throw new IllegalArgumentException("Invalid terrain decision code");
+				decisions[i] = (byte)(int)value;
+			} else densities[i - prefix] = (float)value;
+		}
+		if (decisionKind) for (int column = 0; column < 256; column++) {
+			int top = height - 1;
+			while (top >= 0 && (decisions[column * height + top] == 1 || decisions[column * height + top] == 2)) top--;
+			highestDecision[column] = (short)top;
 		}
 	}
 
 	public TerrainWorkKind workKind() { return job.workKind(); }
 	public long remoteSamplesServed() { return remoteSamplesServed; }
 	public long gridSamplesServed() { return gridSamplesServed; }
+	public long decisionSamplesServed() { return decisionSamplesServed; }
+	public CompleteTerrainApplicator.Prepared prepareCompleteTerrain(net.minecraft.world.level.chunk.ChunkAccess chunk,
+		net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator generator, RandomState actualState,
+		net.minecraft.world.level.StructureManager structures, net.minecraft.world.level.levelgen.blending.Blender blender,
+		net.minecraft.server.level.WorldGenRegion region, java.util.Set<net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome>> possibleBiomes) {
+		if (completeTerrain == null || actualState != state || generator.generatorSettings().value() != settings) {
+			throw new IllegalArgumentException("Complete terrain state identity differs");
+		}
+		return CompleteTerrainApplicator.prepare(job, completeTerrain, chunk, generator, actualState, structures, blender, region, possibleBiomes);
+	}
+	public void recordCompleteTerrainApplication() {
+		if (completeTerrain == null) throw new IllegalStateException("Not complete terrain");
+		remoteSamplesServed += completeTerrain.blockCount(); decisionSamplesServed += completeTerrain.blockCount();
+	}
+	public boolean lastDecisionFluidUpdate() { return lastDecisionFluidUpdate; }
+	/** Called only from doFill's guarded aquifer operation, never from carvers. */
+	public BlockState fillSubstance(int x,int y,int z) {
+		if(workKind() != TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE) throw new IllegalStateException("Not a decision field");
+		int dx=x-chunkX*16,dy=y-minY,dz=z-chunkZ*16;
+		if(dx<0 || dx>=16 || dy<0 || dy>=height || dz<0 || dz>=16) throw new IllegalArgumentException("Decision outside assigned full volume");
+		int index=(dz*16+dx)*height+dy;
+		int code = decisions[index];
+		lastDecisionFluidUpdate = TerrainDecisionData.schedulesFluid(code);
+		decisionSamplesServed++;remoteSamplesServed++;
+		return TerrainDecisionData.substance(code,settings);
+	}
+
+	/** Validate before any server mutation. The constructor sampler hook proves context identity. */
+	public void requireDecisionFill(DensityVolume volume, NoiseGeneratorSettings actualSettings) {
+		if (decisions == null || !contextMatched || actualSettings != settings
+			|| !TerrainDecisionData.supports(job.noiseSettings(),actualSettings)) {
+			throw new IllegalArgumentException("Terrain decision fill context mismatch");
+		}
+		requireFullVolume(volume);
+	}
+	int decisionCode(int index) { return decisions[index]; }
+	int highestDecision(int column) { return highestDecision[column]; }
+	BlockState decisionState(int code) { return decisionStates[code]; }
+	void recordDecisionFill() { decisionSamplesServed += decisions.length; remoteSamplesServed += decisions.length; }
 
 	/** Only the exact assigned state, settings and generation volume can consume this field. */
 	public DensitySamplerSet wrapSurfaceSamplers(RandomState actualState, NoiseGeneratorSettings actualSettings,
 		DensityVolume volume, DensitySamplerSet original) {
-		if (workKind() == TerrainWorkKind.DENSITY || state != actualState || settings != actualSettings
+		if (workKind() == TerrainWorkKind.COMPLETE_TERRAIN || workKind() == TerrainWorkKind.DENSITY || state != actualState || settings != actualSettings
 			|| volume.minBlockX() != chunkX * 16 || volume.minBlockZ() != chunkZ * 16
 			|| volume.minBlockY() != minY || volume.sizeX() != 16 || volume.sizeZ() != 16 || volume.sizeY() != height
 			|| volume.stepBlockX() != 1 || volume.stepBlockY() != 1 || volume.stepBlockZ() != 1) return original;
+		contextMatched = true;
 		DensityFunction aquifer = settings.aquifers().orElseThrow().surfaceLevel();
 		DensityFunction material = settings.noiseRouter().chunkSurfaceLevel();
 		return function -> {
@@ -81,7 +166,8 @@ public final class RemoteDensityField {
 			if (function != aquifer && function != material) return bound;
 			boolean isAquifer = function == aquifer;
 			DensityVolume base = isAquifer ? SurfaceDensityData.aquiferVolume(job) : SurfaceDensityData.materialVolume(job);
-			int offset = (workKind() == TerrainWorkKind.GRID_AND_SURFACE ? GridDensityData.surfaceOffset(height) : 0)
+			int offset = (workKind() == TerrainWorkKind.GRID_AND_SURFACE ? GridDensityData.surfaceOffset(height)
+				: workKind() == TerrainWorkKind.BLOCK_DENSITY_AND_SURFACE ? BlockDensityData.surfaceOffset(height) : 0)
 				+ (isAquifer ? 0 : SurfaceDensityData.AQUIFER_COUNT);
 			return new DensitySampler() {
 				@Override public float sampleValue(SamplerContext context, int x, int y, int z) {
@@ -172,7 +258,20 @@ public final class RemoteDensityField {
 
 	/** Writes only an exact 26.3 full-block volume; never applies block state. */
 	public void copyVolume(DensityVolume volume, DensityBuffer destination) {
-		if (workKind() != TerrainWorkKind.DENSITY || cellWidth != 1 || cellHeight != 1
+		requireFullVolume(volume);
+		int volumeSize = Math.multiplyExact(256, height);
+		if (destination.size() != volumeSize) throw new IllegalArgumentException("Remote destination size mismatch");
+		for (int index = 0; index < volumeSize; index++) {
+			// The immutable private arrays were checked completely on construction.
+			destination.set(index, decisions == null ? densities[index] : decisions[index]);
+		}
+		remoteSamplesServed += volumeSize;
+	}
+	private void requireFullVolume(DensityVolume volume) {
+		int volumeSize = Math.multiplyExact(256, height);
+		if ((workKind() != TerrainWorkKind.DENSITY && workKind() != TerrainWorkKind.BLOCK_DENSITY_AND_SURFACE
+			&& workKind() != TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE)
+			|| cellWidth != 1 || cellHeight != 1
 			|| volume.sizeX() != TerrainDensityJob.CHUNK_SIDE
 			|| volume.sizeZ() != TerrainDensityJob.CHUNK_SIDE
 			|| volume.sizeY() != height
@@ -180,16 +279,8 @@ public final class RemoteDensityField {
 			|| volume.minBlockZ() != Math.multiplyExact(chunkZ, TerrainDensityJob.CHUNK_SIDE)
 			|| volume.minBlockY() != minY
 			|| volume.stepBlockX() != 1 || volume.stepBlockY() != 1 || volume.stepBlockZ() != 1
-			|| destination.size() != densities.length || volume.size() != densities.length) {
+			|| volume.size() != volumeSize) {
 			throw new IllegalArgumentException("Remote density geometry does not match the 26.3 volume");
-		}
-		for (int index = 0; index < densities.length; index++) {
-			double value = densities[index];
-			float density = (float) value;
-			if (!Double.isFinite(value) || !Float.isFinite(density) || (double)density != value) {
-				throw new IllegalArgumentException("Remote density is not an exact finite float at " + index);
-			}
-			destination.set(index, density);
 		}
 	}
 
@@ -217,14 +308,15 @@ public final class RemoteDensityField {
 				int xOffset = cellXIndex * cellWidth + xInCell;
 				for (int zInCell = 0; zInCell < cellWidth; zInCell++) {
 					int zOffset = cellZIndex * cellWidth + zInCell;
-					destination[outputIndex++] = densities[index(xOffset, yOffset, zOffset)];
+					destination[outputIndex++] = densityAtOffset(xOffset, yOffset, zOffset);
 				}
 			}
 		}
 	}
 
 	public double densityAtOffset(int xOffset, int yOffset, int zOffset) {
-		return densities[index(xOffset, yOffset, zOffset)];
+		int i = index(xOffset, yOffset, zOffset);
+		return decisions == null ? densities[i] : decisions[i];
 	}
 
 	private int index(int xOffset, int yOffset, int zOffset) {

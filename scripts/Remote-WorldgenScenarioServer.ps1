@@ -21,8 +21,10 @@ param(
     [switch]$QuietRemoteTrace,
     [switch]$ServerFlightRecording,
     [ValidateSet('vanilla','local','cooperative')][string]$NoiseBackend='vanilla',
-    [ValidateSet('standard','wide')][string]$WindowProfile='standard',
-    [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='ready'
+    [ValidateSet('standard','wide','deep')][string]$WindowProfile='standard',
+    [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='ready',
+    [ValidateRange(0,64)][int]$PrefetchLookahead=0,
+    [ValidateSet('grid','surface','density','block','decisions','complete')][string]$RemoteWorkKind='grid'
 )
 
 # Remote half of the all-dimension trusted-raw scenario.  It owns only the
@@ -34,18 +36,23 @@ $ProgressPreference = 'SilentlyContinue'
 
 $resolved = [IO.Path]::GetFullPath($Root)
 $temp = [IO.Path]::GetFullPath($env:TEMP).TrimEnd([IO.Path]::DirectorySeparatorChar)
-$dedicated = [IO.Path]::GetFullPath((Join-Path $temp 'WorldgenAssist-20260909'))
+$legacyDedicated = [IO.Path]::GetFullPath((Join-Path $temp 'WorldgenAssist-20260909'))
+$dedicated = if($resolved -eq [IO.Path]::GetFullPath('E:/WorldgenAssist/port26.3')){[IO.Path]::GetFullPath('E:/WorldgenAssist')}else{$legacyDedicated}
 if ($resolved -ne [IO.Path]::GetFullPath((Join-Path $dedicated 'port26.3'))) {
     throw 'Root must be the dedicated WorldgenAssist 26.3 test child'
 }
 $javaExecutable = Join-Path $dedicated 'java25/bin/java.exe'
 if ($RemoteApplicationProfile -eq 'overlap' -and $PipelineProfile -ne 'prefetch') { throw 'Overlap measurement requires the bounded prefetch pipeline' }
 if (-not (Test-Path -LiteralPath $javaExecutable -PathType Leaf)) { throw 'Dedicated JDK 25 is missing' }
-foreach ($target in @($resolved, (Join-Path $resolved 'mods'), (Join-Path $resolved 'logs'), (Join-Path $resolved 'evidence'))) {
+foreach ($target in @([IO.Path]::GetPathRoot($dedicated),$dedicated,$resolved, (Join-Path $resolved 'mods'), (Join-Path $resolved 'logs'), (Join-Path $resolved 'evidence'),(Join-Path $dedicated 'temp'))) {
     if ((Test-Path -LiteralPath $target) -and ((Get-Item -LiteralPath $target -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
         throw "Scenario target must not be a reparse point: $target"
     }
 }
+$taskTemp=Join-Path $dedicated 'temp'
+New-Item -ItemType Directory -Force -Path $taskTemp|Out-Null
+$env:TEMP=$taskTemp
+$env:TMP=$taskTemp
 $predictionEnabled = [bool]::Parse($Prediction)
 $dimensionId = if ($Dimension -eq 'fixture') { 'worldgen_assist:fixture' } else { 'minecraft:' + $Dimension }
 if ($predictionEnabled -and $CacheEntries -eq 0) { throw 'Prediction requires CacheEntries greater than zero' }
@@ -366,7 +373,7 @@ try {
     [ordered]@{radius=$measurementRadius;shape=$measurementShape;expected_chunks_per_owner=$measurementOffsets.Count} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'measurement-region.json')
     Copy-Item -LiteralPath (Join-Path $resolved 'server.properties') -Destination (Join-Path $evidence 'server.properties')
     [ordered]@{base_ms=if($Purpose -eq 'correctness'){$CorrectnessDemandWaitMs}else{100};adaptive=($PipelineProfile -ne 'current');maximum_ms=if($PipelineProfile -eq 'current'){30000}elseif($Purpose -eq 'correctness'){[Math]::Min(1000,$CorrectnessDemandWaitMs*2)}else{200}} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'demand-wait-config.json')
-    $start = [Diagnostics.ProcessStartInfo]::new(); $start.FileName = $javaExecutable; $start.Arguments = $(if($MeasureFullView){'-Xmx6G'}else{'-Xmx3G'})+' -Dworldgen_assist.remote.diagnostics=true -jar "' + (Join-Path $resolved 'fabric-server-launch.jar') + '" nogui'; $start.WorkingDirectory = $resolved
+    $start = [Diagnostics.ProcessStartInfo]::new(); $start.FileName = $javaExecutable; $start.Arguments = $(if($MeasureFullView){'-Xmx6G'}else{'-Xmx3G'})+' -Djava.io.tmpdir="'+$taskTemp+'" -Dworldgen_assist.remote.diagnostics=true -jar "' + (Join-Path $resolved 'fabric-server-launch.jar') + '" nogui'; $start.WorkingDirectory = $resolved
     $start.UseShellExecute = $false; $start.CreateNoWindow = $true; $start.RedirectStandardInput = $true; $start.RedirectStandardOutput = $true; $start.RedirectStandardError = $true
     if($ServerJvmProcessors -gt 0){$start.Arguments='-XX:ActiveProcessorCount='+$ServerJvmProcessors+' '+$start.Arguments}
     if($QuietRemoteTrace){$start.Arguments='-Dworldgen_assist.remote.trace_jobs=false '+$start.Arguments}
@@ -384,12 +391,16 @@ try {
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE'] = if($assisted){'true'}else{'false'}
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_SEED_DISCLOSURE'] = if($assisted){'trusted_raw'}else{'deny'}
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_TIMEOUT_MS'] = '30000'
-    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT'] = if($WindowProfile -eq 'wide'){'32'}else{'8'}
-    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_OWNER_WINDOW'] = if($WindowProfile -eq 'wide'){'16'}else{'4'}
-    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREFETCH_LOOKAHEAD'] = '0'
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT'] = switch($WindowProfile){'deep'{'64'} 'wide'{'32'} default{'8'}}
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_OWNER_WINDOW'] = switch($WindowProfile){'deep'{'32'} 'wide'{'16'} default{'4'}}
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREFETCH_LOOKAHEAD'] = [string]$PrefetchLookahead
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_READY_SURFACE_ONLY'] = ($RemoteApplicationProfile -eq 'ready').ToString().ToLowerInvariant()
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_WORK_KIND'] = $RemoteWorkKind
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_ALLOW_TERRAIN_DECISIONS'] = ($RemoteWorkKind -eq 'decisions').ToString().ToLowerInvariant()
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_ALLOW_COMPLETE_TERRAIN'] = ($RemoteWorkKind -eq 'complete').ToString().ToLowerInvariant()
+    [ordered]@{selected_work_kind=$RemoteWorkKind;terrain_decisions_allowed=($RemoteWorkKind -eq 'decisions');complete_terrain_allowed=($RemoteWorkKind -eq 'complete');complete_audit_policy='first_two_successful_then_private_one_in_eight'} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'remote-work-kind-config.json')
     [ordered]@{profile=$RemoteApplicationProfile;ready_surface_only=($RemoteApplicationProfile -eq 'ready');base_wait_ms=if($PipelineProfile -eq 'current'){30000}elseif($Purpose -eq 'correctness'){$CorrectnessDemandWaitMs}else{100};maximum_wait_ms=if($PipelineProfile -eq 'current'){30000}elseif($Purpose -eq 'correctness'){[Math]::Min(1000,$CorrectnessDemandWaitMs*2)}else{200}} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'remote-application-config.json')
-    [ordered]@{profile=$WindowProfile;owner_window=[int]$start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_OWNER_WINDOW'];total_window=[int]$start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT'];lookahead=0} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'pipeline-window-config.json')
+    [ordered]@{profile=$WindowProfile;owner_window=[int]$start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_OWNER_WINDOW'];total_window=[int]$start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT'];lookahead=$PrefetchLookahead} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'pipeline-window-config.json')
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_CACHE_ENTRIES'] = [string]$CacheEntries; $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREDICTION'] = $predictionEnabled.ToString().ToLowerInvariant(); $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_VALIDATION_SAMPLE_CELLS'] = [string]$ValidationCells
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREFETCH'] = ($PipelineProfile -eq 'prefetch').ToString().ToLowerInvariant()
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREPARE_VALIDATION'] = ($PipelineProfile -ne 'current').ToString().ToLowerInvariant()

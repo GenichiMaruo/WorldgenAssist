@@ -472,6 +472,12 @@ public final class RemoteJobCoordinator {
 		return attempts.size();
 	}
 
+	/** Cheap refill hint; actual submission must still perform every admission check. */
+	synchronized boolean ownerHasCapacity(UUID ownerId) {
+		return remoteEnabled && synchronousWaitDepth == 0 && !quarantinedOwners.contains(ownerId)
+			&& workers.hasCapacity(ownerId);
+	}
+
 	private void failSend(Attempt attempt, Throwable error) {
 		synchronized (this) {
 			Attempt removed = attempts.remove(attempt.job.identity().jobId());

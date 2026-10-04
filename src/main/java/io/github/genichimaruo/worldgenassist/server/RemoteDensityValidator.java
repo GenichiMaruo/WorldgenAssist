@@ -20,6 +20,8 @@ import io.github.genichimaruo.worldgenassist.common.TerrainDensityResult;
 import io.github.genichimaruo.worldgenassist.common.TerrainWorkKind;
 import io.github.genichimaruo.worldgenassist.common.SurfaceDensityData;
 import io.github.genichimaruo.worldgenassist.common.GridDensityData;
+import io.github.genichimaruo.worldgenassist.common.BlockDensityData;
+import io.github.genichimaruo.worldgenassist.common.TerrainDecisionData;
 
 /** Independent, bounded server sampling of the 26.3 block-indexed float volume. */
 final class RemoteDensityValidator {
@@ -47,6 +49,7 @@ final class RemoteDensityValidator {
 		Objects.requireNonNull(settings, "settings");
 		Objects.requireNonNull(noiseSettings, "noiseSettings");
 		Objects.requireNonNull(random, "random");
+		if (job.workKind() == TerrainWorkKind.COMPLETE_TERRAIN) throw new IllegalArgumentException("Complete terrain requires explicit whole-chunk audit preparation");
 		if (job.cellWidth() != 1 || job.cellHeight() != 1
 			|| job.minY() != noiseSettings.minY() || job.height() != noiseSettings.height()) {
 			throw new RemoteDensityValidationException("Result geometry does not match the authoritative 26.3 volume");
@@ -61,8 +64,16 @@ final class RemoteDensityValidator {
 		if (job.workKind() == TerrainWorkKind.SURFACE_FIELDS) {
 			return prepareSurface(job, sampleGroups, randomState, settings, random, start);
 		}
+		if (job.workKind() == TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE
+			|| (job.workKind() == TerrainWorkKind.BLOCK_DENSITY_AND_SURFACE && GridDensityData.supports(settings))) {
+			return prepareAlignedCells(job,sampleGroups,randomState,settings,random,start);
+		}
 
-		int totalValues = job.sampleCount();
+		boolean block = job.workKind() == TerrainWorkKind.BLOCK_DENSITY_AND_SURFACE;
+		if (block && !SurfaceDensityData.supports(job.noiseSettings(), settings)) {
+			throw new RemoteDensityValidationException("Unsupported block density settings");
+		}
+		int totalValues = block ? BlockDensityData.surfaceOffset(job.height()) : job.sampleCount();
 		int totalGroups = Math.floorDiv(totalValues + VALUES_PER_GROUP - 1, VALUES_PER_GROUP);
 		int[] groups = selectCells(totalGroups, Math.min(sampleGroups, totalGroups), random);
 		// Keep the original bottom of each column: interpolated float volumes use
@@ -112,15 +123,73 @@ final class RemoteDensityValidator {
 						sampledColumns.put(columnKey, column);
 					}
 					indices[validated] = index;
-					expectedValues[validated] = column[y];
+					expectedValues[validated] = block ? BlockDensityData.canonical(column[y]) : column[y];
 					validated++;
 				}
 			}
 		} finally {
 			randomState.releaseDensityBufferPool(pool);
 		}
+		if (block) {
+			return withSurface(job,sampleGroups,randomState,settings,random,start,groups.length,
+				java.util.Arrays.copyOf(indices,validated),java.util.Arrays.copyOf(expectedValues,validated));
+		}
 		return new Prepared(job, groups.length, java.util.Arrays.copyOf(indices, validated),
 			java.util.Arrays.copyOf(expectedValues, validated), System.nanoTime() - start);
+	}
+
+	private static Prepared prepareAlignedCells(TerrainDensityJob job,int sampleGroups,RandomState state,
+		NoiseGeneratorSettings settings,RandomGenerator random,long start) {
+		boolean decisions = job.workKind() == TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE;
+		if (!SurfaceDensityData.supports(job.noiseSettings(),settings) || !GridDensityData.supports(settings)
+			|| (decisions && !TerrainDecisionData.supports(job.noiseSettings(),settings))) {
+			throw new RemoteDensityValidationException("Unsupported aligned terrain validation context");
+		}
+		int totalCells = 16 * (job.height()/8);
+		int[] cells = selectCells(totalCells,Math.min(sampleGroups,totalCells),random);
+		int[] indices = new int[cells.length*128];
+		float[] expected = new float[indices.length];
+		var full = BlockDensityData.volume(job);
+		var pool = state.acquireDensityBufferPool();
+		int count = 0;
+		try {
+			var samplers = state.samplersWithContext(SamplerContext.builder().useBufferArena(pool).enableCaches().build());
+			var sampler = samplers.get(settings.noiseRouter().finalDensity());
+			// Use only authoritative samples, including the aquifer surface prepass.
+			var aquifer = decisions ? TerrainDecisionData.aquifer(state,settings,samplers,full) : null;
+			for(int cell:cells) {
+				if(Thread.currentThread().isInterrupted()) throw new CancellationException("Aligned validation interrupted");
+				var volume = BlockDensityData.validationCell(job,cell);
+				// A whole aligned4x8x4 cell has y0=0 in fillCell. Sampling a shifted
+				// single point would use different repeated-add float rounding.
+				try(var buffer = sampler.sampleVolume(volume)) {
+					for(int z=0;z<4;z++) for(int x=0;x<4;x++) for(int y=7;y>=0;y--) {
+						int bx=volume.blockX(x),by=volume.blockY(y),bz=volume.blockZ(z);
+						float density = buffer.get(volume.indexUnchecked(x,y,z));
+						indices[count] = full.indexOfBlock(bx,by,bz);
+						if(decisions) {
+							var substance = aquifer.computeSubstance(bx,by,bz,density);
+							expected[count++] = TerrainDecisionData.encode(substance,aquifer.shouldScheduleFluidUpdate(),settings);
+						} else { expected[count++] = BlockDensityData.canonical(density); }
+					}
+				}
+			}
+		} finally { state.releaseDensityBufferPool(pool); }
+		return withSurface(job,sampleGroups,state,settings,random,start,cells.length,indices,expected);
+	}
+
+	private static Prepared withSurface(TerrainDensityJob job,int sampleGroups,RandomState state,
+		NoiseGeneratorSettings settings,RandomGenerator random,long start,int groups,int[] indices,float[] values) {
+		TerrainDensityJob surface = new TerrainDensityJob(job.identity(),job.worldSeed(),job.generateStructures(),
+			job.noiseSettings(),job.minY(),job.height(),1,1,TerrainWorkKind.SURFACE_FIELDS);
+		Prepared extra = prepareSurface(surface,sampleGroups,state,settings,random,System.nanoTime());
+		int[] combined = java.util.Arrays.copyOf(indices,indices.length+extra.indices.length);
+		float[] expected = java.util.Arrays.copyOf(values,combined.length);
+		for(int i=0;i<extra.indices.length;i++) {
+			combined[indices.length+i] = BlockDensityData.surfaceOffset(job.height())+extra.indices[i];
+			expected[indices.length+i] = extra.expected[i];
+		}
+		return new Prepared(job,groups+extra.groups,combined,expected,System.nanoTime()-start);
 	}
 
 	private static Prepared prepareGrid(TerrainDensityJob job, int sampleGroups, RandomState state,
@@ -236,10 +305,20 @@ final class RemoteDensityValidator {
 		private final int[] indices;
 		private final float[] expected;
 		private final long prepareNanos;
+		private final io.github.genichimaruo.worldgenassist.common.CompleteTerrainData expectedTerrain;
 
 		private Prepared(TerrainDensityJob job, int groups, int[] indices, float[] expected, long prepareNanos) {
 			this.job = job; this.groups = groups; this.indices = indices; this.expected = expected;
 			this.prepareNanos = prepareNanos;
+			expectedTerrain = null;
+		}
+		private Prepared(TerrainDensityJob job, io.github.genichimaruo.worldgenassist.common.CompleteTerrainData expected, long elapsed) {
+			this.job = job; expectedTerrain = expected; prepareNanos = elapsed;
+			groups = expected == null ? 0 : 1; indices = new int[0]; this.expected = new float[0];
+		}
+		static Prepared completeTerrain(TerrainDensityJob job, io.github.genichimaruo.worldgenassist.common.CompleteTerrainData expected, long elapsed) {
+			if (job.workKind() != TerrainWorkKind.COMPLETE_TERRAIN) throw new IllegalArgumentException("Not a complete terrain job");
+			return new Prepared(job, expected, elapsed);
 		}
 
 		long prepareNanos() { return prepareNanos; }
@@ -247,6 +326,23 @@ final class RemoteDensityValidator {
 			long started = System.nanoTime();
 			if (!job.identity().equals(result.identity()) || result.densityCount() != job.sampleCount()) {
 				throw new RemoteDensityValidationException("Result identity or volume size does not match its job");
+			}
+			if (job.workKind() == TerrainWorkKind.COMPLETE_TERRAIN) {
+				if (!result.hasCompleteTerrain() || result.completeTerrain().minY() != job.minY()
+					|| result.completeTerrain().height() != job.height()) throw new RemoteDensityValidationException("Invalid complete terrain shape");
+				if (expectedTerrain != null && !expectedTerrain.equals(result.completeTerrain())) {
+					throw new RemoteDensityValidationException("Independent whole-terrain audit mismatch");
+				}
+				return new ValidationMetrics(groups, expectedTerrain == null ? 0 : job.sampleCount(), prepareNanos + System.nanoTime() - started);
+			}
+			if (result.hasCompleteTerrain()) throw new RemoteDensityValidationException("Complete terrain returned for an intermediate job");
+			if(job.workKind() == TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE
+				&& !result.hasTerrainCodes(BlockDensityData.surfaceOffset(job.height()))) {
+				for(int i=0;i<BlockDensityData.surfaceOffset(job.height());i++) {
+					if(!TerrainDecisionData.validCode(result.densityAt(i))) {
+						throw new RemoteDensityValidationException("Invalid terrain decision at index " + i);
+					}
+				}
 			}
 			for (int index = 0; index < indices.length; index++) {
 				requireExact(expected[index], result.densityAt(indices[index]), indices[index]);

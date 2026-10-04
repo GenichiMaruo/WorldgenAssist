@@ -46,6 +46,13 @@ public final class RemoteDensityResultCache {
 		pruneExpired();
 		return entries.containsKey(Objects.requireNonNull(key, "key"));
 	}
+	/** Scheduling hint for one key; avoid a whole-cache expiry scan per queued candidate. */
+	public synchronized boolean available(Key key) {
+		Entry entry = entries.get(Objects.requireNonNull(key));
+		if (entry == null) return false;
+		if (System.nanoTime() - entry.storedNanos() >= maxAgeNanos) { entries.remove(key); return false; }
+		return true;
+	}
 
 	public synchronized Optional<double[]> take(Key key) {
 		pruneExpired();
@@ -71,6 +78,10 @@ public final class RemoteDensityResultCache {
 		Objects.requireNonNull(result, "result");
 		if (capacity == 0) {
 			return;
+		}
+		if ((key.workKind() == TerrainWorkKind.COMPLETE_TERRAIN) != result.hasCompleteTerrain()
+			|| result.hasCompleteTerrain() && (result.completeTerrain().minY() != key.minY() || result.completeTerrain().height() != key.height())) {
+			throw new IllegalArgumentException("Result representation differs from its cache work kind");
 		}
 		if (result.densityCount() != key.sampleCount()) {
 			throw new IllegalArgumentException(
@@ -157,7 +168,15 @@ public final class RemoteDensityResultCache {
 				throw new IllegalArgumentException("Invalid cache-key vertical geometry");
 			}
 			Math.addExact(minY, height);
-			if (workKind == TerrainWorkKind.GRID_AND_SURFACE && (cellWidth != 1 || cellHeight != 1 || height % 8 != 0 || Math.floorMod(minY, 8) != 0)) {
+			if (workKind == TerrainWorkKind.COMPLETE_TERRAIN
+				&& (cellWidth != 1 || cellHeight != 1 || height % 16 != 0 || Math.floorMod(minY, 16) != 0)) {
+				throw new IllegalArgumentException("Invalid complete terrain cache geometry");
+			}
+			if ((workKind == TerrainWorkKind.BLOCK_DENSITY_AND_SURFACE || workKind == TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE) && (cellWidth != 1 || cellHeight != 1)) {
+				throw new IllegalArgumentException("Invalid block density cache geometry");
+			}
+			if ((workKind == TerrainWorkKind.GRID_AND_SURFACE || workKind == TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE)
+				&& (cellWidth != 1 || cellHeight != 1 || height % 8 != 0 || Math.floorMod(minY, 8) != 0)) {
 				throw new IllegalArgumentException("Invalid terrain grid cache geometry");
 			}
 		}
@@ -166,6 +185,9 @@ public final class RemoteDensityResultCache {
 			return switch (workKind) {
 				case SURFACE_FIELDS -> SurfaceDensityData.SAMPLE_COUNT;
 				case GRID_AND_SURFACE -> io.github.genichimaruo.worldgenassist.common.GridDensityData.sampleCount(height);
+				case BLOCK_DENSITY_AND_SURFACE -> io.github.genichimaruo.worldgenassist.common.BlockDensityData.sampleCount(height);
+				case TERRAIN_DECISIONS_AND_SURFACE -> io.github.genichimaruo.worldgenassist.common.BlockDensityData.sampleCount(height);
+				case COMPLETE_TERRAIN -> Math.multiplyExact(TerrainDensityJob.CHUNK_SIDE * TerrainDensityJob.CHUNK_SIDE, height);
 				case DENSITY -> Math.multiplyExact(TerrainDensityJob.CHUNK_SIDE * TerrainDensityJob.CHUNK_SIDE, height);
 			};
 		}

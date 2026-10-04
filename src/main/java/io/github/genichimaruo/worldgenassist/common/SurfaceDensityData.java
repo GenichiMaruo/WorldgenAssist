@@ -22,7 +22,13 @@ public final class SurfaceDensityData {
 	public static TerrainWorkKind selectedKind(Identifier key, NoiseGeneratorSettings settings) {
 		String mode = System.getProperty("worldgen_assist.remote.work_kind", System.getenv("WORLDGEN_ASSIST_REMOTE_WORK_KIND"));
 		if ("density".equalsIgnoreCase(mode) || !supports(key, settings)) return TerrainWorkKind.DENSITY;
+		if (CompleteTerrainMode.requested() && TerrainDecisionData.supports(key, settings)
+			&& settings.defaultBlock() == net.minecraft.world.level.block.Blocks.STONE.defaultBlockState()) return TerrainWorkKind.COMPLETE_TERRAIN;
 		if ("surface".equalsIgnoreCase(mode)) return TerrainWorkKind.SURFACE_FIELDS;
+		if ("block".equalsIgnoreCase(mode)) return TerrainWorkKind.BLOCK_DENSITY_AND_SURFACE;
+		if ("decisions".equalsIgnoreCase(mode) && TerrainDecisionData.allowedByOperator() && TerrainDecisionData.supports(key,settings)) {
+			return TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE;
+		}
 		return GridDensityData.supports(settings) ? TerrainWorkKind.GRID_AND_SURFACE : TerrainWorkKind.SURFACE_FIELDS;
 	}
 

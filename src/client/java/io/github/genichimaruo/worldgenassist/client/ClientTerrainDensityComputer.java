@@ -58,6 +58,23 @@ final class ClientTerrainDensityComputer {
 		WorldgenAssist.LOGGER.info("[CAWG] job.client_prepared id={} preparation_ms={} contexts={}",
 			job.identity().jobId(), (System.nanoTime() - prepareStarted) / 1_000_000.0, session.size());
 		RandomState randomState = prepared.state();
+		if (job.workKind() == TerrainWorkKind.COMPLETE_TERRAIN) {
+			long started = System.nanoTime();
+			var terrain = prepared.terrainComputer().compute(job, prepared.generator(), randomState);
+			return TerrainDensityResult.fromCompleteTerrain(job.identity(), terrain, System.nanoTime() - started);
+		}
+		if (job.workKind() == TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE) {
+			if (!io.github.genichimaruo.worldgenassist.common.TerrainDecisionData.supports(job.noiseSettings(),settings.value())) {
+				throw new RejectedJobException(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT);
+			}
+			return io.github.genichimaruo.worldgenassist.common.TerrainDecisionData.sample(job,randomState,settings.value());
+		}
+		if (job.workKind() == TerrainWorkKind.BLOCK_DENSITY_AND_SURFACE) {
+			if (!SurfaceDensityData.supports(job.noiseSettings(), settings.value())) {
+				throw new RejectedJobException(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT);
+			}
+			return io.github.genichimaruo.worldgenassist.common.BlockDensityData.sample(job, randomState, settings.value());
+		}
 		if (job.workKind() == TerrainWorkKind.GRID_AND_SURFACE) {
 			if (!SurfaceDensityData.supports(job.noiseSettings(), settings.value()) || !io.github.genichimaruo.worldgenassist.common.GridDensityData.supports(settings.value())) {
 				throw new RejectedJobException(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT);
@@ -97,13 +114,21 @@ final class ClientTerrainDensityComputer {
 			Map<ContextKey, Prepared> cache = workers.computeIfAbsent(Thread.currentThread(),
 				ignored -> new LinkedHashMap<>(3, 0.75F, true));
 			ContextKey key = new ContextKey(job.identity().dimension(), job.worldSeed(), job.generateStructures(),
-				job.noiseSettings(), job.minY(), job.height());
+				job.noiseSettings(), job.minY(), job.height(), job.workKind());
 			synchronized (cache) {
 				Prepared existing = cache.get(key);
 				if (reuse && existing != null) return existing;
-				Prepared created = new Prepared(WorldgenContextFingerprintFactory.create(registries, key.dimension(),
-					key.seed(), key.structures(), key.minY(), key.height(), settings),
-					RandomState.create(registries.lookupOrThrow(Registries.NOISE), key.seed(), settings.value()));
+				boolean complete = key.kind() == TerrainWorkKind.COMPLETE_TERRAIN;
+				var generator = complete ? new net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator(
+					net.minecraft.world.level.biome.MultiNoiseBiomeSource.createFromPreset(registries.lookupOrThrow(
+						Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST).getOrThrow(
+						net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterLists.OVERWORLD)), settings) : null;
+				var fingerprint = complete ? WorldgenContextFingerprintFactory.createCompleteTerrain(registries,
+					key.dimension(), key.seed(), key.structures(), key.minY(), key.height(), settings, generator.getBiomeSource())
+					: WorldgenContextFingerprintFactory.create(registries, key.dimension(), key.seed(), key.structures(), key.minY(), key.height(), settings);
+				Prepared created = new Prepared(fingerprint,
+					RandomState.create(registries.lookupOrThrow(Registries.NOISE), key.seed(), settings.value()), generator,
+					complete ? new io.github.genichimaruo.worldgenassist.common.PrivateTerrainComputer(registries) : null);
 				cache.put(key, created);
 				if (cache.size() > 3) cache.remove(cache.keySet().iterator().next());
 				return created;
@@ -116,8 +141,10 @@ final class ClientTerrainDensityComputer {
 		}
 	}
 
-	private record ContextKey(Identifier dimension, long seed, boolean structures, Identifier settings, int minY, int height) { }
-	private record Prepared(WorldgenContextFingerprint fingerprint, RandomState state) { }
+	private record ContextKey(Identifier dimension, long seed, boolean structures, Identifier settings, int minY, int height, TerrainWorkKind kind) { }
+	private record Prepared(WorldgenContextFingerprint fingerprint, RandomState state,
+		net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator generator,
+		io.github.genichimaruo.worldgenassist.common.PrivateTerrainComputer terrainComputer) { }
 
 	static final class RejectedJobException extends RuntimeException {
 		private final TerrainJobFailurePayload.Reason reason;

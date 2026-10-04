@@ -21,20 +21,44 @@ import net.minecraft.world.level.levelgen.densityfunction.ScopedDensityBuffer;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import io.github.genichimaruo.worldgenassist.server.LocalWorldgenTaskBackend;
 import io.github.genichimaruo.worldgenassist.server.NoiseStageBackendConfig;
 import io.github.genichimaruo.worldgenassist.server.NoiseTaskBenchmarkLogger;
 import io.github.genichimaruo.worldgenassist.server.RemoteDensityField;
 import io.github.genichimaruo.worldgenassist.server.RemoteDensitySamplingScope;
 import io.github.genichimaruo.worldgenassist.common.TerrainWorkKind;
+import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
+import io.github.genichimaruo.worldgenassist.server.TerrainDecisionFiller;
 import io.github.genichimaruo.worldgenassist.server.RemoteDensityTarget;
+import io.github.genichimaruo.worldgenassist.server.RemoteDensityOpportunity;
 import io.github.genichimaruo.worldgenassist.server.VanillaDelegatingWorldgenTaskBackend;
 import io.github.genichimaruo.worldgenassist.WorldgenAssist;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.injection.At;
 
 @Mixin(NoiseBasedChunkGenerator.class)
 abstract class NoiseBasedChunkGeneratorMixin {
+	@Shadow @Final private Holder<NoiseGeneratorSettings> settings;
+
+	@WrapMethod(method = "doFill")
+	private void worldgenAssist$fillApprovedDecisions(NoiseChunk noiseChunk, ChunkAccess chunk, Operation<Void> original) {
+		RemoteDensityTarget target = (RemoteDensityTarget)chunk;
+		RemoteDensityField field = target.worldgenAssist$getRemoteDensity();
+		if (field == null || field.workKind() != TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE) {
+			original.call(noiseChunk, chunk); return;
+		}
+		try {
+			field.requireDecisionFill(noiseChunk.volume(), settings.value());
+		} catch (IllegalArgumentException exception) {
+			target.worldgenAssist$clearRemoteDensity(field.jobId());
+			WorldgenAssist.LOGGER.warn("[CAWG] job.remote_decision_rejected id={} reason={}",field.jobId(),exception.toString());
+			original.call(noiseChunk, chunk); return;
+		}
+		TerrainDecisionFiller.fill(field, noiseChunk.volume(), chunk);
+	}
 	@WrapOperation(
 		method = "buildTerrain",
 		at = @At(
@@ -55,10 +79,26 @@ abstract class NoiseBasedChunkGeneratorMixin {
 		Set<Holder<Biome>> possibleBiomes
 	) {
 		NoiseStageBackendConfig backendConfig = NoiseStageBackendConfig.current();
+		Supplier<ChunkAccess> terrainTask = () -> {
+			RemoteDensityField field = RemoteDensitySamplingScope.current();
+			if (field == null || field.workKind() != TerrainWorkKind.COMPLETE_TERRAIN) return task.get();
+			io.github.genichimaruo.worldgenassist.server.CompleteTerrainApplicator.Prepared approved;
+			try {
+				approved = field.prepareCompleteTerrain(centerChunk, (NoiseBasedChunkGenerator)(Object)this,
+					randomState, structureManager, blender, carverBiomeRegion, possibleBiomes);
+			} catch (IllegalArgumentException error) {
+				((RemoteDensityTarget)centerChunk).worldgenAssist$clearRemoteDensity(field.jobId());
+				WorldgenAssist.LOGGER.warn("[CAWG] job.full_terrain_apply_rejected id={} reason={}", field.jobId(), error.toString());
+				return task.get();
+			}
+			ChunkAccess applied = approved.apply();
+			field.recordCompleteTerrainApplication();
+			return applied;
+		};
 		Supplier<ChunkAccess> selectedTask = NoiseTaskBenchmarkLogger.wrap(
 			centerChunk.getPos(),
 			backendConfig.mode().id(),
-			RemoteDensitySamplingScope.wrap(centerChunk, task)
+			RemoteDensitySamplingScope.wrap(centerChunk, terrainTask)
 		);
 		if (backendConfig.mode() == NoiseStageBackendConfig.Mode.VANILLA) {
 			return original.call(selectedTask, vanillaExecutor);
@@ -75,7 +115,13 @@ abstract class NoiseBasedChunkGeneratorMixin {
 		Executor localExecutor = LocalWorldgenTaskBackend.instance().executorFor(
 			"noise",
 			centerChunk.getPos(),
-			vanillaExecutor
+			vanillaExecutor,
+			() -> {
+				RemoteDensityTarget target = (RemoteDensityTarget)centerChunk;
+				if (target.worldgenAssist$getRemoteDensity() != null) return RemoteDensityOpportunity.Availability.READY;
+				RemoteDensityOpportunity opportunity = target.worldgenAssist$getRemoteOpportunity();
+				return opportunity == null ? RemoteDensityOpportunity.Availability.LOCAL : opportunity.availability();
+			}
 		);
 		return original.call(selectedTask, localExecutor);
 	}
@@ -96,7 +142,8 @@ abstract class NoiseBasedChunkGeneratorMixin {
 	) {
 		RemoteDensityTarget target = (RemoteDensityTarget)chunk;
 		RemoteDensityField field = target.worldgenAssist$getRemoteDensity();
-		if (field == null || field.workKind() != TerrainWorkKind.DENSITY) { return original.call(sampler, volume); }
+		if (field == null || (field.workKind() != TerrainWorkKind.DENSITY
+			&& field.workKind() != TerrainWorkKind.BLOCK_DENSITY_AND_SURFACE)) { return original.call(sampler, volume); }
 		ScopedDensityBuffer buffer = sampler.context().acquireBuffer(volume);
 		try {
 			field.copyVolume(volume, buffer);
@@ -108,4 +155,5 @@ abstract class NoiseBasedChunkGeneratorMixin {
 			return original.call(sampler, volume);
 		}
 	}
+
 }

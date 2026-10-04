@@ -19,6 +19,8 @@ public record TerrainDensityJob(
 	public static final int CHUNK_SIDE = 16;
 	public static final int MAX_HEIGHT = 384;
 	public static final int MAX_SAMPLE_COUNT = CHUNK_SIDE * CHUNK_SIDE * MAX_HEIGHT;
+	// The unported fixture retains MAX_SAMPLE_COUNT; only general terrain v7 expands.
+	public static final int MAX_TERRAIN_SAMPLE_COUNT = MAX_SAMPLE_COUNT + SurfaceDensityData.SAMPLE_COUNT;
 	public static final int MAX_NOISE_SETTINGS_ID_UTF8_BYTES = 256;
 	public TerrainDensityJob(TerrainJobIdentity identity, long worldSeed, boolean generateStructures,
 		Identifier noiseSettings, int minY, int height, int cellWidth, int cellHeight) {
@@ -51,7 +53,11 @@ public record TerrainDensityJob(
 			throw new IllegalArgumentException("Minimum Y must align to the cell height: minY=" + minY + " cellHeight=" + cellHeight);
 		}
 		Math.addExact(minY, height);
-		if (workKind == TerrainWorkKind.GRID_AND_SURFACE && (height % 8 != 0 || Math.floorMod(minY, 8) != 0)) {
+		if (workKind == TerrainWorkKind.COMPLETE_TERRAIN && (height % 16 != 0 || Math.floorMod(minY, 16) != 0)) {
+			throw new IllegalArgumentException("Complete terrain must align to sections");
+		}
+		if ((workKind == TerrainWorkKind.GRID_AND_SURFACE || workKind == TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE)
+			&& (height % 8 != 0 || Math.floorMod(minY, 8) != 0)) {
 			throw new IllegalArgumentException("Terrain grid must align to vanilla's vertical cells");
 		}
 	}
@@ -60,6 +66,9 @@ public record TerrainDensityJob(
 		return switch (workKind) {
 			case SURFACE_FIELDS -> SurfaceDensityData.SAMPLE_COUNT;
 			case GRID_AND_SURFACE -> GridDensityData.sampleCount(height);
+			case BLOCK_DENSITY_AND_SURFACE -> BlockDensityData.sampleCount(height);
+			case TERRAIN_DECISIONS_AND_SURFACE -> BlockDensityData.sampleCount(height);
+			case COMPLETE_TERRAIN -> Math.multiplyExact(CHUNK_SIDE * CHUNK_SIDE, height);
 			case DENSITY -> Math.multiplyExact(CHUNK_SIDE * CHUNK_SIDE, height);
 		};
 	}

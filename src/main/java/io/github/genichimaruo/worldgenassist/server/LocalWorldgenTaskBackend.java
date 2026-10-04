@@ -8,6 +8,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 
 import net.minecraft.world.level.ChunkPos;
 
@@ -22,6 +23,7 @@ public final class LocalWorldgenTaskBackend implements WorldgenTaskBackend {
 	private final int queueCapacity;
 	private final int admissionCapacity;
 	private final String threadPrefix;
+	private final boolean remoteAware;
 	private final AtomicInteger threadIds = new AtomicInteger();
 	private final Object lifecycleLock = new Object();
 	private final AtomicLong submissionAttempts = new AtomicLong();
@@ -35,6 +37,9 @@ public final class LocalWorldgenTaskBackend implements WorldgenTaskBackend {
 	private volatile ExecutorState executorState;
 
 	LocalWorldgenTaskBackend(int workerThreads, int queueCapacity, String threadPrefix) {
+		this(workerThreads, queueCapacity, threadPrefix, false);
+	}
+	LocalWorldgenTaskBackend(int workerThreads, int queueCapacity, String threadPrefix, boolean remoteAware) {
 		if (workerThreads < 1) {
 			throw new IllegalArgumentException("workerThreads must be positive");
 		}
@@ -46,6 +51,7 @@ public final class LocalWorldgenTaskBackend implements WorldgenTaskBackend {
 		this.queueCapacity = queueCapacity;
 		this.admissionCapacity = Math.addExact(workerThreads, queueCapacity);
 		this.threadPrefix = Objects.requireNonNull(threadPrefix, "threadPrefix");
+		this.remoteAware = remoteAware;
 		start();
 	}
 
@@ -59,7 +65,7 @@ public final class LocalWorldgenTaskBackend implements WorldgenTaskBackend {
 	}
 
 	public String schedulerId() {
-		return SCHEDULER_ID;
+		return remoteAware ? "fork_join_remote_ready" : SCHEDULER_ID;
 	}
 
 	public int queueCapacity() {
@@ -90,9 +96,14 @@ public final class LocalWorldgenTaskBackend implements WorldgenTaskBackend {
 
 	@Override
 	public Executor executorFor(String stage, ChunkPos chunkPos, Executor fallbackExecutor) {
+		return executorFor(stage, chunkPos, fallbackExecutor, () -> RemoteDensityOpportunity.Availability.LOCAL);
+	}
+	public Executor executorFor(String stage, ChunkPos chunkPos, Executor fallbackExecutor,
+		Supplier<RemoteDensityOpportunity.Availability> availability) {
 		Objects.requireNonNull(stage, "stage");
 		Objects.requireNonNull(chunkPos, "chunkPos");
 		Objects.requireNonNull(fallbackExecutor, "fallbackExecutor");
+		Objects.requireNonNull(availability, "availability");
 		ChunkPos immutablePosition = new ChunkPos(chunkPos.x(), chunkPos.z());
 
 		return command -> {
@@ -106,7 +117,7 @@ public final class LocalWorldgenTaskBackend implements WorldgenTaskBackend {
 				permitAcquired = true;
 				int admitted = admissionCapacity - currentState.admissionPermits().availablePermits();
 				intervalPeakAdmittedTasks.accumulateAndGet(admitted, Math::max);
-				currentState.pool().execute(() -> {
+				Runnable ownedCommand = () -> {
 					int active = activeTasks.incrementAndGet();
 					intervalPeakActiveTasks.accumulateAndGet(active, Math::max);
 					startedTasks.incrementAndGet();
@@ -117,7 +128,17 @@ public final class LocalWorldgenTaskBackend implements WorldgenTaskBackend {
 						activeTasks.decrementAndGet();
 						currentState.admissionPermits().release();
 					}
-				});
+				};
+				if (currentState.readyQueue() == null) currentState.pool().execute(ownedCommand);
+				else synchronized (lifecycleLock) {
+					// Shutdown cannot interleave enqueue and scheduling its drainer.
+					if (currentState != executorState || currentState.pool().isShutdown()) {
+						throw new RejectedExecutionException("cooperative backend lifecycle changed");
+					}
+					if (currentState.readyQueue().offer(ownedCommand, availability, workerThreads)) {
+						currentState.pool().execute(() -> drainReadyQueue(currentState));
+					}
+				}
 				long accepted = acceptedTasks.incrementAndGet();
 				WorldgenAssist.LOGGER.debug(
 					"[CAWG] backend.local_submitted stage={} chunk={},{} attempt={} accepted={} queue_depth={}",
@@ -155,6 +176,17 @@ public final class LocalWorldgenTaskBackend implements WorldgenTaskBackend {
 				);
 			}
 		};
+	}
+
+	private void drainReadyQueue(ExecutorState state) {
+		Runnable command;
+		while ((command = state.readyQueue().poll()) != null) {
+			try { command.run(); }
+			catch (RuntimeException | Error error) {
+				// A failed command must not strand accepted work or its admission permits.
+				WorldgenAssist.LOGGER.error("[CAWG] backend.cooperative_command_failed", error);
+			}
+		}
 	}
 
 	public Snapshot snapshot() {
@@ -201,6 +233,9 @@ public final class LocalWorldgenTaskBackend implements WorldgenTaskBackend {
 			executorState = null;
 		}
 		if (stoppedState != null) {
+			if (stoppedState.readyQueue() != null) WorldgenAssist.LOGGER.info(
+				"[CAWG] backend.cooperative_summary scheduler={} reordered={} queued={}",
+				schedulerId(), stoppedState.readyQueue().reordered(), stoppedState.readyQueue().size());
 			stoppedState.pool().shutdown();
 		}
 		Snapshot snapshot = snapshot();
@@ -228,7 +263,7 @@ public final class LocalWorldgenTaskBackend implements WorldgenTaskBackend {
 			(thread, error) -> WorldgenAssist.LOGGER.error("[CAWG] backend.local_worker_failed thread={}", thread.getName(), error),
 			true
 		);
-		return new ExecutorState(pool, new Semaphore(admissionCapacity));
+		return new ExecutorState(pool, new Semaphore(admissionCapacity), remoteAware ? new RemoteAwareTerrainQueue() : null);
 	}
 
 	private static LocalWorldgenTaskBackend createConfiguredInstance() {
@@ -236,12 +271,13 @@ public final class LocalWorldgenTaskBackend implements WorldgenTaskBackend {
 		return new LocalWorldgenTaskBackend(
 			config.workerThreads(),
 			queueCapacityForWorkers(config.workerThreads(), config.queuedTasksPerWorker()),
-			THREAD_PREFIX
+			THREAD_PREFIX, config.mode() == NoiseStageBackendConfig.Mode.COOPERATIVE
 		);
 	}
 
-	private record ExecutorState(ForkJoinPool pool, Semaphore admissionPermits) {
+	private record ExecutorState(ForkJoinPool pool, Semaphore admissionPermits, RemoteAwareTerrainQueue readyQueue) {
 		int queuedTasks() {
+			if (readyQueue != null) return readyQueue.size();
 			long queued = pool.getQueuedSubmissionCount() + pool.getQueuedTaskCount();
 			return (int) Math.min(Integer.MAX_VALUE, queued);
 		}

@@ -11,7 +11,8 @@ import java.util.zip.Inflater;
 public final class TerrainDensityResultEnvelope {
 	/** 26.3 samples float densities; protocol v4 transports their exact raw bits. */
 	public static final int BYTES_PER_DENSITY = Float.BYTES;
-	public static final int MAX_ENCODED_DENSITY_BYTES = TerrainDensityJob.MAX_SAMPLE_COUNT * BYTES_PER_DENSITY;
+	public static final int MAX_ENCODED_DENSITY_BYTES = Math.max(TerrainDensityJob.MAX_TERRAIN_SAMPLE_COUNT * BYTES_PER_DENSITY,
+		CompleteTerrainData.MAX_RAW_BYTES + 4);
 
 	private final TerrainJobIdentity identity;
 	private final int densityCount;
@@ -29,43 +30,66 @@ public final class TerrainDensityResultEnvelope {
 		long clientEncodeNanos
 	) {
 		this.identity = Objects.requireNonNull(identity, "identity");
-		if (densityCount < 1 || densityCount > TerrainDensityJob.MAX_SAMPLE_COUNT) {
+		if (densityCount < 1 || densityCount > TerrainDensityJob.MAX_TERRAIN_SAMPLE_COUNT) {
 			throw new IllegalArgumentException(
-				"Density count must be between 1 and " + TerrainDensityJob.MAX_SAMPLE_COUNT + ": " + densityCount
+				"Density count must be between 1 and " + TerrainDensityJob.MAX_TERRAIN_SAMPLE_COUNT + ": " + densityCount
 			);
 		}
 		this.densityCount = densityCount;
 		this.encoding = Objects.requireNonNull(encoding, "encoding");
 		Objects.requireNonNull(encodedDensities, "encodedDensities");
-		int rawBytes = Math.multiplyExact(densityCount, BYTES_PER_DENSITY);
+		int rawBytes = rawBytes(densityCount, encoding);
 		if (encodedDensities.length < 1 || encodedDensities.length > rawBytes) {
 			throw new IllegalArgumentException(
 				"Encoded density bytes must be between 1 and the raw length " + rawBytes + ": " + encodedDensities.length
 			);
 		}
-		if (encoding == Encoding.RAW && encodedDensities.length != rawBytes) {
+		if (!encoding.compressed() && !encoding.completeTerrain() && encodedDensities.length != rawBytes) {
 			throw new IllegalArgumentException(
 				"Raw density byte count must equal " + rawBytes + ": " + encodedDensities.length
 			);
 		}
 		this.encodedDensities = encodedDensities.clone();
+		if (encoding.completeTerrain()) {
+			int expanded = completeRawLength();
+			if (expanded < 48 + densityCount + 1024 + densityCount / 4096 * 4 || expanded > rawBytes - 4
+				|| (!encoding.compressed() && encodedDensities.length != expanded + 4)) {
+				throw new IllegalArgumentException("Invalid complete terrain length");
+			}
+		}
 		this.clientComputeNanos = requireTiming(clientComputeNanos, "Client compute time");
 		this.clientEncodeNanos = requireTiming(clientEncodeNanos, "Client encode time");
 	}
 
 	public static TerrainDensityResultEnvelope encode(TerrainDensityResult result) {
+		return encode(result, TerrainWorkKind.DENSITY);
+	}
+
+	public static TerrainDensityResultEnvelope encode(TerrainDensityResult result, TerrainWorkKind kind) {
 		Objects.requireNonNull(result, "result");
 		long startedNanos = System.nanoTime();
-		byte[] raw = new byte[Math.multiplyExact(result.densityCount(), BYTES_PER_DENSITY)];
+		if (kind == TerrainWorkKind.COMPLETE_TERRAIN) return encodeComplete(result, startedNanos);
+		if (result.hasCompleteTerrain()) throw new IllegalArgumentException("Complete terrain returned for a density job");
+		boolean decisions = kind == TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE;
+		Encoding rawEncoding = decisions ? Encoding.TERRAIN_CODES : Encoding.RAW;
+		byte[] raw = new byte[rawBytes(result.densityCount(), rawEncoding)];
 		ByteBuffer rawBuffer = ByteBuffer.wrap(raw).order(ByteOrder.BIG_ENDIAN);
-		for (int index = 0; index < result.densityCount(); index++) {
+		int codeCount = decisions ? decisionCount(result.densityCount()) : 0;
+		boolean packed = decisions && result.hasTerrainCodes(codeCount);
+		if (packed) rawBuffer.put(result.terrainCodes());
+		for (int index = packed ? codeCount : 0; index < result.densityCount(); index++) {
 			double value = result.densityAt(index);
 			float density = (float) value;
 			if (!Float.isFinite(density) || (double) density != value
 				|| Double.doubleToRawLongBits((double) density) != Double.doubleToRawLongBits(value)) {
 				throw new IllegalArgumentException("Density is not an exact finite float at " + index);
 			}
-			rawBuffer.putInt(Float.floatToRawIntBits(density));
+			if (index < codeCount) {
+				if (!TerrainDecisionData.validCode(value) || Float.floatToRawIntBits(density) == 0x80000000) {
+					throw new IllegalArgumentException("Invalid canonical terrain decision code at " + index);
+				}
+				rawBuffer.put((byte)(int)value);
+			} else rawBuffer.putInt(Float.floatToRawIntBits(density));
 		}
 
 		byte[] candidate = new byte[raw.length];
@@ -80,8 +104,9 @@ public final class TerrainDensityResultEnvelope {
 		} finally {
 			deflater.end();
 		}
-		Encoding encoding = finished && compressedLength < raw.length ? Encoding.DEFLATE : Encoding.RAW;
-		byte[] encoded = encoding == Encoding.DEFLATE ? Arrays.copyOf(candidate, compressedLength) : raw;
+		boolean compressed = finished && compressedLength < raw.length;
+		Encoding encoding = compressed ? (decisions ? Encoding.DEFLATE_TERRAIN_CODES : Encoding.DEFLATE) : rawEncoding;
+		byte[] encoded = compressed ? Arrays.copyOf(candidate, compressedLength) : raw;
 		long encodeNanos = System.nanoTime() - startedNanos;
 		return new TerrainDensityResultEnvelope(
 			result.identity(),
@@ -94,24 +119,40 @@ public final class TerrainDensityResultEnvelope {
 	}
 
 	public TerrainDensityResult decode() {
+		if (encoding.completeTerrain()) {
+			int length = completeRawLength();
+			byte[] raw = encoding.compressed() ? inflateExact(length, 4)
+				: Arrays.copyOfRange(encodedDensities, 4, encodedDensities.length);
+			int minY = ByteBuffer.wrap(raw).order(ByteOrder.BIG_ENDIAN).getInt(4);
+			CompleteTerrainData data = CompleteTerrainData.decode(raw, minY, densityCount / 256);
+			return TerrainDensityResult.fromCompleteTerrain(identity, data, clientComputeNanos);
+		}
 		byte[] raw = switch (encoding) {
-			case RAW -> encodedDensities.clone();
-			case DEFLATE -> inflateExact();
+			case RAW, TERRAIN_CODES -> encodedDensities;
+			case DEFLATE, DEFLATE_TERRAIN_CODES -> inflateExact();
+			case COMPLETE_TERRAIN, DEFLATE_COMPLETE_TERRAIN -> throw new IllegalStateException("Complete terrain decoded separately");
 		};
 		ByteBuffer buffer = ByteBuffer.wrap(raw).order(ByteOrder.BIG_ENDIAN);
-		double[] densities = new double[densityCount];
-		for (int index = 0; index < densities.length; index++) {
-			densities[index] = Float.intBitsToFloat(buffer.getInt());
+		int codeCount = encoding.decisions() ? decisionCount(densityCount) : 0;
+		if (codeCount > 0) {
+			byte[] codes = new byte[codeCount]; buffer.get(codes);
+			float[] surface = new float[SurfaceDensityData.SAMPLE_COUNT];
+			for (int i = 0; i < surface.length; i++) surface[i] = Float.intBitsToFloat(buffer.getInt());
+			return TerrainDensityResult.fromTerrainCodes(identity, codes, surface, clientComputeNanos);
 		}
-		return new TerrainDensityResult(identity, densities, clientComputeNanos);
+		float[] densities = new float[densityCount];
+		for (int index = 0; index < densities.length; index++) densities[index] = Float.intBitsToFloat(buffer.getInt());
+		return TerrainDensityResult.fromFloats(identity, densities, clientComputeNanos);
 	}
 
 	private byte[] inflateExact() {
-		int rawLength = Math.multiplyExact(densityCount, BYTES_PER_DENSITY);
+		return inflateExact(rawDensityBytes(), 0);
+	}
+	private byte[] inflateExact(int rawLength, int offset) {
 		byte[] raw = new byte[rawLength];
 		Inflater inflater = new Inflater();
 		try {
-			inflater.setInput(encodedDensities);
+			inflater.setInput(encodedDensities, offset, encodedDensities.length - offset);
 			int written = 0;
 			while (!inflater.finished() && written < raw.length) {
 				int count = inflater.inflate(raw, written, raw.length - written);
@@ -173,7 +214,46 @@ public final class TerrainDensityResultEnvelope {
 	}
 
 	public int rawDensityBytes() {
-		return densityCount * BYTES_PER_DENSITY;
+		if (encoding.completeTerrain()) return completeRawLength() + 4;
+		return rawBytes(densityCount, encoding);
+	}
+
+	public static int rawBytes(int count, Encoding encoding) {
+		if (encoding.completeTerrain()) {
+			if (count < 4096 || count > TerrainDensityJob.MAX_SAMPLE_COUNT || count % 4096 != 0) {
+				throw new IllegalArgumentException("Complete terrain requires section-aligned volume");
+			}
+			return 4 + 48 + count + 1024 + count / 4096 * 4 + count * CompleteTerrainData.MAX_POST_PROCESS_PER_BLOCK * 2;
+		}
+		return encoding.decisions() ? Math.addExact(decisionCount(count), SurfaceDensityData.SAMPLE_COUNT * Float.BYTES)
+			: Math.multiplyExact(count, BYTES_PER_DENSITY);
+	}
+	private static int decisionCount(int count) {
+		int prefix = count - SurfaceDensityData.SAMPLE_COUNT;
+		if (prefix < 256 || prefix > TerrainDensityJob.MAX_SAMPLE_COUNT || prefix % (256 * 8) != 0) {
+			throw new IllegalArgumentException("Packed terrain decisions require aligned full-block geometry");
+		}
+		return prefix;
+	}
+	private int completeRawLength() {
+		if (encodedDensities.length < 5) throw new IllegalArgumentException("Truncated complete terrain header");
+		return ByteBuffer.wrap(encodedDensities).order(ByteOrder.BIG_ENDIAN).getInt();
+	}
+	private static TerrainDensityResultEnvelope encodeComplete(TerrainDensityResult result, long started) {
+		byte[] raw = result.completeTerrain().encode();
+		byte[] compressed = new byte[raw.length];
+		int count; boolean finished;
+		Deflater deflater = new Deflater(Deflater.BEST_SPEED);
+		try {
+			deflater.setInput(raw); deflater.finish(); count = deflater.deflate(compressed); finished = deflater.finished();
+		} finally { deflater.end(); }
+		boolean useCompression = finished && count < raw.length;
+		int size = useCompression ? count : raw.length;
+		byte[] encoded = ByteBuffer.allocate(size + 4).order(ByteOrder.BIG_ENDIAN).putInt(raw.length)
+			.put(useCompression ? compressed : raw, 0, size).array();
+		return new TerrainDensityResultEnvelope(result.identity(), result.densityCount(),
+			useCompression ? Encoding.DEFLATE_COMPLETE_TERRAIN : Encoding.COMPLETE_TERRAIN,
+			encoded, result.clientComputeNanos(), System.nanoTime() - started);
 	}
 
 	public long clientComputeNanos() {
@@ -204,6 +284,13 @@ public final class TerrainDensityResultEnvelope {
 
 	public enum Encoding {
 		RAW,
-		DEFLATE
+		DEFLATE,
+		TERRAIN_CODES,
+		DEFLATE_TERRAIN_CODES,
+		COMPLETE_TERRAIN,
+		DEFLATE_COMPLETE_TERRAIN;
+		public boolean compressed() { return this == DEFLATE || this == DEFLATE_TERRAIN_CODES || this == DEFLATE_COMPLETE_TERRAIN; }
+		public boolean decisions() { return this == TERRAIN_CODES || this == DEFLATE_TERRAIN_CODES; }
+		public boolean completeTerrain() { return this == COMPLETE_TERRAIN || this == DEFLATE_COMPLETE_TERRAIN; }
 	}
 }

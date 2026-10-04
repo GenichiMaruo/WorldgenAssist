@@ -43,6 +43,13 @@ public final class WorldgenContextFingerprintFactory {
 	public static WorldgenContextFingerprint create(ServerLevel level, NoiseBasedChunkGenerator generator) {
 		Objects.requireNonNull(level, "level");
 		Objects.requireNonNull(generator, "generator");
+		var settings = generator.generatorSettings();
+		if (settings.unwrapKey().isPresent() && io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(
+			settings.unwrapKey().orElseThrow().identifier(), settings.value()) == io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.COMPLETE_TERRAIN) {
+			var noise = settings.value().noiseSettings().clampToHeightAccessor(level);
+			return createCompleteTerrain(level.registryAccess(), level.dimension().identifier(), level.getSeed(),
+				level.getServer().getWorldGenSettings().options().generateStructures(), noise.minY(), noise.height(), settings, generator.getBiomeSource());
+		}
 		return fingerprint(capture(level, generator));
 	}
 
@@ -56,6 +63,43 @@ public final class WorldgenContextFingerprintFactory {
 		Holder<NoiseGeneratorSettings> settings
 	) {
 		return fingerprint(capture(registries, dimension, worldSeed, generateStructures, minY, height, settings));
+	}
+
+	/** Complete terrain has additional biome/material/carver inputs absent from the density context. */
+	public static WorldgenContextFingerprint createCompleteTerrain(
+		HolderLookup.Provider registries, Identifier dimension, long worldSeed, boolean generateStructures,
+		int minY, int height, Holder<NoiseGeneratorSettings> settings,
+		net.minecraft.world.level.biome.BiomeSource biomes
+	) {
+		DynamicOps<JsonElement> ops = registries.createSerializationContext(JsonOps.INSTANCE);
+		CanonicalDigestWriter writer = new CanonicalDigestWriter();
+		writer.putString("worldgen_assist:complete_terrain_context_v1");
+		writer.putString(create(registries, dimension, worldSeed, generateStructures, minY, height, settings).toString());
+		writer.putInt(io.github.genichimaruo.worldgenassist.common.CompleteTerrainPalette.VERSION);
+		writer.putJson(encode(net.minecraft.world.level.biome.BiomeSource.CODEC, ops, biomes, "terrain biome source"));
+		writer.putJson(encode(net.minecraft.world.level.levelgen.material.rule.MaterialRule.DIRECT_CODEC,
+			ops, settings.value().materialRule().value(), "terrain material rule"));
+		writer.putRegistry("material_rule", encodeRegistry(registries, Registries.MATERIAL_RULE,
+			net.minecraft.world.level.levelgen.material.rule.MaterialRule.DIRECT_CODEC, ops));
+		writer.putRegistry("biome", encodeRegistry(registries, Registries.BIOME,
+			net.minecraft.world.level.biome.Biome.DIRECT_CODEC, ops));
+		writer.putRegistry("carver", encodeRegistry(registries, Registries.CARVER,
+			net.minecraft.world.level.levelgen.carver.WorldCarver.DIRECT_CODEC, ops));
+		writer.putRegistry("multi_noise_biome_source_parameter_list", encodeRegistry(registries,
+			Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST,
+			net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterList.DIRECT_CODEC, ops));
+		var blockRegistry = net.minecraft.core.registries.BuiltInRegistries.BLOCK;
+		var tags = blockRegistry.getTags().sorted(Comparator.comparing(tag -> tag.key().location().toString())).toList();
+		writer.putInt(tags.size());
+		for (var tag : tags) {
+			writer.putString(tag.key().location().toString());
+			var members = tag.stream().map(holder -> holder.unwrapKey().orElseThrow().identifier().toString()).sorted().toList();
+			writer.putInt(members.size());
+			members.forEach(writer::putString);
+		}
+		writer.putBoolean(SharedConstants.DEBUG_DISABLE_SURFACE);
+		writer.putBoolean(SharedConstants.DEBUG_DISABLE_CARVERS);
+		return WorldgenContextFingerprint.fromBytes(writer.finish());
 	}
 
 	static ContextSnapshot capture(ServerLevel level, NoiseBasedChunkGenerator generator) {

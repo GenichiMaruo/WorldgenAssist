@@ -21,8 +21,10 @@ param(
     [ValidateRange(1,10)][int]$WarmupRuns=1,
     [ValidateRange(1,10)][int]$MeasuredRepeats=3,
     [ValidateSet('vanilla','local','cooperative')][string]$NoiseBackend='vanilla',
-    [ValidateSet('standard','wide')][string]$WindowProfile='standard',
+    [ValidateSet('standard','wide','deep')][string]$WindowProfile='standard',
     [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='ready',
+    [ValidateRange(0,64)][int]$PrefetchLookahead=0,
+    [ValidateSet('grid','surface','density','block','decisions','complete')][string]$RemoteWorkKind='grid',
     [string]$RemoteHost = 'gen1c@100.117.255.71',
     [string]$RemoteRoot = 'C:/Users/gen1c/AppData/Local/Temp/WorldgenAssist-20260909/port26.3'
 )
@@ -53,7 +55,10 @@ $measurementShape = if($MeasureFullView){'view'}else{'square'}
 $measurementOffsets = @(Get-WorldgenMeasurementOffsets $measurementRadius $measurementShape)
 $clientLoad = @()
 
-if($RemoteHost -ne 'gen1c@100.117.255.71' -or $RemoteRoot -ne 'C:/Users/gen1c/AppData/Local/Temp/WorldgenAssist-20260909/port26.3'){throw 'This 26.3 fixture is limited to its dedicated remote test child'}
+$legacyServer=$RemoteHost -eq 'gen1c@100.117.255.71' -and $RemoteRoot -eq 'C:/Users/gen1c/AppData/Local/Temp/WorldgenAssist-20260909/port26.3'
+$physicalServer=$RemoteHost -eq 'gen1c@100.103.102.109' -and $RemoteRoot -eq 'E:/WorldgenAssist/port26.3'
+if(-not($legacyServer -or $physicalServer)){throw 'This fixture requires an explicitly authorized host/root pair'}
+$remotePrefix=if($physicalServer){'$env:TEMP="E:/WorldgenAssist/temp";$env:TMP=$env:TEMP;'}else{''}
 if (-not $output.StartsWith($testRoot, [StringComparison]::OrdinalIgnoreCase) -or $output -eq $testRoot.TrimEnd([IO.Path]::DirectorySeparatorChar)) { throw 'OutputRoot must be a child of test-artifacts' }
 if ($predictionEnabled -and $CacheEntries -eq 0) { throw 'Prediction requires CacheEntries greater than zero' }
 if ($Mode -eq 'assisted' -and $ValidationCells -eq 0 -and $Purpose -eq 'correctness') { throw 'Assisted correctness requires authoritative validation cells' }
@@ -80,7 +85,7 @@ function Stop-Owned([Diagnostics.Process]$Process) {
     try { & "$env:SystemRoot\System32\taskkill.exe" '/PID' $Process.Id '/T' '/F' | Out-Null; $Process.WaitForExit(30000)|Out-Null; return $Process.HasExited } catch { return $false }
 }
 function Invoke-Remote([string]$Code) {
-    $encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($Code)); & ssh.exe -o BatchMode=yes -o ConnectTimeout=15 $RemoteHost "powershell -NoProfile -NonInteractive -EncodedCommand $encoded"
+    $encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($remotePrefix+$Code)); & ssh.exe -o BatchMode=yes -o ConnectTimeout=15 $RemoteHost "powershell -NoProfile -NonInteractive -EncodedCommand $encoded"
     if($LASTEXITCODE -ne 0){throw 'Remote preparation command failed'}
 }
 function Receive-RemoteEvidence {
@@ -108,12 +113,16 @@ function Start-Client([string]$Name,[string]$Uuid,[int]$Index,[string]$AssetsRoo
         $argumentPath=$launch.Arguments[0].Substring(1)
         @(Get-Content -LiteralPath $argumentPath | ForEach-Object {if($_ -eq '-Xmx2G'){'-Xmx4G'}else{$_}}) | Set-Content -LiteralPath $argumentPath
     }
+    if($RemoteWorkKind -eq 'complete'){
+        $argumentPath=$launch.Arguments[0].Substring(1)
+        @('-Dworldgen_assist.client.worker_threads=4')+@(Get-Content -LiteralPath $argumentPath) | Set-Content -LiteralPath $argumentPath
+    }
     @('forward','back','left','right','jump','sneak','sprint','attack','use') |
         ForEach-Object { 'key_key.' + $_ + ':key.keyboard.unknown' } |
         Add-Content -LiteralPath (Join-Path $profile 'client/options.txt')
     $environment=@{JAVA_HOME=$jdk;Path="$jdk\bin;$env:Path";WORLDGEN_ASSIST_REMOTE=if($Mode -eq 'assisted'){'true'}else{'false'};WORLDGEN_ASSIST_CLIENT_SEEDED_LEAF_PUBLIC_FIXTURE='false';WORLDGEN_ASSIST_CLIENT_SEEDED_LEAF_FIXTURE_FAULT='none';WORLDGEN_ASSIST_CLIENT_MEASURE_RECEIPT=if($Purpose -eq 'performance'){'true'}else{'false'}}
     $environment['WORLDGEN_ASSIST_CLIENT_REUSE_CONTEXT'] = if($PipelineProfile -eq 'current'){'false'}else{'true'}
-    $environment['WORLDGEN_ASSIST_CLIENT_JOB_WINDOW'] = if($WindowProfile -eq 'wide'){'16'}else{'4'}
+    $environment['WORLDGEN_ASSIST_CLIENT_JOB_WINDOW'] = switch($WindowProfile){'deep'{'32'} 'wide'{'16'} default{'4'}}
     $process=Start-Owned $launch.Executable $launch.Arguments $environment $launch.WorkingDirectory
     $capture=$null
     try {
@@ -181,7 +190,10 @@ try {
     $remoteCommand += ' -NoiseBackend '+$NoiseBackend
     $remoteCommand += ' -WindowProfile '+$WindowProfile
     $remoteCommand += ' -RemoteApplicationProfile '+$RemoteApplicationProfile
-    $encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($remoteCommand));$server=Start-Owned 'ssh.exe' @('-o','BatchMode=yes','-o','ConnectTimeout=15',$RemoteHost,"powershell -NoProfile -NonInteractive -OutputFormat Text -EncodedCommand $encoded");$serverErr=$server.StandardError.ReadToEndAsync()
+    $remoteCommand += ' -PrefetchLookahead '+$PrefetchLookahead
+    $remoteCommand += ' -RemoteWorkKind '+$RemoteWorkKind
+    # Process-scoped policy for our transferred helper; no machine/user policy change.
+    $encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($remotePrefix+$remoteCommand));$server=Start-Owned 'ssh.exe' @('-o','BatchMode=yes','-o','ConnectTimeout=15',$RemoteHost,"powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -OutputFormat Text -EncodedCommand $encoded");$serverErr=$server.StandardError.ReadToEndAsync()
     $ready=[DateTime]::UtcNow.AddSeconds(240)
     $serverReady=$false
     $lineTask=$server.StandardOutput.ReadLineAsync()
@@ -268,6 +280,9 @@ try {
     $result=[ordered]@{schema='worldgen-assist.scenario-result.v1';success=$success;cleanup_safe=$cleanupSafe;loopback_only=$true;artifact_sha256=if($null -ne $artifactHash){$artifactHash}else{$null};dimension=$Dimension;mode=$Mode;players=$Players;purpose=$Purpose;cache_entries=$CacheEntries;prediction=$predictionEnabled;validation_cells=$ValidationCells;server_logical_processors=$ServerLogicalProcessors;server_jvm_processors=$ServerJvmProcessors;pipeline_profile=$PipelineProfile;movement=$Movement;source_manifest_sha256=$manifestBefore;source_manifest_before_sha256=$manifestBefore;source_manifest_after_sha256=$manifestAfter;failure=$failure}
     $result.demand_wait_ms = if($Purpose -eq 'correctness'){$CorrectnessDemandWaitMs}else{100}
     $result.remote_application_profile = $RemoteApplicationProfile
+    $result.prefetch_lookahead = $PrefetchLookahead
+    $result.remote_work_kind = $RemoteWorkKind
+    $result.client_worker_threads = if($RemoteWorkKind -eq 'complete'){4}else{2}
     if($Purpose -eq 'correctness'){$path=Join-Path $output 'remote-evidence/correctness.json';$result.correctness=if(Test-Path -LiteralPath $path){Get-Content -LiteralPath $path -Raw|ConvertFrom-Json}else{[ordered]@{required_applied_chunks=@();noise_digests=@()}}}else{$path=Join-Path $output 'remote-evidence/performance.json';$result.performance=if(Test-Path -LiteralPath $path){Get-Content -LiteralPath $path -Raw|ConvertFrom-Json}else{[ordered]@{warmup_runs=1;measured_repeats=3;measured=@()}}}
     $result.scenario_client_load=$clientLoad
     Write-Json (Join-Path $output 'scenario-result.json') $result

@@ -1,5 +1,111 @@
 # Multi-PC fixture testing — 2026-09-09
 
+## Y complete; Z refill experiment (2026-10-04)
+
+Y143558-574/csb143600-402 exact X JAR in vanilla-first order completed: paired
+FULL-6.86%/receipt-7.08% all three faster, CPU+6.31% all three higher. Both
+orders improved speed, CPU savings not reproduced. Z alpha.7-dev.9 skips metadata
+ordering when admission is full; three affected methods/three builds, physical
+parity/actual skipped refills then view32 vanilla-first pair in one batch. Same
+authorized natural weak server on E, two strong clients/view32, no CPU restriction.
+
+## W complete; X admission batch (2026-10-04)
+
+W133017-360/csb133315-291 completed on the authorized weak natural server/E
+and stronger client PC at view32, deep32/64 assisted-first. Shared digests1,803,
+zero mismatch; all three same-region FULL/receipt faster, median paired-5.29%/
+-5.47%, CPU+5.21% all three. Cache coverage~35-39%; not a substantial or beta gain.
+X alpha.7-dev.8 adds bounded actual-stage priority/registration-pending hints,
+same protocol9 and settings. One admission batch runs5 affected methods, three
+builds, fresh two-owner parity with actual new-route use, then view32 performance.
+Remote runtimes/temp/worlds/logs stay on E; no competing runtime batches.
+X140104-921/csb140421-423 now complete:5 methods/three builds,1813 matching
+digests, actual-stage485/426 sent/applied; FULL-13.93%,receipt-14.04%,CPU-2.80%
+in all three paired repeats, tick p95+3.66%. Total cache use~40-50%; metric
+ready_cache_used counts only early cache.hit, not queued-ready applications.
+Native X142525-576 runs after physical completion. Confirm opposite physical
+order with identical X JAR and reused tests/build/parity before beta judgment.
+Native X now completed both loaders,1,987/1,971 matching shared digests and real
+new-lane applications after marker, no native speed claim. Y order confirmation
+retains exact X JAR/source, deep32/64/ready/lookahead0 and uses vanilla-first.
+
+## V dependency hint experiment (2026-10-04)
+
+Alpha.7-dev.7/protocol9 uses -TestProfile prefetch -RemoteApplicationProfile ready
+-PrefetchLookahead 0 -ViewDistance 32. Six affected methods, three builds then
+actual two-owner dependency-origin dispatch/digest pair and natural-server
+performance comparison pending. Same authorized weak server/E and strong client
+PC, unchanged2/16 backend and validation8, no artificial CPU limit.
+gate124404-025 passed6 methods, three builds and1,802 matching digests;
+actual dependency dispatch and510/407 decision applications verified.
+csb124721-766 COMPLETE: same-region FULL-5.70%, receipt-6.69%, all three
+faster; CPU+4.94% all three higher, cache use~31-34%. No beta claim.
+Prepared native-only correctness batch Run-TerrainNativeGate after this physical
+pair ends. It uses existing local installed fixtures and exact V JARs; no native
+speed claim or extra remote installation. Now executing after the physical pair.
+Native continuation132009-383 COMPLETE: Forge1,971/NeoForge1,954 shared digests,
+zero mismatch and both-owner full decision use/dependency dispatch. Forge runtime
+reused, analysis fresh; NeoForge fresh. Initial harness failures remain disclosed.
+
+W config experiment retains V JAR/source and changes windows to deep32/64,
+client32 with existing2 compute threads; validation8/cache128/backend2/16 same.
+Physical order assisted-first, no CPU restriction or extra C-drive files.
+Fresh two-owner correctness/view32 pair pending in one batch; exact V tests/builds
+and unchanged native evidence reused. No W speedup/beta claim yet.
+
+## T early request experiment (2026-10-04)
+
+Run-TerrainDecisionGate -Execute -TestProfile prefetch -RemoteApplicationProfile
+ready -PrefetchLookahead 32 -ViewDistance 32 selects alpha.7-dev.6/protocol9's
+existing-task observation. Same authorized natural server on E and stronger
+two-client PC, matching owned2 workers/queue32, no artificial CPU limits.
+Four affected methods, three builds and1,802 matching terrain digests passed.
+Full-view32 same-repeat FULL-6.79%/receipt-7.26% in all three; CPU+3.83% paired
+median with two higher. U repeats the same gate using -PrefetchLookahead 0 and
+-ReuseBuildEvidence test-artifacts/block-density-gate-20261004-113738-740.
+Only configuration changes; original T tests/builds keep their identities.
+U resumed gate121049-831 completed using exact original tests/builds and successful
+correctness evidence, preserving initial failed coverage assertion. Fresh csb121051-317
+same-region FULL-13.84% (two faster), receipt-13.48% (all three), CPU-3.75% (two
+lower), median paired ratios. No beta claim.
+
+## Current natural-server candidate S (2026-10-04)
+
+Run-TerrainDecisionGate -Execute -TestProfile scheduling -RemoteApplicationProfile
+ready -PrefetchLookahead 32 -ViewDistance 32 uses the authorized physical server
+on E, with no affinity or JVM processor restriction. Server/client artifacts
+match alpha.7-dev.5/protocol9. Two clients run on the same stronger PC, so this
+is two physical PCs, not three. Warmup1/measured3 fresh paired regions with full
+view geometry require3,461 delivered chunks per owner/repeat; rendering is not
+measured. Both conditions use the same2-worker cooperative readiness queue with
+capacity32. Three affected scheduling tests/builds passed, correctness1,792
+shared digests/zero mismatch and actual both-owner decision use passed. Full
+performance completed csb-20261004-105842-046: same-repeat FULL-4.56%, receipt
+-5.38% in all three, CPU+3.28% in all three. No beta basis. Earlier results
+keep their identities; two client processes still share the stronger PC.
+
+## Natural slower-server preparation (2026-10-03)
+
+The user authorized an additional SSH test server `gen1c@100.103.102.109`:
+GENPC-SUB, Windows 11 Pro, i7-7700K (4 cores / 8 logical processors), 31.96 GiB
+RAM. The client PC is i7-12700K (12 cores / 20 logical processors), 63.77 GiB.
+Observed free disk space was C:21.17 GiB / E:266.16 GiB. All task runtimes,
+downloads, caches, worlds, logs and process-local temporary files belong under
+`E:/WorldgenAssist`, with the server child `E:/WorldgenAssist/port26.3`.
+The system Java/PATH/TEMP are unchanged. Prepared Java is the existing pinned
+25.0.4 portable image, checked against the local archive before extraction.
+
+`Run-RemoteOverlapGate.ps1 -Execute -PhysicalServer -ViewDistance 32` runs the
+changed harness check, a smallest two-owner Overworld correctness pair and then
+one full-view32 performance pair (warmup1 / measured3). This initial baseline
+uses the immutable alpha.6 Fabric JAR and cooperative/wide/overlap settings on
+both sides, with assistance toggled. It applies no artificial affinity/JVM CPU
+limit. Both performance conditions record JFR so server CPU hotspots can be
+examined; these instrumented timings must retain that condition. Exact host/root pairs stay bounded to the two explicitly authorized
+environments; the old scripts' legacy default remains. No broad unit/build
+matrix is required for this harness-only preparation. Actual results must be
+recorded separately after execution; this section does not claim a pass.
+
 ## Alpha.2 concurrent-owner procedure (2026-09-13)
 
 `Run-TwoClientFixture.ps1 -Route fixture -Mode simultaneous` now starts two

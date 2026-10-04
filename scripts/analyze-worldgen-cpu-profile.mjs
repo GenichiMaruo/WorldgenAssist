@@ -38,7 +38,7 @@ for(const mode of ['vanilla','assisted']){
     ['density samplers',n=>n.startsWith('net.minecraft.world.level.levelgen.densityfunction.')],
     ['material rule density',n=>n.startsWith('net.minecraft.world.level.levelgen.material.MaterialRuleContext.getDensitiesInChunk')],
     ['surface depth noise',n=>n.startsWith('net.minecraft.world.level.levelgen.material.MaterialSystem.getSurfaceDepth')||n.startsWith('net.minecraft.world.level.levelgen.material.MaterialSystem.getSurfaceSecondary')],
-    ['terrain block fill',n=>n==='net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator.doFill'],
+    ['terrain block fill',n=>n==='net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator.doFill'||n==='io.github.genichimaruo.worldgenassist.server.TerrainDecisionFiller.fill'],
     ['surface material',n=>n==='net.minecraft.world.level.levelgen.material.MaterialSystem.buildSurface'],
     ['carvers',n=>n==='net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator.generateCarvers'],
     ['biome selection',n=>n.startsWith('net.minecraft.world.level.biome.')],

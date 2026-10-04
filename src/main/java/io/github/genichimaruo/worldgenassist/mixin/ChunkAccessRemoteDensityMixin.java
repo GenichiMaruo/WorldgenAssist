@@ -21,6 +21,9 @@ abstract class ChunkAccessRemoteDensityMixin implements RemoteDensityTarget {
 	@Override public synchronized @Nullable RemoteDensityOpportunity worldgenAssist$takeRemoteOpportunity() {
 		var opportunity = worldgenAssist$remoteOpportunity; worldgenAssist$remoteOpportunity = null; return opportunity;
 	}
+	@Override public synchronized @Nullable RemoteDensityOpportunity worldgenAssist$getRemoteOpportunity() {
+		return worldgenAssist$remoteOpportunity;
+	}
 	@Override public synchronized void worldgenAssist$clearRemoteOpportunity(RemoteDensityOpportunity opportunity) {
 		if (worldgenAssist$remoteOpportunity == opportunity) worldgenAssist$remoteOpportunity = null;
 	}

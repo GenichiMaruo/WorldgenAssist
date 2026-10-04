@@ -1,5 +1,606 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## AB complete physical result (2026-10-04)
+
+Gate174336-396/session94343 exited0; csb174644-620 COMPLETE, assisted-first.
+Fabric SHA256 B3737A13E74C9DF331F442ACE762170BEFD4632E9007972035A1F52F09547D5D.
+Five affected asynchronous-wait methods/three builds/profile and fresh1,802
+shared format2 digests/zero mismatch passed; actual682/699 full applications.
+FULL97.316->90.213s,108.121->106.483s,108.779->98.007s,all faster,
+paired median-7.30%; receipt102.911->96.216s,114.844->112.817s,
+114.238->102.951s,all faster,paired-6.51%. CPU405.125->361.891s,
+449.859->389.844s,416.406->384.438s,all lower,paired-10.67%.
+Tick p95 all higher,paired+4.48%. Equal settings/coordinates/JAR and31,974
+completed tasks per condition; each owner3461 receipts/repeat,issues empty,
+failures/timeouts0. Bounded demand-wait expirations222/152/148 are local
+fallbacks, separate from coordinator job timeouts. Application rejections0.
+Complete results actually consumed7888/8981/8021 (~74-84%); independent full
+audited acceptances963/1104/1080,unaudited7141/8339/7252. Acceptance is not use.
+
+AB existing-recording offline JFR: fill29.96->14.22%,surface25.47->12.02%,
+remote management17.73% assisted, private audit computation13.37% (overlaps),
+original biome creation8.87%,TerrainBiomeWindow digest7.17%,features19.34%.
+Inclusive sample shares overlap and are not CPU durations. Returning complete
+terrain now removes much more original work, but repeated nine-chunk audit
+biome creation and per-voxel biome digest cost limit gains. No beta, substantial
+speedup, native complete runtime or opposite-order AB claim. Earlier pending
+paragraphs below retain chronology and exact identities.
+
+## AB bounded asynchronous complete-terrain candidate (2026-10-04)
+
+AA gate171238-233/session17430 exited0; physical csb171615-810 is COMPLETE.
+Exact Fabric SHA256 EAB1E9A44E1E641F593EE8E605C6020E0D35D1A6331A5E8E3E901817A161E57C.
+17 affected methods,3 Forge fragment methods,three builds,1,802 shared format2
+digests/zero mismatch and1,182 full applications passed. No native runtime yet.
+Same-region FULL98.864->90.745s,108.565->101.269s,109.832->98.140s,
+all faster, median paired-8.21%. Receipt104.547->95.514s,115.498->106.973s,
+115.481->102.932s,all faster, paired-8.64%. CPU403.250->419.016s,
+450.984->463.453s,419.438->437.063s,all higher, paired+3.91%.
+Tick p95 all higher, paired+4.40%. Equal coordinates/settings/JAR and31,974
+completed tasks per condition, each owner3461 receipts/repeat, failures/timeouts0.
+Actual complete applications3166/3789/3814 (~30-36%); apply rejections0.
+Independent full audit acceptances383/476/477, unaudited2974/3756/3617;
+accepted results are not necessarily consumed. No beta or CPU-saving claim.
+
+Existing AA measured-window JFR was analyzed offline, with exact recording,
+window and JAR hashes. Inclusive samples: fill30.21->23.29%,surface25.17->20.94%,
+remote management10.64% assisted, private full-audit compute6.36% (overlaps
+management), biome selection7.92->9.94%. These are overlapping sample shares,
+not CPU durations. Application code is not among the top150 inclusive methods;
+the measured apply_ms includes scheduling, not just section writes.
+
+AB alpha.7-dev.11 retains protocol10, fixed palette, audit policy and authority.
+It removes the forced ready-only complete-mode branch. Explicit overlap mode
+now uses the existing bounded asynchronous awaitDemand path, releasing game/
+network threads while clients compute; existing owner learning,100ms base,
+200ms hard ceiling, cancellation and local fallback remain. Ready mode stays
+available. Hypothesis: stop duplicating pending whole-terrain computation and
+increase consumed coverage. Five existing affected AdaptiveDemandWait263Test
+methods,three necessary builds,new two-owner format2 parity and view32 physical
+pair form one sequential batch after all implementation. AA wire/audit unit
+evidence remains attached to its original snapshot; no fragment/codec retest.
+AB tests/runtime/performance are not run yet. Opposite-order and native runtime
+are deferred until a promising physical candidate, rather than broad testing.
+
+AB gate174336-396/session94343 is active:five affected methods and three builds
+passed, physical profile passed. Fresh two-owner parity precedes assisted-first
+view32 performance; current source/version/runtime inputs are frozen until
+terminal. No AB parity/performance conclusion yet.
+
+## AA complete-terrain implementation (unverified, 2026-10-04)
+
+Current source is alpha.7-dev.10/protocol10. Separate `complete`/operator opt-in
+connects original private nine-chunk biome/fill/surface/carver computation to
+bounded50-state choices, exact WG heights/ordered fluid lists, compact variable
+transport, first two full owner/epoch/context audits then private1/8 audits,
+and guarded server application. All implementation and one focused sequential
+gate are prepared; no AA tests/builds/parity/performance have been run yet.
+Physical complete profile uses4 compute workers/client, same advertised32-job
+window and global64 bound in both conditions; do not reuse Z's2-worker runtime.
+No beta, CPU saving or new speed claim; Z below has distinct source/JAR identity.
+
+AA first gate170954-517 FAILED at affected units: Java/client/test compilation
+passed,17 methods ran,16 passed. BlockDensity263Test's old protocol assertion
+expected9 despite the explicit protocol10 change. Updated that expectation;
+failed XML and logs remain in the original gate. No native build/runtime or
+performance ran. Restart only the same complete sequential affected batch.
+
+AA rerun gate171238-233/session17430 is active:17 affected methods and3 Forge
+fragment methods passed, all three builds passed, physical profile passed.
+Fresh Fabric vanilla/complete two-owner parity is running before view32
+performance. Source/version/runtime inputs are frozen until this batch is
+terminal. No performance/parity result yet; no AA native runtime has run.
+
+AA fresh Fabric parity completed:1,802 shared format2 digests/zero mismatch,
+both required application chunks equal,617/565 full applications (1,182 total).
+Independent whole-terrain accepted audits162, unaudited acceptances1,087;
+application rejections0. This verifies actual complete-route blocks, WG heights
+and ordered fluid metadata against original vanilla, not a performance claim.
+Gate171238-233/session17430 now continues physical view32 performance.
+
+## Y confirmed speed; CPU reduction not reproduced; Z refill candidate (2026-10-04)
+
+Z gate160545-522/csb160952-420 is now COMPLETE, session22381 exited0.
+Fabric SHA2566FD33003845BAC81FABCC58D3D53CD13BEA53098318B3423A968F9D34637306C.
+Three affected methods, three builds, physical profile and1,802 shared digests/
+zero mismatch passed. Same-region FULL96.765->97.852s,137.510->118.276s,
+122.498->97.840s: two faster, paired median-13.99%; receipt102.573->103.152s,
+145.184->124.146s,128.501->102.964s: two faster, paired median-14.49%.
+Server CPU394.328->446.656s,553.781->516.156s,477.813->438.875s: two lower,
+paired median-6.79%. Tick p95 increased all three, paired median+3.48%.
+Equal work/settings/coordinates/JAR, all owners3461 receipts/repeat,
+31,974 tasks per condition, failures/timeouts0 and issues empty.
+Do not use separate-median FULL-20.12% as the paired result. Vanilla repeats2/3
+were substantially slower than Y's separate vanilla run; this unrandomized pair
+does not establish that the capacity edit caused14% savings. No beta claim.
+The older pending paragraphs below describe the state while the batch ran.
+New complete-terrain core files are in development after Z became terminal;
+they have not been built/tested or connected to live dispatch/application.
+
+Y gate143558-574/csb143600-402 COMPLETE: exact X alpha.7-dev.8/protocol9 JAR,
+deep32/64/ready/lookahead0, physical order vanilla-first. X units/build/parity
+reused only after exact source/harness/JAR checks; no new native/parity/units.
+FULL98.729->88.173s,110.343->105.487s,104.548->97.373s, all faster, median
+paired-6.86%. Receipt104.435->92.739s,116.998->111.193s,109.912->102.136s,
+all faster, median paired-7.08%. CPU399.406->421.297s,439.219->475.703s,
+417.453->443.781s, all higher, median paired+6.31%. Tick p95+9.45% all higher.
+Full cache completions5213/4474/5079 of10658 tasks (~42-49%). Equal coordinates,
+settings/JAR/completed work, all owners3461 received chunks/repeat, issues empty.
+X/Y both orders show six of six speed improvements; the all-three CPU reduction
+in X did not reproduce. Do not present13.93% or CPU savings as guaranteed/beta.
+
+Z alpha.7-dev.9/protocol9 keeps X's actual-stage lane and original authority but
+skips candidate ordering/empty batch allocation when global or preparation slots
+are full, or no current demanded owner has an adaptive lease available. Cheap
+owner capacity query is advisory and never reserves; submission retains all
+checks. Original completion callbacks and server ticks refill, so no timer/wait
+or added generation task. Empty queues return early. capacity_skips diagnostics
+prove the route. Existing X JFR candidate queue2.49% and dispatcher2.94% inclusive
+suggest this redundant metadata work may be worth removing; categories overlap
+and are not guaranteed CPU savings. Three affected RemoteWindow263Test methods,
+three builds, new physical two-owner parity with actual decision application and
+nonzero capacity_skips, then view32 vanilla-first pair in one batch. All code
+finished before testing. Z evidence pending; unchanged X native evidence retained.
+Z gate160545-522 is running. Three methods/three builds/profile passed, fresh
+two-owner Fabric parity1,802 shared digests/zero mismatch,575/641 full applications.
+Actual-stage418 sent/324 fully applied; initial scheduler recorded280 capacity
+skips, later intervals may correctly have0. This proves the hint path was used,
+not that it removes the dominant candidate cost. Full view32 vanilla-first
+csb160952-420 is active; do not edit game/version/runtime inputs while it runs.
+Full-terrain alternative is recorded in TERRAIN_CHUNK_OFFLOAD_PLAN; no new work
+kind, palette, audit or prototype has been implemented. Its independent audit
+model must be evaluated explicitly, never silently reduce the old8-cell policy.
+
+## X actual-stage admission candidate; W complete (2026-10-04 JST)
+
+X gate140104-921/csb140421-423 COMPLETE (alpha.7-dev.8/protocol9):5 affected
+methods, three builds,1,813 matching Fabric digests,616/653 actual full decision
+applications, new lane485 sent/426 applied in correctness. Same-region FULL
+105.441->90.220s,117.727->106.264s,113.673->97.841s; all three faster, median
+paired-13.93%. Receipt111.845->94.830s,124.973->112.422s,119.491->102.710s,
+all three faster, median paired-14.04%. CPU433.922->419.219s,485.781->472.781s,
+453.328->440.656s, all three lower, median paired-2.80%. Tick p95+3.66% all
+three higher (roughly12-13ms). Equal work/settings/coordinates/JAR,31974 terrain
+tasks/condition, both owners received3461 chunks/repeat, failures/timeouts0,
+issues empty. Exact Fabric hash1993A2F74FCE98C377D5234AE8B9F36D80EEACBA055983C2F729E477AF6A91A4;
+ForgeAFC67522F8F6461D5B9F6AC128298183B606DFEF66616CC8CEE45FDB55BD9395;
+NeoForge0300F61BCC1CAC8D5057811BB0D52F9233559C4B332BF330C2216ED5DFB85DE5.
+
+Offline exact-window analysis queued-terrain-offline-analysis.json confirms all
+cache completions5294/4280/5086 (unique IDs equal line counts),~40-50% of10658
+terrain tasks. New lane2856/2029/2270 sent and1756/1096/1547 applied. The scenario
+ready_cache_used metric counts only early cache.hit events2559/2023/2308, not
+queued_ready completions; it must not be mistaken for total assistance coverage.
+An intermediate interpretation from these smaller counts was incorrect; no
+product change was made on that basis. Shared comparator full completion counts
+are the coverage evidence. V/W/X are separate runs; X's vanilla condition also
+took longer than W's. These measurements do not isolate the new lane's causal
+incremental gain or establish general acceleration/beta readiness. Counterbalance
+condition order with the exact X JAR before promotion; reuse passed units/builds/
+correctness with original identity. Native X gate142525-576 is running sequentially
+after performance; no unchanged units/builds rerun.
+Native X142525-576 now COMPLETE with four fresh runtimes, exact X native JARs,
+all before/after source/harness hashes equal, cleanup safe and old JARs restored.
+Forge1,987/NeoForge1,971 shared digests,zero mismatch;32/145 in-workload full
+applications, all present/equal. Both owners required actual full applications.
+New lane after marker: Forge13 sent/8 applied, NeoForge48 sent/28 applied.
+Forge101 before-marker applications with1 missing vanilla comparison coordinate
+are disclosed; NeoForge40 before-marker applications with0 missing. ALL shared
+digests still checked. Local Overworld correctness only, not native performance.
+
+Existing measured repeat1 recordings analyzed offline after runtime completion:
+W vanilla/assisted26833/27539 samples, terrain30.46->21.67%,surface26.55->29.48%,
+manager.39->5.91%,validation1.60% and candidate queue2.43% assisted.
+X vanilla/assisted29907/27836 samples, terrain30.98->19.90%,surface26.69->29.76%,
+manager.32->6.92%,validation2.51%,candidate queue2.49%,ore vein5.46% assisted.
+Exact recording/JAR hashes and UTC windows are in each *-jfr-compute.json.
+Inclusive categories overlap; these are not CPU durations or guaranteed savings.
+Terrain work fell proportionally while management/validation still cost CPU;
+mere request count cannot establish useful offload. No new runtime or tests for
+this offline analysis. Y retains exact X inputs and reverses physical order to
+vanilla-first, reusing completed X build/parity identities. Not yet a result.
+
+W gate133017-360 and csb133315-291 COMPLETE with exact V JAR, deep owner/client32
+global64, ready/lookahead0 and assisted-first physical order. Fresh parity1,803
+shared digests/zero mismatch,544/551 actual full decision applications. Original
+V6 tests/three builds reused with source/JAR checks. Same-region FULL97.624->
+90.629s,106.750->104.831s,106.850->101.202s: all three faster, median paired
+ratio-5.29%. Receipt-5.47% all three. CPU393.109->414.000s,450.625->468.297s,
+413.625->435.156s: all three higher, paired median+5.21%. Tick p95+1.74% all
+three higher. Cache completions4,171/3,726/3,800 of10,658 tasks (~35-39%);
+sent4,725/4,867/4,734. Equal work/settings/coordinates/JAR, failures/timeouts0,
+both owners received3,461 chunks/repeat, issues empty. A larger window increased
+coverage descriptively but did not establish a larger net gain or CPU reduction.
+V/W are separate runs, not a randomized causal comparison. No beta claim.
+
+Static follow-up found actual eligible work enters the terrain executor before
+the coalesced server dispatcher registers its candidate. Until registration,
+readiness said LOCAL, so it could outrank jobs already waiting for assistance.
+X alpha.7-dev.8/protocol9 captures actual eligible keys/settings in a separate
+max_in_flight-bounded queue, drained owner-round-robin before observation hints.
+The same server task handles registration/packets in existing batches; no live
+chunk lookup or prediction re-evaluation for captured actual work. Queued
+registration counts as PENDING, but never authorizes consumption. All-pending
+work still runs locally immediately and oldest work runs after8 bypasses.
+No new chunk/ticket/world writes, new seed disclosure or reduced validation.
+Only2 admission methods plus3 affected scheduling methods, three builds, small
+two-owner Fabric parity with actual terrain_stage dispatch/application, then
+matching physical32 pair in one sequential batch after all changes. Pending.
+Unchanged V native runtime keeps its original identity, not X verification.
+Initial X gate140030-051 stopped before compilation/JUnit because the sandbox
+denied the Gradle distribution download (getsockopt); failure remains saved.
+Permitted batch140104-921 now passed5 focused methods, three builds and the
+physical-profile assertion. Fresh assisted parity/runtime is running; no speed
+or correctness claim for X before completion.
+X batch140104-921's correctness is now complete:1,813 shared terrain digests,
+zero mismatch,616/653 full decision applications (1,269 total). New actual-stage
+lane sent485 jobs and426 of these were fully applied after validation; backend
+reported557 reorderings and drained queue0. Actual path use is established,
+not a performance gain. csb140421-423 is running deep32/64/assisted-first,
+ready/lookahead0 on the natural weak E server; all product/runtime inputs fixed.
+
+## V complete: stable small speedup, CPU cost remains (2026-10-04 JST)
+
+Native continuation terrain-native-gate-20261004-132009-383 COMPLETE:
+Forge runtime reused from131227-253 with exact current runtime-input/JAR checks;
+fresh Forge marker-scoped comparison:1,971 shared digests/zero mismatch,304
+in-workload full decision applications, all present/equal in vanilla. Reports
+88 before-marker applications and13 missing comparison coordinates separately.
+Fresh NeoForge two-owner pair:1,954 shared digests/zero mismatch,28 in-workload
+full decision applications, all present/equal;90 before-marker applications,
+13 before-marker missing comparison coordinates disclosed. Both owners must
+apply full decisions after the marker; actual task_dependency dispatch verified
+for both loaders. New full source/harness before/after snapshots match; cleanup
+safe, original failed gates unchanged. Local Overworld correctness only, no
+native performance/other-dimension/modpack claim. V native target now verified.
+
+W retains the exact V JAR/source/protocol9 and changes only bounded windows:
+owner/client16->32, global32->64 (within existing hard caps), same two compute
+threads/client, queue2/16, cache128, validation8 and lookahead0. Hypothesis:
+larger finite supply lets clients finish more queued terrain before local start;
+V cache use only31-34% despite available stronger client resources. This does
+not claim a fix before results. A deep window profile is explicit in harness
+metadata and checked against actual recorded server settings. Reverse physical
+condition order (assisted then vanilla) to expose fixed order bias; compare only
+matching same-region repeats within W. It is not a randomized direct V/W test.
+Reuse V's exact6 methods/three builds; fresh two-owner parity and full physical
+view32 pair in one batch after all harness changes. Native unchanged V evidence
+retains its original identity; no new native/JUnit/build rerun. W pending.
+W gate block-density-gate-20261004-133017-360 is running. Exact V source/JAR
+matched before original six methods/three builds were reused; physical-profile
+assertion passed for deep32/64 and assisted-first order. Fresh correctness has
+started, full view32 performance follows sequentially. No W result claim yet.
+Fresh W correctness completed1,803 shared terrain digests/zero mismatch;
+544/551 actual decision applications (1,095 total). Both registered clients
+requested32 parallel jobs; recorded server profile owner32/global64/lookahead0.
+csb-20261004-133315-291 is running assisted-first with the exact V artifact.
+Higher small-fixture application count is not a view32 performance result.
+
+block-density-gate-20261004-124404-025 COMPLETE:6 affected methods, three
+builds,1,802 matching Fabric digests/zero mismatch,510/407 decision applications
+and actual task_dependency dispatch. Exact alpha.7-dev.7/protocol9 hashes below.
+csb-20261004-124721-766 COMPLETE, natural weak server on E, full view32,
+two owners, same cooperative2/16 backend, ready/lookahead0, validation8.
+Same-region FULL97.057->91.521s,105.574->105.400s,107.304->99.508s:
+all three faster, median paired ratio0.94297 (-5.70%). Receipt-6.69% all three.
+CPU399.047->418.766s,444.469->465.656s,412.547->435.813s: all three higher,
+paired median+4.94%. Tick p95+7.25% all three. Cache completions3,653/3,272/
+3,543 of10,658 terrain tasks/repeat (~31-34%). All owners received3,461 chunks;
+equal work/coordinates/settings/JAR, generation failures/timeouts0, issues empty.
+U/V are separate nonrandomized runs: V's smaller paired gain does not establish
+a causal regression versus U. It does not prove substantial speedup or beta.
+Existing measured repeat1 JFR:26,612/27,828 samples; terrain fill30.36->23.16%,
+surface27.21->29.25%, manager0.29->4.27%, candidate queue1.25% assisted,
+validation1.38%, ore vein5.35%. Sampling categories overlap, not CPU durations.
+Metadata cost decreased descriptively from U's2.10%, but total CPU still higher;
+actual client reuse still only about one third, so improve useful scheduling or
+additional independent calculations before a beta claim.
+Run-TerrainNativeGate is now executing4 targeted native cases in one sequential
+batch, after the physical batch finished. Tests/builds are reused with exact
+original source/JAR identity; source/harness snapshots fence native runtime.
+Initial terrain-native-gate-20261004-130812-910 FAILED before Forge vanilla
+joined. Client options confirmed onboardAccessibility=true and multiplayer
+warning enabled; no Connecting log and no owner join occurred. Generated26.3
+Gui.buildInitialScreens queues AccessibilityOnboardingScreen before QuickPlay
+when that setting is true. The fixture now explicitly disables onboarding and
+multiplayer warning in newly created test profiles, as the existing Fabric fixture
+already does. Original failure/cleanup retained; MOD/JAR unchanged, no unit/build
+rerun. A fresh four-case native batch will run after this harness-only fix.
+Second gate terrain-native-gate-20261004-131227-253: Forge vanilla and assisted
+runtime PASSED, safe cleanup and matching exact V JAR. Global1,971 shared terrain
+digests all match;392 full decision applications,0 different applied digests.
+Overall gate FAILED because13 applied chunks near spawn lacked vanilla data.
+Inspection proved all13 jobs were assigned BEFORE CAWG_NATIVE_DECISIONS_BEGIN;
+the bounded paired rectangles cover the explicit relocated workload, not variable
+initial spawn preparation. Comparator now selects applied jobs assigned after
+the explicit marker, reports excluded pre-marker applications/missing coordinates,
+and still compares ALL shared digests (including spawn). Both-owner scenario
+completion already requires post-marker full decisions. Missing/mismatching
+in-scope applied output still fails. Preserve original comparison/gate failure.
+Resume with -ReuseForgeRuntime after exact game/loader/launch/scenario start
+snapshot/current hash and both original runtime success/cleanup/JAR checks.
+Original overall batch lacked an end snapshot due comparison failure; disclose
+that limitation. Copy exact logs/results, fresh Forge analysis, then only2 fresh
+NeoForge cases/comparison, no repeat of successful Forge runtime or builds/tests.
+
+## U complete; V implementation checkpoint (2026-10-04 JST)
+
+U continuation block-density-gate-20261004-121049-831 COMPLETE. Reused exact
+T four methods/three builds and original U correctness (1,803 shared digests,
+zero mismatch,337/515 actual applications); the original failed origin-coverage
+assertion remains recorded, not relabeled as a successful original gate.
+Fresh csb-20261004-121051-317, same T JAR, ready/lookahead0, natural i7-7700K
+server on E, two clients on stronger i7-12700K, same cooperative2/16 backend:
+same-region FULL102.354->102.550s,119.223->102.341s,115.069->99.141s.
+Two of three faster; median paired ratio0.86158 (-13.84%). Receipt paired
+median-13.48%, all three faster. CPU419.266->462.406s,494.828->470.516s,
+453.391->436.391s: two lower, paired median-3.75%; condition CPU medians+1.99%
+are a different aggregation. Tick p95 paired median+2.65%, mean+8.96%.
+Cache completions3,650/3,302/3,333 of10,658 terrain tasks per repeat (~31-34%).
+Every owner received3,461 chunks; equal work/settings/coordinates/JAR, failures
+and timeouts0, issues empty. This is descriptive, sequential-condition evidence;
+one FULL repeat slightly slower, native runtime and beta readiness unproven.
+
+Offline scripts/AnalyzeWorldgenJfr.java reads existing measured-window
+jdk.ExecutionSample events directly without large JSON exports or new runtime.
+U repeat1:28,835 vanilla/31,164 assisted samples; terrain fill30.80->23.78%,
+surface26.64->28.57%, remote manager0.42->5.04%, candidate queue0.003->2.10%,
+validation1.39% assisted, ore vein4.65->5.11%. Reports include recording/JAR
+hashes/window; categories overlap and are not CPU durations or speedup limits.
+Initial invocation failed because PowerShell converted JSON timestamps to local
+DateTime text; -DateKind String fixed invocation, both recordings then analyzed.
+
+V alpha.7-dev.7/protocol9 now observes already claimed TERRAIN dependencies of
+existing tasks, using Minecraft's accumulated layer radius (FULL radius2,
+25 existing holders), not guessed neighboring generation. Per-holder persisted
+status, current owner demand, epochs/deadlines, final eligibility and validation
+remain. Cancellation stops visiting. New task_dependency diagnostics prove
+actual dependency-origin dispatch separately from center/load hints.
+Candidate queue maintains owner counts and reuses immutable ordering only when
+candidates, demand, lookahead and expiry remain unchanged. No response wait,
+new ticket, arbitrary block authority or validation reduction. Six affected
+prefetch methods, three builds, smallest two-owner parity requiring actual
+dependency dispatch, then matching view32 ready/lookahead0 pair are pending in
+one sequential batch. All implementation precedes testing; no unrelated tests.
+V block-density-gate-20261004-124404-025: all6 methods and three builds passed,
+fresh Fabric correctness1,802 shared digests/zero mismatch,510/407 actual
+decision applications. Both dependency_hints and actual hint=task_dependency
+dispatch verified. Fabric5C4677A694C693A264005B3BB70BFDFEAD3F3255EEB6984BA39945DD14F00224;
+ForgeF4B74793B6D99C99B1BC2FF827D14FB5BB13F6925AEF7857B2E15200975F184C;
+NeoForge7560250BEF5B91FF4852C564783FDE03833ACA0C403176E71D904B7857938269.
+Its completed full physical view32 results are recorded in V above.
+The final offline analyzer's overwrite guard also ran successfully on both U
+repeat2 recordings (34,234/31,216 samples; candidate queue1.86% assisted).
+Prepared Run-TerrainNativeGate for only Forge/NeoForge two-owner Overworld
+decision parity/dependency use (4 runtime cases with comparisons), reusing exact
+V builds and tests with identity checks. Native scenario/comparator have explicit
+TerrainDecisions profiles accepting only full-prefix decision completions.
+At that preparation checkpoint native runtime had not run. The physical pair
+then finished and the native batch is now running. No product source changed.
+
+## T complete: early task hints, modest speedup with CPU tradeoff (2026-10-04 JST)
+
+Alpha.7-dev.6/protocol9 adds an observation at RETURN of Minecraft's existing
+ChunkMap.scheduleGenerationTask. Only its center requesting TERRAIN or later
+and not known persisted TERRAIN may enter the existing bounded prefetch queue.
+This starts independent client preparation before disk/structure/biome waits;
+actual terrain admission/application retains all original checks. No additional
+world generation task/ticket, arbitrary neighbor region or validation reduction.
+Keep original first-observation origin/time during deduplication; job.sent now
+records hint=task/loaded/prediction and candidate_age_ms for actual submissions.
+Four affected GenerationPrefetch263Test methods then three builds, smallest
+two-owner digest comparison requiring actual task-hint dispatch, then matching
+natural-server full view32/ready/lookahead32 pair will run in one sequential batch.
+All implementation precedes testing; unchanged transport/scheduling tests retain
+their original R/S identities. block-density-gate-20261004-113738-740 passed4
+focused methods and all three builds. Fresh correctness:1,802 shared digests,
+zero mismatch,257/187 actual decision applications,310 queue reorderings and
+queue drained to0. Both observed task hints and actual hint=task submissions
+verified. Fabric79558BDAD67597D108A393C1CBC70BE623761BF066A80FA01EE63694D0642CA7.
+csb-20261004-114110-451 COMPLETE, full physical view32/ready/lookahead32:
+same-repeat FULL106.039->91.544s,109.024->102.646s,106.870->99.618s;
+all three faster, median paired ratio0.93214 (-6.79%). Receipt paired median
+ratio0.92743 (-7.26%). CPU428.875->414.844s,440.703->466.688s,
+419.234->435.297s: only one lower, paired median+3.83%. Condition CPU medians
++1.50% are a different aggregation. Tick p95 paired median+11.78%.
+Cache completions2,412/2,391/2,398 of10,658 tasks/repeat (~22.5%). All owners
+received3,461 chunks per measured repeat; equal work/settings/coordinates/JAR,
+generation failures/timeouts0, issues empty. Forge6FFB44F7E7E867126BB7528CD7901A9F668632B88690C53720740BA2903703C6;
+NeoForge83D3D4B4170E6596BF172DBD83C98F9485CB86836AD96C2F2C3F4B5714C47AEF.
+S/T timings are separate runs, not a randomized direct implementation comparison.
+This does not establish substantial acceleration or a beta basis.
+
+U will reuse T's exact source/JAR/test/build identities and change only existing
+prefetch_lookahead32->0. S's readiness queue can already defer queued pending
+work while other local work proceeds; legacy rotation may skip exactly those
+jobs that now have enough queue time for client replies. Fresh two-owner parity
+and matching physical view32 pair are pending in the same sequential gate.
+U block-density-gate-20261004-120303-032 stopped before performance: both
+runtime cases and comparison passed1,803 shared digests/zero mismatch, but
+the implementation-coverage assertion required actual hint=task dispatch.
+With lookahead0, loaded/stage hints supplied the applied jobs; task observations
+were still nonzero. This is a failed overall gate, not a generation failure.
+The assertion now applies to fresh implementation gates; configuration-only
+reuse retains T's original actual task-dispatch proof with identical source/JAR.
+New ReuseCorrectnessEvidence checks original passed steps, both runtime cleanup,
+matching current full source/harness manifests/JAR/settings and PASS comparison,
+then rechecks actual application for both owners. Original failed gate/issues
+are retained in the new summary; successful runtime is not rerun. Only the
+unexecuted full view32 comparison remains for this continuation.
+Continuation block-density-gate-20261004-121049-831 reused T's four original
+methods/builds and U's successful runtime after full manifest/JAR checks.
+Actual U applications337/515 (852 total), versus T257/187 (444 total) in its
+separate correctness run. This is higher utilization in the small fixture, not
+proof of view32 acceleration. Its completed performance is recorded in U above.
+
+## S complete: consistent small speedup, CPU cost higher (2026-10-04 JST)
+
+block-density-gate-20261004-105418-073:3 new scheduling methods/zero failures,
+errors or skips; Fabric/Forge/NeoForge builds passed. These are fresh affected
+checks; R's13 transport/2 Forge fragment tests are unchanged historical evidence.
+Actual two-owner Fabric comparison:1,792 shared terrain digests, zero mismatch;
+303/242 decision chunks applied and385 cooperative queue reorderings, queue
+drained to0. Owned workers2/queue16 per worker (capacity32) verified from log.
+csb-20261004-105842-046 COMPLETE: matching physical view32, warmup1/measured3,
+10,658 terrain tasks/repeat and3,461 received chunks/owner/repeat. Same-repeat
+FULL98.089->93.064s,109.973->105.081s,106.676->101.817s: all three faster,
+median paired ratio0.95445 (-4.56%). Receipt median paired ratio0.94617 (-5.38%).
+CPU all three higher, median paired ratio1.03284 (+3.28%); tick p95+6.57%.
+Condition CPU medians426.422->432.609s (+1.45%) differ from paired aggregation.
+Cache completions2,244/2,446/2,366 of10,658 tasks (~22%); no failures/timeouts,
+equal completed work, matching coordinates/settings/artifact, issues empty.
+FabricD406440D0BF72AB644676FB5DED5A4ABD0614355B35111D4E071B31D30A7B410;
+Forge83BC6531889FB25D6F88FCFEA7496A9B5BA7680AF6259E858440EA7F20E644A7;
+NeoForge915EDA201AD697B94D37E3CBCA569E588876A45FD0518A976BF01088AE30CA7C.
+Absolute assisted FULL101.817s is slower than Q91.773s in a separate run; those
+are not randomized comparisons, so do not attribute that difference to S alone.
+This is a small descriptive speedup with CPU tradeoff, not a beta basis.
+
+## R complete; S implemented, unverified (2026-10-04 JST)
+
+R block-density-gate-20261004-002154-533 COMPLETE, alpha.7-dev.4/protocol9:
+FabricE8C1E937F14FC0BBB0FFF985EC1A1C766730DDED60DE2DB0F97A8523AD01B840;
+ForgeC54D1D5112007E5896D50DDF2024BDD9270154B44731667E568C6962BC08C383;
+NeoForge1AF6911227F714EC81B18C469F2933A21514EDB542103623694AD0FCAEEF64F7.
+Fresh13 affected/2 Forge tests, three builds and1,813 matching terrain digests.
+csb-20261004-002504-619 COMPLETE, ready/lookahead32, marginal medians:
+FULL108.884->95.642s (-12.16%), receipt114.384->100.728s (-11.94%), CPU+0.21%.
+However same-repeat FULL:87.524->93.393s,110.179->112.973s,108.884->95.642s;
+only one of three faster. The median of paired FULL ratios is1.02536 (slower).
+Marginal medians alone do not demonstrate stable acceleration. Decode roughly
+0.48->0.23ms and compare0.24->0.007ms, but cross-run timings are descriptive.
+Generation failures/timeouts0; native runtime unverified. No beta basis.
+
+S alpha.7-dev.5/protocol9 adds bounded readiness scheduling to cooperative mode:
+choose validated READY results before LOCAL work, defer PENDING only while
+other work exists, at most8 bypasses. All-pending queue computes locally now.
+Automatic queue16 per worker (was4), existing2 workers, same backend both modes.
+No new tickets, response wait, game dependency change or reduced validation.
+Three affected methods cover priority/dynamic readiness/no-wait/fairness,
+bounded permits/failure/drain/restart and hint/claim separation/config bounds.
+Packed transport is unchanged from R; rerunning its13/2 tests is unnecessary.
+Three fresh builds then affected two-owner correctness/actual reordering and
+full view32 pair pending. Comparator adds same-repeat ratios/improvement counts
+alongside original marginal stats to expose conflicting aggregation results.
+
+## Q complete; R implemented, unverified (2026-10-04 JST)
+
+Q block-density-gate-20261003-235339-335 COMPLETE, same O JAR/protocol9;
+O13 affected/2 Forge tests and builds explicitly REUSED after hashes matched.
+Fresh two-owner correctness:1,802 shared terrain digests, zero mismatch.
+csb-20261003-235627-853 COMPLETE, ready/lookahead32, same cooperative2-worker
+backend on both conditions: FULL95.748->91.773s (-4.15%), receipt100.790->96.293s
+(-4.46%), CPU450.359->468.484s (+4.02%), tick p95+4.80%. All three FULL repeats
+faster, all three CPU measures higher. Three full16/32-view owner regions each
+received3,461 chunks;10,658 terrain tasks/repeat; generation failures/timeouts0.
+No substantial acceleration or beta evidence. Cross-run P/Q difference is not
+a randomized direct comparison; it does not prove the rotation alone caused it.
+
+R alpha.7-dev.4/protocol9 now retains validated code bytes plus769 floats through
+client, decode, cache and application. No98,304-code float expansion/reconversion;
+only factory-validated code results bypass redundant domain scans. Eight secret
+aligned cells and eight surface groups still independently verified. Server fill
+skips unwritten AIR above/within columns and caches the exact heightmap early-out
+threshold. Section writes/counters, locks, fluid marks and later stages unchanged.
+All affected tests, three builds, correctness and view32 pair are pending.
+
+## Candidate P complete; existing lookahead experiment Q pending (2026-10-03 JST)
+
+block-density-gate-20261003-231314-847 reused O's exact source/JAR hashes and
+original 13 affected/2 Forge tests and three builds; these are not fresh tests.
+Fresh two-owner correctness: 1,813 shared terrain digests, zero mismatch;
+actual decision use373/318 chunks. csb-20261003-231625-642 COMPLETE, ready
+timing, lookahead0: FULL95.525->92.898s (-2.75%), receipt100.428->97.631s
+(-2.78%), CPU447.094->466.844s (+4.42%), tick p95+2.95%. All three FULL
+repeats improved, all three CPU measures worsened. Limited acceleration, not
+a substantial speedup or beta evidence. No generation failures/job timeouts.
+
+Q changes only the harness configuration: existing GenerationPrefetchQueue
+rotation with lookahead32, ready timing, unchanged O JAR/protocol9. Each owner
+retains every candidate; owner/global windows16/32, demand/epoch/deadline
+checks remain. Unit/build hashes must match O before reuse. One fresh two-owner
+correctness pair followed by the matched full-view32 performance pair is pending.
+The comparator now includes the saved window/lookahead in condition matching.
+
+## Candidate O complete; application timing next (2026-10-03 JST)
+
+block-density-gate-20261003-223904-155 COMPLETE, alpha.7-dev.3/protocol9:
+Fabric020A10785CFE53DA9D6E2585E6834ADAC2C6AC552D9357AF91AB1B539D5D352B;
+Forge07061FC0AB2B6CCF02FDCECD9C6FB244C3647A1BE2518510EB97758D89F78AC1;
+NeoForgeA627590763D6B55D5AA9E1C057B7152AE2A75171A4E4392F39CE18982584A324.
+13 affected methods and2 Forge fragment methods passed, three builds,1,813
+shared terrain digests/zero mismatch. Actual decision application728/756 chunks
+for two owners, including the new fill helper. Cleanup safe, issues empty.
+csb-20261003-224238-620 COMPLETE: view32 FULL96.771->100.192s (+3.54%),
+receipt101.971->105.384s (+3.35%), CPU459.594->438.953s (-4.49%), tick p95+3.54%.
+Less CPU does not establish acceleration; beta remains unproven. O uses overlap
+timing; the already implemented ready-at-executor-start route will be tested
+with the unchanged O JAR. Saved unit/build identities and all Fabric source
+hashes will be checked before reuse; no redundant unit/build execution.
+
+## Candidate N complete; O implemented, unverified (2026-10-03 JST)
+
+block-density-gate-20261003-214940-991 COMPLETE, alpha.7-dev.2/protocol8:
+Fabric683F21E69BEA4422DCF91AF0F2EFF1EF74D7C66A5392566463DB6F872A02B83B;
+ForgeCB724140A5B59600FE3C2C4C46A2C5D7B5F3A062C73154489B9B440D4FFE8D4A;
+NeoForge5F57445CBCE1FDC280197934B6EFB4F4045B3D5A3451834FE461711795C72473.
+8 methods/zero failures/errors/skips, three builds,1,813 shared terrain digests
+match; actual full-decision use724/749 chunks across two owners. Safe cleanup.
+csb-20261003-215314-750 view32 COMPLETE, FULL97.685->104.002s (+6.47%),
+receipt102.926->109.374s (+6.26%), CPU458.453->452.297s (-1.34%), tick p95+6.64%.
+One of three FULL repeats improved; CPU all three slightly lower. Payload6–7KB,
+RTT43–45ms, validation1.37–1.46ms, decode0.84–0.90ms, client compute4.69–5.09ms.
+Wait fallbacks59/137/86, generation failures/job timeouts0. No demonstrated
+acceleration or beta readiness. computational-analysis-decisions.json analyses
+only the first measured CPU sample window; overlapping shares are not timings.
+
+O alpha.7-dev.3/protocol9 implements compact codes, float storage and chunk-level
+guarded server fill helper. All affected tests/builds/runtime/performance pending;
+no earlier exact-JAR results are presented as O verification.
+
+## Candidate M complete; N implemented, unverified (2026-10-03 JST)
+
+block-density-gate-20261003-210629-271 COMPLETE, alpha.7-dev.1/protocol7
+Fabric A76EF3B02EF1F902983A03DDD364B8388759F0154DDC3415606F14CC70FE7CF4;
+Forge1AE26C29150F27D58D9815AA0E4A2F3CDBB0113B353C4A1309F656AD98F866EB;
+NeoForgeA2568EAB043A44BD7CD30EA9D02F694B1DA4CBA64B4F6BB448037551E92D1C86.
+8 methods/zero failures/errors/skips, three builds,1,814 shared terrain
+digests/zero mismatch, actual full-density application657/685 for two owners.
+Safe cleanup confirmed. csb-20261003-211013-745 view32 COMPLETE, slower:
+FULL95.455 ->118.414s (+24.05%); receipt100.308 ->124.726s (+24.34%);
+CPU447.547 ->507.031s (+13.29%); tick p95+7.02%. All FULL repeats slower,
+generation failures/job timeouts0, bounded wait fallbacks657/621/860.
+Verification3.23–3.26ms versus client compute3.54–3.55ms, payload54–58KB
+and RTT69.7–77.9ms. No acceleration or beta readiness. Initial gate
+block-density-gate-20261003-210506-941 failed due existing envelope test's
+registry/bootstrap order dependence; static bootstrap fixed before full rerun.
+No failed first-run results counted as passes.
+
+N alpha.7-dev.2/protocol8 now implements bounded aquifer decisions and aligned
+cell verification. Necessary tests/builds/runtime/performance are pending.
+M and published alpha.6 evidence stay associated with their original hashes.
+
+## New physical server baseline and next candidate (2026-10-03 JST)
+
+Published alpha.6 exact Fabric2E98...A0D3D on gen1c@100.103.102.109 (i7-7700K,
+8 logical processors unrestricted) and two local i7-12700K clients:
+remote-overlap-gate-20261003-202231-068 COMPLETE. 1,813 shared terrain digests
+match, both owners' actual bounded wait/grid use394/403, safe cleanup.
+Matching instrumented view32 csb-20261003-202550-676 COMPLETE: FULL median
+99.121 ->107.260s (+8.21%); CPU446.266 ->447.656s (+0.31%). All three FULL
+repeats were slower. RTT46–49ms, client compute2.55–2.59ms; validation0.094–
+0.105ms and registration0.009–0.010ms. CPU sampling analysis uses only the
+first measured window, overlapping categories, not durations. No speedup.
+All remote runtime/download/temp/world/log files are on E:/WorldgenAssist.
+The first batch remote-overlap-gate-20261003-202003-389 failed before Java
+readiness due to PowerShell script execution policy; process-scoped Bypass
+fixed the owned helper invocation without changing system policy. No evidence
+from that failed batch is presented as a runtime pass.
+
+Alpha.7-dev.1/protocol7 block-density candidate is implemented; affected tests,
+three builds and fresh correctness/performance remain pending. Published
+alpha.6 artifacts/tags and historical evidence are unchanged.
+
 ## Alpha.6 release packaging (2026-10-03 JST)
 
 Final0.1.0-alpha.6+mc26.3 Fabric/Forge/NeoForge archives were assembled in one

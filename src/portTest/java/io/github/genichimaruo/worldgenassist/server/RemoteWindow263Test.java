@@ -16,7 +16,9 @@ class RemoteWindow263Test {
 		var coordinator=new RemoteJobCoordinator(new RemoteWorldgenConfig(true,32,Duration.ofSeconds(30)),new Sender(),16);
 		var a=UUID.randomUUID();var b=UUID.randomUUID();
 		for(var owner:List.of(a,b)) {
+			assertFalse(coordinator.ownerHasCapacity(owner));
 			assertEquals(16,coordinator.handleHello(owner,new WorkerHelloPayload(WorldgenProtocolVersion.CURRENT,64,"test")).maxInFlightJobs());
+			assertTrue(coordinator.ownerHasCapacity(owner));
 			assertEquals(1,coordinator.ownerJobLimit(owner));
 			for(int i=0;i<30;i++)coordinator.recordValidated(owner);
 			assertEquals(16,coordinator.ownerJobLimit(owner));
@@ -24,9 +26,30 @@ class RemoteWindow263Test {
 		var jobs=new ArrayList<RemoteJobCoordinator.Submission>();
 		for(int i=0;i<16;i++) {jobs.add(submit(coordinator,a,i).orElseThrow());jobs.add(submit(coordinator,b,i).orElseThrow());}
 		assertEquals(32,coordinator.pendingCount());assertTrue(submit(coordinator,a,99).isEmpty());assertTrue(submit(coordinator,b,99).isEmpty());
+		assertFalse(coordinator.ownerHasCapacity(a));assertFalse(coordinator.ownerHasCapacity(b));
 		coordinator.disconnect(a);assertEquals(16,coordinator.pendingCount());
+		assertFalse(coordinator.ownerHasCapacity(a));
 		for(int i=0;i<jobs.size();i++)assertEquals(i%2==0,jobs.get(i).result().isCompletedExceptionally());
 		coordinator.disconnect(b);assertEquals(0,coordinator.pendingCount());
+		assertFalse(coordinator.ownerHasCapacity(b));
+	}
+	@Test void capacityHintDoesNotReserveAndTracksCancelSendFailureAndQuarantine() {
+		var fail=new java.util.concurrent.atomic.AtomicBoolean();
+		var sender=new Sender(){@Override public void sendJob(UUID owner,TerrainJobRequestPayload payload){if(fail.get())throw new IllegalStateException("expected send failure");}};
+		var coordinator=new RemoteJobCoordinator(new RemoteWorldgenConfig(true,4,Duration.ofSeconds(30)),sender,4);
+		var owner=UUID.randomUUID();
+		assertFalse(coordinator.ownerHasCapacity(owner));
+		coordinator.handleHello(owner,new WorkerHelloPayload(WorldgenProtocolVersion.CURRENT,4,"test"));
+		for(int i=0;i<100;i++)assertTrue(coordinator.ownerHasCapacity(owner));
+		assertEquals(0,coordinator.pendingCount());assertEquals(1,coordinator.ownerJobLimit(owner));
+		var first=submit(coordinator,owner,1).orElseThrow();assertFalse(coordinator.ownerHasCapacity(owner));
+		coordinator.cancelJob(owner,first.job().identity());assertTrue(coordinator.ownerHasCapacity(owner));
+		for(int i=0;i<6;i++)coordinator.recordValidated(owner);
+		assertEquals(4,coordinator.ownerJobLimit(owner));
+		fail.set(true);assertTrue(submit(coordinator,owner,2).isEmpty());
+		assertEquals(0,coordinator.pendingCount());assertTrue(coordinator.ownerHasCapacity(owner));
+		coordinator.quarantine(owner);assertFalse(coordinator.ownerHasCapacity(owner));
+		coordinator.shutdown();assertFalse(coordinator.ownerHasCapacity(owner));
 	}
 	@Test void globalAndAdvertisedLimitsClampWidePolicyAndRefillRemainsBounded() {
 		var coordinator=new RemoteJobCoordinator(new RemoteWorldgenConfig(true,8,Duration.ofSeconds(30)),new Sender(),16);

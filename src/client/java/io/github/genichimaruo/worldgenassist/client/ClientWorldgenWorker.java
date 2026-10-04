@@ -186,7 +186,7 @@ public final class ClientWorldgenWorker {
 				if (corruptResultsForAdversarialTest) {
 					result = corruptEveryDensity(result);
 				}
-				TerrainDensityResultEnvelope envelope = TerrainDensityResultEnvelope.encode(result);
+				TerrainDensityResultEnvelope envelope = TerrainDensityResultEnvelope.encode(result, job.workKind());
 				WorldgenAssist.LOGGER.info(
 					"[CAWG] job.client_complete id={} compute_ms={} encode_ms={} samples={} encoding={} raw_bytes={} encoded_bytes={}",
 					job.identity().jobId(),

@@ -3,7 +3,6 @@ package io.github.genichimaruo.worldgenassist.server;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HexFormat;
@@ -22,7 +21,7 @@ import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 public final class NoiseStageDigest {
-	public static final int FORMAT_VERSION = 1;
+	public static final int FORMAT_VERSION = 2;
 	public static final String ALGORITHM = "SHA-256";
 	private static final String FORMAT_NAME = "worldgen_assist:noise_stage";
 	private static final Heightmap.Types[] HEIGHTMAP_TYPES = {
@@ -144,7 +143,7 @@ public final class NoiseStageDigest {
 				offsets[index] = section.getShort(index) & 0xFFFF;
 			}
 
-			Arrays.sort(offsets);
+			// v2 retains the exact scheduling order and duplicates, not just the multiset.
 			putInt(digest, offsets.length);
 			for (int offset : offsets) {
 				putInt(digest, offset);

@@ -1,5 +1,220 @@
 # Validation matrix
 
+## AB complete timing gate (implementation complete; unrun)
+
+Run-CompleteTerrainGate -Execute -BoundedWait -ViewDistance32 selects only five
+existing AdaptiveDemandWait263Test methods: useful asynchronous reply, bounded
+grace/hard deadline, owner learning, failure/cancellation and timer cleanup.
+Three loader builds, fresh physical two-owner format2 parity requiring audited
+and unaudited full acceptance/actual applications/no rejection, then view32
+overlap/100ms base/adaptive200ms ceiling/deep32/64/lookahead0 form one sequential
+batch. Complete profile still uses4 workers/client in both conditions.
+Unchanged codec/fragment/audit tests retain exact AA identities rather than
+rerunning. New source/JAR runtime is always fresh. Native/opposite-order are
+deferred until a promising candidate. AA physical gate171238-233 completed with
+FULL-8.21%/receipt-8.64% all three faster but CPU+3.91% all three higher; no beta.
+
+## AA complete-terrain decision gate (implementation complete; unrun)
+
+Run-CompleteTerrainGate -Execute -ViewDistance32 runs one sequential batch:
+17 affected methods (13 existing protocol/domain/codec methods plus4 complete
+transport/audit lifecycle methods),3 Forge fragment methods and three builds;
+physical two-owner original vanilla/complete parity with format2 ordered fluid
+metadata; mandatory actual complete applications by both owners, audited and
+unaudited acceptances, no application rejection; then matched natural weak-
+server view32 warmup1/repeats3/deep32/64/ready/lookahead0. Both conditions use
+four owned compute threads per client in this complete profile (two clients
+on the stronger PC, at most eight computing threads). Native functional cases
+retain their original two workers/client; no native speed comparison. No broad matrix.
+Only after this batch is terminal, run targeted fresh native two-owner parity
+via Run-TerrainNativeGate against the saved exact artifacts, then opposite
+physical order with current exact source/JAR identities. New mode cannot reuse
+Z's tests/correctness/builds or claim beta before these results exist.
+
+## Z refill capacity batch (alpha.7-dev.9/protocol9)
+
+Run-TerrainDecisionGate -Execute -TestProfile capacity -RemoteApplicationProfile
+ready -PrefetchLookahead 0 -WindowProfile deep -ConditionOrder vanilla-first
+-ViewDistance 32 selects only RemoteWindow263Test3 methods. Existing owner/global/
+advertised-limit tests cover changed hint availability; one added method verifies
+repeated hints never reserve/grow adaptive windows, cancellation/failing sends
+restore capacity, and quarantine/shutdown reject. Three builds then two-owner
+Fabric parity must exercise real terrain_stage applications and nonzero recorded
+capacity_skips; matching physical view32 performance follows sequentially. All
+implementation before testing; no other unit/fragment/transport/runtime matrix.
+Y order confirmation143558-574 completed; X tests/native evidence retain identity.
+
+## X actual-stage admission batch (alpha.7-dev.8/protocol9)
+
+Run-TerrainDecisionGate -Execute -TestProfile admission -RemoteApplicationProfile
+ready -PrefetchLookahead 0 -WindowProfile deep -ConditionOrder assisted-first
+-ViewDistance 32 selects only QueuedTerrainAdmission263Test2 methods and affected
+RemoteAwareScheduling263Test3 methods (5 total). Cover bounded deduplication,
+expiry, captured-context identity, owner fairness/cleanup, stale snapshot removal,
+dynamic readiness, original admission/fallback/draining, and no response waits.
+Then three loader builds, smallest two-owner Fabric parity, real terrain_stage
+dispatch AND full validated application, and matching natural weak-server view32
+pair. All implementation finishes before this one sequential batch. Existing
+transport/validation/fill tests retain R evidence; no full matrix or unchanged
+fragment tests. Native X route remains unverified until its targeted runtime.
+X140104-921 and native142525-576 completed the selected gates; exact outcomes and
+initial sandbox failure are retained in TEST_RESULTS_LATEST. Y condition-order
+confirmation reuses X build/parity with -ReuseBuildEvidence and
+-ReuseCorrectnessEvidence pointing to140104-921, deep32/64/ready/lookahead0 and
+vanilla-first. Only physical-profile assertion and matching view32 pair rerun;
+no new JUnit/build/native/parity repetitions. Source/harness/JAR hashes must match.
+W prior config-only batch133017-360 completed successfully; paired metrics and
+limitations are in TEST_RESULTS_LATEST.
+
+## V dependency/metadata batch (alpha.7-dev.7/protocol9)
+
+Run-TerrainDecisionGate -Execute -TestProfile prefetch -RemoteApplicationProfile
+ready -PrefetchLookahead 0 -ViewDistance 32 runs6 GenerationPrefetch263Test
+methods: existing4 plus actual pinned pyramid/cache radius and cancellation,
+immutable order-cache expiry/demand/mutation/removal/owner-balance fences.
+Three builds then smallest two-owner Fabric parity must observe dependency_hints
+and actually dispatch hint=task_dependency, plus full decision use by both owners.
+Matching physical view32 pair follows. All implementation before one batch;
+unchanged transport/readiness tests keep R/S evidence, native runtime unverified.
+
+After the physical batch is terminal, Run-TerrainNativeGate -Execute
+-BuildEvidence <completed-V-gate> reuses the exact built Forge/NeoForge JARs
+and tests with current source/JAR checks. It runs only4 native runtime cases:
+two-owner Overworld vanilla/decisions for each loader, then digest comparisons.
+Run-InstalledNativeLoaderScenario -TerrainDecisions uses matching cooperative
+2/16, owner/global16/32, ready/lookahead0, cache128 and validation8; each owner
+must actually apply98,304 decisions, and dependency-origin dispatch must occur.
+Both modes complete the same bounded comparison rectangles; every applied and
+shared terrain digest must match. Original native grid profile stays available.
+Fixtures are local correctness checks, not native speed measurements. No extra
+unit test, rebuild, settings smoke or full matrix. Source/harness manifests must
+stay unchanged through the batch; old fixture server JARs are backed up/restored.
+The initial batch failed before Forge joined because fresh native options left
+accessibility onboarding enabled. Newly created fixture profiles now disable
+that initial screen/multiplayer warning (source-verified Gui.buildInitialScreens),
+matching the existing Fabric fixture. Preserve failed gate130812-910 and run a
+fresh targeted native batch with unchanged V JARs; no unit/build rerun.
+The second batch passed both Forge runtimes but stopped because13 BEFORE-marker
+spawn applications lacked vanilla data (1,971 shared digests,zero mismatches).
+Decision comparator accepts explicit -AfterMarker CAWG_NATIVE_DECISIONS_BEGIN:
+require comparison data for every job assigned in the relocated workload; report
+excluded initial applications/missing coordinates and still compare ALL shared
+digests. Do not suppress mismatching shared terrain or missing in-scope results.
+ReuseForgeRuntime verifies both original case success/cleanup/profile/JAR and
+the original start snapshot against current game/loader/launch/scenario inputs;
+only orchestration/analysis scripts may differ. Report original gate failure and
+missing original overall end snapshot. Copy exact logs/results and analyze them
+fresh, then run only the two unexecuted NeoForge cases with current full snapshots.
+Native continuation132009-383 completed both comparisons; Forge1,971/NeoForge
+1,954 shared digests,zero mismatch,304/28 selected full decision applications.
+
+W config-only batch uses -TestProfile prefetch -WindowProfile deep -ConditionOrder
+assisted-first -RemoteApplicationProfile ready -PrefetchLookahead 0 -ViewDistance
+32 -ReuseBuildEvidence <V124404-025>. Check exact6 tests/builds/JAR identities,
+run only the affected physical-profile plan assertion, fresh two-owner parity,
+then full view32 physical pair. Deep owner/client32/global64 remains within
+unchanged game caps, validation8/cache128/backend2/16 unchanged. Record requested
+window/order and assert actual saved server settings. No unchanged unit/build or
+native rerun; all implementation precedes one sequential batch.
+
+## T early prefetch batch (alpha.7-dev.6/protocol9)
+
+Run-TerrainDecisionGate -TestProfile prefetch runs only GenerationPrefetch263Test
+(4 methods), covering requested/persisted status gating, retained origin during
+deduplication and existing bounded demand/fairness/expiry behavior. Three builds
+then affected Fabric two-owner digest comparison must show nonzero task hints
+AND actual job.sent hint=task, both-owner decision application, no mismatches.
+Matching same-backend physical view32 pair follows. All changes are finished
+before one sequential batch. Unchanged R transport/S scheduling tests are not
+rerun or relabeled; native runtime remains unverified.
+For configuration-only reuse, original successful implementation coverage is
+retained. A changed ordering need not submit jobs from every hint origin, but
+must still observe the new task hook and apply real decisions for both owners.
+ReuseCorrectnessEvidence resumes only after original passed runtime/comparison,
+current source/harness/JAR/settings and cleanup match. New summaries reference
+the original gate's success flag/issues and identify runtime as reused.
+
+## S scheduling batch (alpha.7-dev.5/protocol9)
+
+Run-TerrainDecisionGate -TestProfile scheduling runs only the new3 affected
+RemoteAwareScheduling263Test methods, then builds all three loaders (native
+network/fragment sources unchanged; no repeat of R's13/2 methods). They cover
+dynamic ready/local/pending selection, bounded starvation and no-client-wait,
+actual owned worker admission/fallback/failed-command drain/restart/permit release,
+and non-consuming availability with unchanged single claim and config limits.
+Actual Fabric correctness pair additionally requires nonzero cooperative queue
+reordering plus actual decision use for both owners and matching terrain digests.
+Same-backend full view32 pair follows; marginal stats remain but same-repeat
+ratios/counts are now recorded to avoid a misleading ratio of medians.
+No broad matrix or unrelated fixture. All implementation precedes one batch.
+
+## R affected batch (alpha.7-dev.4/protocol9)
+
+Use the same13 O methods because the shared result constructor/access/equality
+and decision domain/transport/application change; extend existing envelope tests
+for byte-array ownership, suffix signed-zero, cross-representation equality/hash,
+old float wire encoding and invalid code/geometry/suffix/timing. Two Forge
+fragment tests verify shared decoder representation, three builds. Fresh two-owner
+terrain digest comparison exercises the AIR/heightmap skip in actual fill;
+same ready/lookahead32 view32 pair follows. No extra standalone mirrored skip
+tests or unrelated full matrix. All edits complete before this one serial batch.
+
+## Current O affected batch (alpha.7-dev.3/protocol9)
+
+Run-TerrainDecisionGate -Execute completes implementation first and runs13
+affected methods: decisions2, full-density2, old-density validator1, grid2,
+surface2, envelope4. Existing whole grid/surface checks are included because
+their result/application storage also changes. The two added envelope methods
+cover float immutability/value equality, signed-zero suffix, packed/raw/deflate
+and network roundtrip, domain/shape/length/trailing/overexpansion rejection.
+Forge runs only2 fragment methods (existing assembly plus full terrain compact
+and float transport bounds/codec). Three builds and exact metadata/hashes then
+two-owner Fabric terrain digest pair (blocks, both WG heightmaps, postprocessing)
+require actual decision use. Finally same physical view32 warmup1/measured3
+pair, JFR both modes, same scheduler/coordinates/settings. Native runtime is
+not proven by native unit/build. No unrelated fixture or full matrix.
+
+For application-timing-only experiments, Run-TerrainDecisionGate additionally
+accepts RemoteApplicationProfile ready and ReuseBuildEvidence pointing to a
+completed gate. It verifies current Fabric source inventory/content plus the
+versioned JAR hashes and explicitly records REUSED original unit/build evidence.
+It reruns the affected correctness/actual-decision-use pair and full view32 pair;
+it never presents reused tests/builds as newly executed or changed native source
+as reverified. The protocol/implementation must remain identical.
+
+## Candidate N affected gate (alpha.7-dev.2, protocol8)
+
+Run-TerrainDecisionGate -Execute uses the shared sequential gate runner with
+decisions work kind and its extra operator flag. Eight selected methods:
+TerrainDecision263Test(2), BlockDensity263Test shape(1), old density transport/
+validation(1), grid shape/cache(1), surface shape/cache(1), envelope(2).
+The new test compares every fill substance and fluid flag across four contexts,
+all768 aligned-cell float values against an independent whole volume in one
+context, independent secret validation/corruption of both prefix and suffix,
+strict invalid-code rejection even with sampling0, code/geometry/context/cache
+and operator gate. BLOCK full control's aligned validation is also covered.
+All edits precede this batch; no unrelated fixtures/full matrix.
+Three sequential builds and metadata precede the two-owner Fabric correctness
+pair, which requires actual98304 decision reads per applied chunk for both
+owners. Only then matched JFR-instrumented view32 warmup1/measured3. Exact
+hashes/settings/coordinates and safe cleanup required. Native builds are not
+native runtime proof. Protocol7 M evidence below remains historical.
+
+## Candidate M affected sequential gate
+
+Run-BlockDensityGate -Execute completes all implementation before testing.
+Eight selected JUnit methods cover block density/Aquifer/fluid equivalence,
+canonical sampler isolation, corruption in density and surface samples, payload
+bound/shape/kind/cache isolation and affected existing density/grid/surface
+transport. Unrelated lifetime/security/legacy fixtures are not rerun.
+Fabric/Forge/NeoForge builds run sequentially. Native metadata is checked; native
+runtime is not claimed from builds. Then the new physical server on E runs
+two-owner Overworld correctness, requiring both owners to consume full density
+and all compared terrain digests to match. Only then a matched instrumented
+view32 cooperative/wide/overlap pair runs, one warmup and three measured repeats.
+Exact artifact/source/harness/coordinates/settings and safe cleanup are required.
+No beta claim follows merely from a completed gate or small median fluctuation.
+
 ## Candidate L: configuration-only asynchronous overlap gate
 
 Run-RemoteOverlapGate -Execute selects the exact unchanged dev.12 JAR; no

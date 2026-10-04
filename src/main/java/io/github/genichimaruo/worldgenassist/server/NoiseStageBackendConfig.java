@@ -68,7 +68,7 @@ public record NoiseStageBackendConfig(Mode mode, int workerThreads, int queuedTa
 		boolean defaultQueue=queueValue==null || queueValue.isBlank();
 		return new NoiseStageBackendConfig(mode,
 			mode==Mode.COOPERATIVE && automatic ? Math.max(1,Math.min(2,processors)) : parseWorkerThreads(workersValue),
-			mode==Mode.COOPERATIVE && defaultQueue ? 4 : parseQueuedTasksPerWorker(queueValue));
+			mode==Mode.COOPERATIVE && defaultQueue ? 16 : parseQueuedTasksPerWorker(queueValue));
 	}
 
 	private static NoiseStageBackendConfig load() {

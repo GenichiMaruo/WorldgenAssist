@@ -2,6 +2,59 @@
 
 ## Status
 
+AA dev.10 and AB dev.11/protocol10 passed targeted units/builds/Fabric parity.
+Native complete runtime is unrun; no beta or hostile-client safety claim.
+Complete terrain is a separate
+operator choice using50 server-defined default terrain states, not arbitrary
+client block IDs or mutation requests. Seed disclosure remains trusted_raw.
+Whole-chunk independent audits require first two successful owner/context/epoch
+results, then private probability1/8; complete shape/domain/lifecycle checks
+apply to every result. This explicitly changes sampled integrity and requires
+`allow_complete_terrain`; it does not weaken the old8-cell decision policy.
+It cannot prove all unaudited outputs against a hostile worker. Default remote
+off/raw-seed denial remain; do not claim public-server security or beta.
+
+X alpha.7-dev.8/protocol9 captures only already eligible actual-stage context
+and prioritizes its bounded registration metadata. PENDING is advisory; final
+claim still requires current owner/context/deadline and validated output. No
+decision domain or secret sample reduction, new disclosure, client-selected
+positions or arbitrary block/world mutations. W completed modest acceleration
+with higher CPU; X Fabric parity passed1,813 shared digests/zero mismatch,
+performance remains running and native X route remains unverified.
+
+V alpha.7-dev.7/protocol9 only expands advisory hints to Minecraft's already
+claimed TERRAIN layer dependencies and caches metadata ordering. Each holder
+retains current owner/persisted-status gates; final admission/validation/claim
+remain authoritative. No raw-seed, code domain, sampled integrity or public
+server claim changes. Six affected methods/builds and1,802 matching Fabric
+digests passed; view32 modestly faster with more CPU, targeted native runtime
+passed targeted two-owner Overworld parity for Forge/NeoForge after the physical
+batch. W's larger32/64 pipeline windows stay within original hard limits and do
+not reduce validation or change raw-seed/owner/authority gates. Performance pending.
+
+2026-10-03 candidate N: trusted_raw still reveals the raw seed. Additional
+allow_terrain_decisions operator choice permits seven aquifer classification
+codes for assigned owner chunks; it never permits arbitrary block IDs/entities/
+world mutations. All codes are range/domain checked, eight secret cells plus
+surface groups are independently recomputed. This is sampled validation for
+trusted friends, not confidentiality or full integrity against hostile workers.
+Default remote-off/seed-disclosure denial and the unported public fixture's
+separate authority/budget remain. N completed correctness but view32 was slower.
+O/protocol9 and R retain the same gates and sampled integrity limits; their
+affected tests/builds and Fabric two-owner terrain comparisons passed. R's
+immutable byte-code factory checks the full domain before any later duplicate
+scan is skipped. Independent secret cells/surface groups are unchanged.
+Current S alpha.7-dev.5/protocol9 only prioritizes queued computation using
+non-authoritative readiness hints. Execution-time owner/context/deadline checks
+still grant application authority. S's three focused methods/builds passed;
+actual two-owner runtime passed1,792 matching terrain digests. View32 is modestly
+faster but uses more server CPU. None of these establish
+private-seed confidentiality or integrity against hostile clients.
+T alpha.7-dev.6/protocol9 advances existing-task hints only. Unknown persisted
+status permits bounded speculative computation, not application authority;
+actual-stage eligibility, validation and execution-time fences are unchanged.
+No additional seed disclosure mode or client-selected world mutation is added.
+
 Public-fixture exception, 2026-09-05: a separate explicitly enabled v3 packet
 family and live adapter now exist **only** for the already public seed 8675309.
 See `SEEDED_LEAF_FIXTURE_PROTOCOL.md` for the gate and candidate-seed comparison

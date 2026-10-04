@@ -84,7 +84,7 @@ class GridDensity263Test {
 		cache.put(grid,result);assertTrue(cache.takeResult(surface).isEmpty());assertSame(result,cache.takeResult(grid).orElseThrow());
 		assertThrows(IllegalArgumentException.class,()->new TerrainDensityJob(id,0,true,dim,-63,384,1,1,TerrainWorkKind.GRID_AND_SURFACE));
 		assertThrows(IllegalArgumentException.class,()->new TerrainDensityJob(id,0,true,dim,-64,384,4,8,TerrainWorkKind.GRID_AND_SURFACE));
-		assertEquals(6894,grid.sampleCount());assertThrows(IllegalArgumentException.class,()->TerrainWorkKind.fromWire(3));
+		assertEquals(6894,grid.sampleCount());assertThrows(IllegalArgumentException.class,()->TerrainWorkKind.fromWire(6));
 	}
 	private static void compare(DensitySampler.Bound a,DensitySampler.Bound b,DensityVolume volume) {
 		try(var expected=a.sampleVolume(volume);var actual=b.sampleVolume(volume)) {for(int i=0;i<volume.size();i++)bits(expected.get(i),actual.get(i));}

@@ -1,5 +1,156 @@
 # Mixin Targets
 
+## AA complete-terrain prototype (registered, not tested)
+
+New PrivateBiomeInvoker263 targets ChunkGenerator's private doCreateBiomes
+(Blender,RandomState,ChunkAccess)->void, calling original bulk climate sampling.
+New PrivateTerrainInvoker263 targets NoiseBasedChunkGenerator private doFill
+(NoiseChunk,ChunkAccess)->void; buildSurface(ChunkAccess,NoiseChunk,RandomState,
+BiomeManager,Set<Holder<Biome>>,MaterialRule)->void; generateCarvers(ChunkAccess,
+Blender,NoiseChunk,RandomState,BiomeManager,WorldGenRegion,MaterialRule)->void.
+Fabric generated26.3 and generated Forge/NeoForge NoiseBasedChunkGenerator
+signatures/bodies were inspected; no external task/executor used by invokers.
+ChunkGenerator's inherited biome invoker was also verified against Forge's
+injected sources and NeoForge mergeWithSources_82bbfb7209337ea68495df6c834fa0741881eac3.
+Both root/Forge Mixin lists register these interfaces; NeoForge consumes root.
+NoiseBasedChunkGenerator is final: interface checks go through Object before
+Mixin transformation. Invoker mixins contain only abstract annotated methods.
+Existing buildTerrain supplyAsync wrapper now runs a guarded complete applicator
+inside the existing execution-time remote scope. Eligibility/allocations precede
+writes; application exceptions propagate, never retry partially modified chunks.
+AA alpha.7-dev.10/protocol10 passed three builds and fresh Fabric parity1,802
+shared format2 digests/zero mismatch with actual complete applications. No fresh
+native complete runtime. AB dev.11 changes only manager branch selection for
+explicit overlap: existing bounded asynchronous awaiting followed by the same
+source-verified original buildTerrain/executor/scope. No new game target or
+thread assumption. AB five wait methods/three builds/1,802 matching Fabric
+digests and physical batch passed; no native complete runtime. Z/AA evidence
+stays separate.
+
+## Z capacity-aware refill (alpha.7-dev.9/protocol9)
+
+No new or changed game symbol, Mixin target, packet or execution thread.
+Only server manager/coordinator/worker metadata capacity hints change. The
+same source-verified schedule/wrapRunnable dispatcher and original buildTerrain
+locks/runnable remain. X targeted native parity retains its exact artifact
+identity; Z tests/builds/physical parity/performance pending.
+
+## V existing task claims (alpha.7-dev.7/protocol9)
+
+ChunkGenerationTaskHintsMixin263 implements a read-only visitor using verified
+26.3 ChunkGenerationTask fields: private final ChunkPos pos, private final
+StaticCache2D<GenerationChunkHolder> cache, public final ChunkStatus targetStatus,
+private volatile boolean markedForCancellation. Same fields in Fabric generated
+source, Forge injected-sources and NeoForge mergeWithSources. No method is
+cancelled/wrapped. The existing ChunkMap RETURN hook calls the visitor; it reads
+only cache.get within the same GENERATION_PYRAMID accumulated TERRAIN radius
+that scheduleLayer uses. ChunkStep returns0 for its own status; FULL accumulates
+radius2 via FEATURES/LIGHT requirements. StaticCache2D.get reads its preclaimed
+array without acquiring/loading. Cancellation and persisted/owner gates exclude
+ineligible hints. Root and Forge Mixin lists include the new implementation;
+NeoForge consumes root list. All three builds passed; Fabric runtime verified
+actual dependency-origin dispatch and1,802 matching terrain digests. Native
+runtime completed targeted two-owner Overworld parity with actual dependency
+dispatch: Forge1,971/NeoForge1,954 shared digests,zero mismatch. Forge runtime
+reused with original input/JAR identity and fresh marker-scoped comparison;
+NeoForge runtime fresh. No broad native matrix or native performance claim.
+
+## T early task observation (alpha.7-dev.6/protocol9)
+
+Generated26.3 ChunkMap.scheduleGenerationTask at Fabric646 / Forge656 /
+NeoForge656 has descriptor
+`(Lnet/minecraft/world/level/chunk/status/ChunkStatus;Lnet/minecraft/world/level/ChunkPos;)Lnet/minecraft/server/level/ChunkGenerationTask;`.
+It creates the task, appends it to pendingGenerationTasks and returns; runGenerationTasks
+dispatches it later. The existing ChunkMapLoadOpportunityMixin263 adds RETURN
+observation only, without cancellation or return replacement. worldGenContext
+is the same final field in all three sources. getCenter returns the already
+claimed center holder; its getPersistedStatus only reads the completed EMPTY
+future and returns null before load completes. No new load/ticket/wait is added.
+Known TERRAIN is excluded; final actual-stage eligibility remains authoritative.
+Forge injected-sources and NeoForge mergeWithSources extraction verified the
+same method and semantics. Three builds passed; Fabric runtime exercised actual
+task-hint dispatch and1,802 matching terrain digests. Native runtime unverified.
+
+## S scheduling entry (alpha.7-dev.5/protocol9)
+
+Same verified26.3 buildTerrain supplyAsync(Supplier,Executor) WrapOperation in
+all three loaders; only the server-owned executor gets an availability callback.
+No game method/field target added. Existing ChunkAccessRemoteDensityMixin's
+own synchronized opportunity field adds a non-consuming getter. Selection is
+metadata; original runnable and dependency/section locks stay untouched. Context
+and geometry are still checked by original execution-time claim before writes.
+COOPERATIVE alone enables bounded READY/LOCAL/PENDING priority and max8 bypasses;
+LOCAL mode preserves FIFO. Three builds passed; actual Fabric runtime exercised
+385 reorderings and1,792 matching terrain digests. Native runtime unverified.
+
+## R preserves O's targets (alpha.7-dev.4, protocol9)
+
+No new Mixin target. Server fill helper uses generated26.3 Heightmap.update's
+firstAvailable-2 early-out; cache threshold per column and refresh only after a
+successful update. AIR decisions are never written or postprocessed by vanilla
+doFill. R skips those iterations while retaining original non-AIR section writes
+and counts. Private result storage changes no game symbol. Validation/build and
+actual two-owner terrain digest comparison are pending for the new exact JAR.
+
+## Candidate O: one guarded fill entry (alpha.7-dev.3, protocol9)
+
+Generated26.3 Fabric doFill at391 and Forge at407 / NeoForge at403 have the
+same descriptor `(NoiseChunk,ChunkAccess)V` and the same z/x/descending-y loop.
+NoiseBasedChunkGeneratorMixin shadows the final Holder<NoiseGeneratorSettings>
+and wraps doFill once. Only the explicitly allowed verified decision kind can
+call TerrainDecisionFiller; contextMatched from the constructor sampler hook
+proves exact RandomState/settings/volume, empty beardifier/blender. Complete
+geometry and debug compatibility are checked before writes. Rejection clears
+the field and calls vanilla. Exceptions after writes are not retried as a local
+fill. The outer buildTerrain still acquires/releases sections and runs surface
+and carvers. The helper reproduces section writes, both WG heightmaps and fluid
+postprocessing; DEBUG_AQUIFERS is excluded so its debug helper is identity.
+Decision codes are held in private bytes; server-known outcomes are preselected.
+Removed both per-block Aquifer WrapOperations and decision sampleVolume copy.
+The sampleVolume hook still handles old DENSITY/full-density control. No world
+threading/dependency changes. Native source comparison complete; new runtime
+gate block-density-gate-20261003-223904-155 passed13 units,2 Forge fragment
+units, three builds and1,813 matching Fabric terrain digests. Native runtime is
+unverified. O's overlap view32 pair remained slower. Historical N's two
+operation hooks below describe its exact JAR.
+
+## Candidate N: doFill-only aquifer decisions (alpha.7-dev.2)
+
+Generated target26.3 Fabric/Forge/NeoForge doFill all have one
+Aquifer.computeSubstance(IIID)BlockState call and one
+Aquifer.shouldScheduleFluidUpdate()Z call after the exact full-volume density
+sample. Two WrapOperations map a verified TERRAIN_DECISIONS_AND_SURFACE field's
+code to limited server-known outcomes/flag. Ordinary density/grid/full controls
+call the original aquifer. copyVolume validates the entire assigned volume
+before copying codes; construction checks every code. No coordinates from the
+client expand the assigned volume. Buffer rejection clears the field and samples
+vanilla before either operation is reached. Section writes/heightmaps/debug
+preliminary surface/fluid postprocessing remain vanilla. These hooks target
+doFill only: applyCarvingMask's density0 aquifer call is unmodified.
+
+Generated InterpolatedFunction.Sampler.fillCell resets v_0_/valueStep per cell;
+whole aligned4x8x4 samples have y0=0 and identical repeated float additions.
+Independent whole-volume versus every-cell bits will be tested; shifted point
+sampling is not substituted. Source descriptors verified in all three loader
+source trees; native/runtime application remains pending the single affected gate.
+
+## Candidate M: full density replacement restricted to doFill (2026-10-03)
+
+Verified target26.3 generated source: NoiseBasedChunkGenerator.doFill gets the
+chunk's exact DensityVolume, calls finalDensity.sampleVolume once, and reads
+each float only as Aquifer.computeSubstance's density argument. A null result
+selects settings.defaultBlock; server section writes, heightmaps and fluid
+postprocessing remain intact. NoiseBasedAquifer.computeSubstance starts with
+`density > 0.0`, returning null and clearing shouldScheduleFluidUpdate.
+Therefore positive magnitude can be canonicalized in this one use only.
+
+The existing doFill WrapOperation admits BLOCK_DENSITY_AND_SURFACE as well as
+DENSITY. Geometry mismatch closes the scoped buffer, clears the field and invokes
+the original sampler. No new target/descriptors or executor/threading changes.
+RemoteDensityField wraps the two surface samplers only for this work kind;
+MaterialRuleContext and carvers' finalDensity sampler remains original. Native
+and installed Fabric validation are pending the affected batch, not yet verified.
+
 ## Candidate L application timing experiment (unchanged dev.12 JAR)
 
 No new target or Mixin. RemoteWorldgenManager.generate's existing asynchronous
@@ -1265,3 +1416,24 @@ When updating Minecraft:
 5. Re-run deterministic tests.
 
 Never assume a Mixin target survived a Minecraft update unchanged.
+## 2026-10-03 timing-only experiment
+
+P and Q reuse alpha.7-dev.3/protocol9's verified Minecraft26.3 targets and exact
+O artifacts. No new game target or Mixin is introduced. Q exposes the existing
+bounded GenerationPrefetchQueue lookahead rotation through the physical test
+harness. Q completed1,802 matching digests and limited FULL/receipt improvement,
+with CPU increasing. It is not a beta readiness result.
+
+## X actual-stage admission (alpha.7-dev.8, 2026-10-04)
+
+No new or changed Mixin descriptor/target. The original actual TERRAIN wrapper
+captures already evaluated context; registration uses the existing coalesced
+server dispatcher. Verified generated26.3 BlockableEventLoop.schedule at92
+enqueues/unparks without waiting, execute at98 may run inline; MinecraftServer
+wrapRunnable at866 returns TickTask. X retains explicit schedule/wrapRunnable
+and original section/executor ownership; it does not send from Worker-Main.
+X5 focused methods/three builds and Fabric1,813 matching terrain digests passed.
+Native X gate142525-576 also passed four fresh runtimes: Forge1,987/NeoForge1,971
+shared digests,zero mismatch, both-owner full applications and the new actual-stage
+route used after the workload marker (8/28 new-lane full applications). No native
+performance/modpack claim. V evidence retains its historical identity.

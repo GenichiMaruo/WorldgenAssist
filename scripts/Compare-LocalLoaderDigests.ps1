@@ -3,18 +3,28 @@ param(
     [Parameter(Mandatory=$true)][string]$VanillaLog,
     [Parameter(Mandatory=$true)][string]$OutFile,
     [ValidateSet('all','minecraft:overworld','minecraft:the_nether','minecraft:the_end')]
-    [string]$Dimension = 'minecraft:overworld'
+    [string]$Dimension = 'minecraft:overworld',
+    [switch]$TerrainDecisions,
+    [switch]$CompleteTerrain,
+    [string]$AfterMarker
 )
 
 $ErrorActionPreference = 'Stop'
+if($CompleteTerrain){$TerrainDecisions=[switch]$true}
+$expectedWorkKind=if($CompleteTerrain){'COMPLETE_TERRAIN'}else{'TERRAIN_DECISIONS_AND_SURFACE'}
+if($AfterMarker -and -not $TerrainDecisions){throw 'An explicit workload marker is supported only for the decision fixture'}
 
 function Read-Evidence([string]$Path) {
     $digests = @{}
     $jobs = @{}
     $ownerDimensions = @{}
     $remote = [System.Collections.Generic.List[string]]::new()
+    $outside = [System.Collections.Generic.List[string]]::new()
+    $selectedJobs = [System.Collections.Generic.HashSet[string]]::new()
+    $markerSeen = -not [bool]$AfterMarker
     $issues = [System.Collections.Generic.List[string]]::new()
     foreach ($line in [System.IO.File]::ReadLines((Resolve-Path -LiteralPath $Path))) {
+        if($AfterMarker -and $line.Contains($AfterMarker,[StringComparison]::Ordinal)){$markerSeen=$true}
         if ($line -match '\[CAWG\] stage\.digest stage=noise chunk=(-?\d+,-?\d+) .*digest=([0-9a-f]{64}).*dimension=([a-z0-9_:]+)') {
             $key = "$($Matches[3])/$($Matches[1])"
             if ($Dimension -ne 'all' -and -not $key.StartsWith("$Dimension/", [StringComparison]::Ordinal)) { continue }
@@ -29,17 +39,24 @@ function Read-Evidence([string]$Path) {
         if ($line -match '\[CAWG\] job.sent id=([a-f0-9-]+) chunk=(-?\d+,-?\d+) .*owner=([a-f0-9-]+)') {
             $ownerDimension = if ($ownerDimensions.ContainsKey($Matches[3])) { $ownerDimensions[$Matches[3]] } else { 'minecraft:overworld' }
             $jobs[$Matches[1]] = "$ownerDimension/$($Matches[2])"
+            if($markerSeen){[void]$selectedJobs.Add($Matches[1])}
         }
-        if ($line -match '\[CAWG\] job.complete id=([a-f0-9-]+) source=remote') {
+        $completionPattern = if ($TerrainDecisions) {
+            '\[CAWG\] job\.complete id=([a-f0-9-]+) source=(?:remote|cache|prefetch) .*work_kind='+$expectedWorkKind+' .*decision_samples=98304\b'
+        } else { '\[CAWG\] job.complete id=([a-f0-9-]+) source=remote' }
+        if ($line -match $completionPattern) {
             if ($jobs.ContainsKey($Matches[1])) {
                 $key = $jobs[$Matches[1]]
-                if ($Dimension -eq 'all' -or $key.StartsWith("$Dimension/", [StringComparison]::Ordinal)) { $remote.Add($key) }
+                if ($Dimension -eq 'all' -or $key.StartsWith("$Dimension/", [StringComparison]::Ordinal)) {
+                    if($selectedJobs.Contains($Matches[1])){$remote.Add($key)}else{$outside.Add($key)}
+                }
             } else {
                 $issues.Add("remote completion without sent job: $($Matches[1])")
             }
         }
     }
-    return @{ digests=$digests; remote=$remote; issues=$issues }
+    if(-not $markerSeen){$issues.Add("missing comparison start marker: $AfterMarker")}
+    return @{ digests=$digests; remote=$remote; outside=$outside; issues=$issues }
 }
 
 $assisted = Read-Evidence $AssistedLog
@@ -61,6 +78,10 @@ if ($differentApplied.Count -gt 0) { $issues += "different applied digests: $($d
 $result = [ordered]@{
     schema = 'worldgen-assist.local-loader-digest-comparison.v1'
     dimension = $Dimension
+    terrain_decisions = [bool]$TerrainDecisions
+    comparison_start_marker = $AfterMarker
+    before_marker_applied = $assisted.outside.Count
+    before_marker_missing_in_vanilla = @($assisted.outside | Where-Object {-not $vanilla.digests.ContainsKey($_)})
     status = if ($issues.Count -eq 0) { 'PASS' } else { 'FAIL' }
     assisted_log = (Resolve-Path -LiteralPath $AssistedLog).Path
     vanilla_log = (Resolve-Path -LiteralPath $VanillaLog).Path

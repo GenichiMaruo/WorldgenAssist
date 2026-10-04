@@ -84,9 +84,9 @@ final class WorldgenPayloadCodecs {
 	static TerrainDensityResultEnvelope readResult(RegistryFriendlyByteBuf buffer) {
 		TerrainJobIdentity identity = readIdentity(buffer);
 		int count = buffer.readVarInt();
-		if (count < 1 || count > TerrainDensityJob.MAX_SAMPLE_COUNT) {
+		if (count < 1 || count > TerrainDensityJob.MAX_TERRAIN_SAMPLE_COUNT) {
 			throw new IllegalArgumentException(
-				"Encoded density count must be between 1 and " + TerrainDensityJob.MAX_SAMPLE_COUNT + ": " + count
+				"Encoded density count must be between 1 and " + TerrainDensityJob.MAX_TERRAIN_SAMPLE_COUNT + ": " + count
 			);
 		}
 		int encodingId = buffer.readUnsignedByte();
@@ -94,7 +94,7 @@ final class WorldgenPayloadCodecs {
 			throw new IllegalArgumentException("Unknown density result encoding: " + encodingId);
 		}
 		int encodedLength = buffer.readVarInt();
-		int rawLength = Math.multiplyExact(count, TerrainDensityResultEnvelope.BYTES_PER_DENSITY);
+		int rawLength = TerrainDensityResultEnvelope.rawBytes(count, TerrainDensityResultEnvelope.Encoding.values()[encodingId]);
 		if (encodedLength < 1 || encodedLength > rawLength) {
 			throw new IllegalArgumentException(
 				"Encoded density length must be between 1 and " + rawLength + ": " + encodedLength

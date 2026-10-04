@@ -9,6 +9,7 @@ public interface RemoteDensityTarget {
 
 	RemoteDensityField worldgenAssist$getRemoteDensity();
 	void worldgenAssist$installRemoteOpportunity(RemoteDensityOpportunity opportunity);
+	default RemoteDensityOpportunity worldgenAssist$getRemoteOpportunity() { return null; }
 	RemoteDensityOpportunity worldgenAssist$takeRemoteOpportunity();
 	void worldgenAssist$clearRemoteOpportunity(RemoteDensityOpportunity opportunity);
 }

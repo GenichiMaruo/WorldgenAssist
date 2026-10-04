@@ -119,6 +119,12 @@ public final class WorkerRegistry {
 		return state == null ? 0 : state.currentLimit;
 	}
 
+	/** Advisory only: does not acquire a lease or change adaptive admission. */
+	synchronized boolean hasCapacity(UUID ownerId) {
+		WorkerState state = workers.get(ownerId);
+		return state != null && state.inFlight < state.currentLimit;
+	}
+
 	public synchronized void recordSuccess(UUID ownerId) {
 		WorkerState state = workers.get(ownerId);
 		if (state == null) return;

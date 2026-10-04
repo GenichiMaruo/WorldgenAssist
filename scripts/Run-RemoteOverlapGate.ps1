@@ -1,12 +1,14 @@
 [CmdletBinding()]
-param([switch]$Execute,[ValidateRange(2,32)][int]$ViewDistance=10)
+param([switch]$Execute,[ValidateRange(2,32)][int]$ViewDistance=10,[switch]$PhysicalServer)
 
 # Configuration-only experiment: the unchanged protocol-6 artifact already
 # has a bounded asynchronous demand continuation. No build or JUnit rerun.
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $workspace=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$expectedHash='97187A759E3AE7D2DA74E00BB50AF3EC70FD7AAF15248D7AAE8DEFEB5CC1672D'
+$expectedHash=if($PhysicalServer){'2E98CAA38F6E7FA020B97BC2093F4904C767BA0E50A00D93CF2A5C47355A0D3D'}else{'97187A759E3AE7D2DA74E00BB50AF3EC70FD7AAF15248D7AAE8DEFEB5CC1672D'}
+$remoteArguments=if($PhysicalServer){@('-RemoteHost','gen1c@100.103.102.109','-RemoteRoot','E:/WorldgenAssist/port26.3','-ServerLogicalProcessors','0','-ServerJvmProcessors','0')}else{@('-ServerLogicalProcessors','2','-ServerJvmProcessors','2')}
+$benchmarkArguments=if($PhysicalServer){@('-PhysicalServer','-ServerFlightRecording')}else{@('-TwoLogicalOnly','-ServerJvmProcessors','2')}
 if(-not $Execute){
     [ordered]@{artifact_sha256=$expectedHash;builds='NOT_RUN: unchanged JAR';unit_tests='NOT_RUN: unchanged MOD';correctness='two-owner Overworld pair; cooperative both; wide window; asynchronous application, base100ms/max200ms';performance="full-view $ViewDistance pair; warmup1 + measured3";sequence='finish implementation, then one sequential batch'}|ConvertTo-Json
     exit 0
@@ -34,6 +36,10 @@ function Step([string]$Name,[string[]]$Arguments,[int]$Seconds){
 }
 try{
     $lock=[IO.File]::Open((Join-Path $workspace 'test-artifacts/validation-matrix.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
+    if($PhysicalServer){
+        $steps+=Step 'physical-profile' @('-NoProfile','-File',(Join-Path $PSScriptRoot 'Test-PhysicalServerProfile.ps1')) 60
+        if($steps[-1].status -ne 'PASSED'){throw 'Physical server profile failed'}
+    }
     foreach($name in @('Run-RemoteOverlapGate.ps1','Run-WorldgenScenario.ps1','Remote-WorldgenScenarioServer.ps1','Compare-WorldgenScenarioMatrix.ps1','Run-ConstrainedServerBenchmark.ps1')){
         $tokens=$null;$parseErrors=$null
         [void][Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $name),[ref]$tokens,[ref]$parseErrors)
@@ -47,7 +53,7 @@ try{
     $cases=@()
     foreach($mode in @('vanilla','assisted')){
         $directory=Join-Path $correctRoot $mode
-        $steps+=Step "correctness-$mode" @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-WorldgenScenario.ps1'),'-Dimension','overworld','-Mode',$mode,'-Players','2','-Purpose','correctness','-CacheEntries','128','-Prediction','false','-ValidationCells','8','-Seed','8675309','-ServerLogicalProcessors','2','-ServerJvmProcessors','2','-CorrectnessDemandWaitMs','100','-NoiseBackend','cooperative','-WindowProfile','wide','-RemoteApplicationProfile','overlap','-OutputRoot',$directory) 1200
+        $steps+=Step "correctness-$mode" (@('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-WorldgenScenario.ps1'),'-Dimension','overworld','-Mode',$mode,'-Players','2','-Purpose','correctness','-CacheEntries','128','-Prediction','false','-ValidationCells','8','-Seed','8675309','-CorrectnessDemandWaitMs','100','-NoiseBackend','cooperative','-WindowProfile','wide','-RemoteApplicationProfile','overlap','-OutputRoot',$directory)+$remoteArguments) 1200
         if($steps[-1].status -ne 'PASSED'){throw "Affected runtime failed: $mode"}
         $result=Get-Content -LiteralPath (Join-Path $directory 'scenario-result.json') -Raw|ConvertFrom-Json
         if(-not $result.success -or -not $result.cleanup_safe -or $result.artifact_sha256 -ne $expectedHash){throw 'Runtime cleanup/artifact mismatch'}
@@ -73,7 +79,7 @@ try{
     }
     [IO.File]::WriteAllText((Join-Path $root 'overlap-use.json'),($use|ConvertTo-Json))
     $lock.Dispose();$lock=$null
-    $steps+=Step 'performance-pair' @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-ConstrainedServerBenchmark.ps1'),'-Execute','-TwoLogicalOnly','-ViewDistance',[string]$ViewDistance,'-MeasureFullView','-ServerJvmProcessors','2','-QuietRemoteTrace','-AssistedNoiseBackend','cooperative','-VanillaNoiseBackend','cooperative','-WindowProfile','wide','-RemoteApplicationProfile','overlap') 7200
+    $steps+=Step 'performance-pair' (@('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-ConstrainedServerBenchmark.ps1'),'-Execute','-ViewDistance',[string]$ViewDistance,'-MeasureFullView','-QuietRemoteTrace','-AssistedNoiseBackend','cooperative','-VanillaNoiseBackend','cooperative','-WindowProfile','wide','-RemoteApplicationProfile','overlap')+$benchmarkArguments) 7200
     $output=Get-Content -LiteralPath (Join-Path $root 'performance-pair-out.log') -Raw
     $match=[regex]::Match($output,'CONSTRAINED_SERVER_BENCHMARK status=COMPLETE summary=(?<path>[^\r\n]+)')
     if($steps[-1].status -ne 'PASSED' -or -not $match.Success){throw 'Performance pair incomplete'}

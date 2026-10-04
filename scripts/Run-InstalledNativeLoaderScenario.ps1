@@ -6,11 +6,15 @@ param(
     [Parameter(Mandatory)][string]$InstalledRoot,
     [Parameter(Mandatory)][string]$OutputRoot,
     [Parameter(Mandatory)][string]$AssetsRoot,
-    [string]$OptionsTemplate
+    [string]$OptionsTemplate,
+    [switch]$TerrainDecisions,
+    [switch]$CompleteTerrain
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+if($CompleteTerrain){$TerrainDecisions=[switch]$true}
+$expectedWorkKind=if($CompleteTerrain){'COMPLETE_TERRAIN'}else{'TERRAIN_DECISIONS_AND_SURFACE'}
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $fixtureRoot = [IO.Path]::GetFullPath((Join-Path $workspace 'test-artifacts')).TrimEnd('\') + '\'
 $installed = [IO.Path]::GetFullPath($InstalledRoot)
@@ -62,6 +66,11 @@ function Start-Owned([string]$Exe,[string[]]$Arguments,[string]$WorkingDirectory
     $info.RedirectStandardOutput = $true
     $info.RedirectStandardError = $true
     foreach ($key in $Environment.Keys) { $info.Environment[$key] = $Environment[$key] }
+    if ($TerrainDecisions) {
+        foreach ($key in @('WORLDGEN_ASSIST_LOCAL_WORKERS','WORLDGEN_ASSIST_LOCAL_QUEUE_PER_WORKER')) {
+            [void]$info.Environment.Remove($key)
+        }
+    }
     $process = [Diagnostics.Process]::new()
     $process.StartInfo = $info
     if (-not $process.Start()) { throw "Could not start $Exe" }
@@ -98,7 +107,10 @@ function Owner-Completes([string]$Log,[string]$Owner,[string]$Marker) {
         if ($line -match 'job.sent id=([0-9a-f-]+).* owner=([0-9a-f-]+)' -and $Matches[2] -eq $Owner) { [void]$ids.Add($Matches[1]) }
     }
     foreach ($line in ($slice -split "`n")) {
-        if ($line -match 'job.complete id=([0-9a-f-]+) source=remote' -and $ids.Contains($Matches[1])) { return $true }
+        $pattern = if ($TerrainDecisions) {
+            'job\.complete id=([0-9a-f-]+) source=(?:remote|cache|prefetch) .*work_kind='+$expectedWorkKind+' .*decision_samples=98304\b'
+        } else { 'job.complete id=([0-9a-f-]+) source=remote' }
+        if ($line -match $pattern -and $ids.Contains($Matches[1])) { return $true }
     }
     return $false
 }
@@ -123,7 +135,28 @@ try {
         WORLDGEN_ASSIST_REMOTE_VALIDATION_SAMPLE_CELLS = '8'
         WORLDGEN_ASSIST_NOISE_DIGEST = 'true'
     }
-    $server = Start-Owned $java @('-Xmx3G',$nativeArguments,'nogui') $serverRoot $serverEnvironment
+    if ($TerrainDecisions) {
+        $serverEnvironment.WORLDGEN_ASSIST_NOISE_BACKEND = 'cooperative'
+        $serverEnvironment.WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT = '32'
+        $serverEnvironment.WORLDGEN_ASSIST_REMOTE_OWNER_WINDOW = '16'
+        $serverEnvironment.WORLDGEN_ASSIST_REMOTE_WORK_KIND = 'decisions'
+        $serverEnvironment.WORLDGEN_ASSIST_REMOTE_ALLOW_TERRAIN_DECISIONS = 'true'
+        if($CompleteTerrain){
+            $serverEnvironment.WORLDGEN_ASSIST_REMOTE_WORK_KIND='complete'
+            $serverEnvironment.WORLDGEN_ASSIST_REMOTE_ALLOW_TERRAIN_DECISIONS='false'
+            $serverEnvironment.WORLDGEN_ASSIST_REMOTE_ALLOW_COMPLETE_TERRAIN='true'
+        }
+        $serverEnvironment.WORLDGEN_ASSIST_REMOTE_CACHE_ENTRIES = '128'
+        $serverEnvironment.WORLDGEN_ASSIST_REMOTE_PREFETCH = 'true'
+        $serverEnvironment.WORLDGEN_ASSIST_REMOTE_PREFETCH_LOOKAHEAD = '0'
+        $serverEnvironment.WORLDGEN_ASSIST_REMOTE_READY_SURFACE_ONLY = 'true'
+        $serverEnvironment.WORLDGEN_ASSIST_REMOTE_PREPARE_VALIDATION = 'true'
+        $serverEnvironment.WORLDGEN_ASSIST_REMOTE_PREDICTION = 'false'
+    }
+    $serverArguments = @('-Xmx3G')
+    if ($TerrainDecisions) { $serverArguments += '-Dworldgen_assist.remote.diagnostics=true' }
+    $serverArguments += @($nativeArguments,'nogui')
+    $server = Start-Owned $java $serverArguments $serverRoot $serverEnvironment
     $serverStdout = $server.StandardOutput.ReadToEndAsync()
     $serverStderr = $server.StandardError.ReadToEndAsync()
     $serverLog = Join-Path $serverRoot 'logs/latest.log'
@@ -143,17 +176,58 @@ try {
         if ($OptionsTemplate) {
             Copy-Item -LiteralPath $OptionsTemplate -Destination (Join-Path $clientRoot 'options.txt')
         } else {
-            @('version:5023','renderDistance:4','simulationDistance:4','fullscreen:false','enableVsync:false') +
+            @('version:5023','onboardAccessibility:false','skipMultiplayerWarning:true','tutorialStep:none',
+                'renderDistance:4','simulationDistance:4','fullscreen:false','enableVsync:false','maxFps:30') +
                 (@('forward','back','left','right','jump','sneak','sprint','attack','use') | ForEach-Object { 'key_key.' + $_ + ':key.keyboard.unknown' }) |
                 Set-Content -LiteralPath (Join-Path $clientRoot 'options.txt') -Encoding utf8
         }
-        $client = Start-Owned $launch.Executable $launch.Arguments $launch.WorkingDirectory @{WORLDGEN_ASSIST_REMOTE=if($Mode -eq 'assisted'){'true'}else{'false'}}
+        $clientEnvironment = @{WORLDGEN_ASSIST_REMOTE=if($Mode -eq 'assisted'){'true'}else{'false'}}
+        if ($TerrainDecisions) { $clientEnvironment.WORLDGEN_ASSIST_CLIENT_JOB_WINDOW = '16' }
+        $client = Start-Owned $launch.Executable $launch.Arguments $launch.WorkingDirectory $clientEnvironment
         $clients.Add([pscustomobject]@{name=$name;profile=$profile;process=$client;stdout=$client.StandardOutput.ReadToEndAsync();stderr=$client.StandardError.ReadToEndAsync();sha256=$launch.ModSha256})
         Wait-Log $serverLog ([regex]::Escape($name) + ' joined the game') 180 $client $server.StartTime.ToUniversalTime()
         if ($Mode -eq 'assisted') { Wait-Log $serverLog ('worker.register owner=' + $ownerIds[$index] + ' status=ACCEPTED') 60 $client $server.StartTime.ToUniversalTime() }
     }
     Send-ServerCommand 'gamerule minecraft:spectators_generate_chunks false'
-    if ($Mode -eq 'assisted') {
+    if ($TerrainDecisions) {
+        $marker = 'CAWG_NATIVE_DECISIONS_BEGIN'
+        Send-ServerCommand "say $marker"
+        for ($index=0; $index -lt $Players; $index++) {
+            $base = if ($index -eq 0) { 1600 } else { -3200 }
+            Send-ServerCommand "execute in minecraft:overworld run tp $($ownerNames[$index]) $base 150 $base"
+        }
+        if ($Mode -eq 'assisted') {
+            $deadline = [datetime]::UtcNow.AddSeconds(90)
+            $ready = $false
+            while ([datetime]::UtcNow -lt $deadline) {
+                if ($server.HasExited -or ($clients | Where-Object { $_.process.HasExited })) { throw 'Native process exited during decision application' }
+                $missing = @($ownerIds | Select-Object -First $Players | Where-Object { -not (Owner-Completes $serverLog $_ $marker) })
+                if ($missing.Count -eq 0) { $ready = $true; break }
+                Start-Sleep -Seconds 2
+            }
+            if (-not $ready) { throw 'Full terrain decisions were not applied for every native owner' }
+        }
+        # Complete the same bounded regions in both modes so every applied
+        # owner's coordinate also has independent vanilla comparison data.
+        $required = @{}
+        for ($index=0; $index -lt $Players; $index++) {
+            $center = if ($index -eq 0) { 100 } else { -200 }
+            foreach ($xs in @(@(-10,0),@(1,10))) { foreach ($zs in @(@(-10,0),@(1,10))) {
+                Send-ServerCommand ("execute in minecraft:overworld run forceload add " + (($center+$xs[0])*16) + ' ' + (($center+$zs[0])*16) + ' ' + (($center+$xs[1])*16) + ' ' + (($center+$zs[1])*16))
+            } }
+            for ($dx=-10;$dx -le 10;$dx++) { for ($dz=-10;$dz -le 10;$dz++) { $required["$($center+$dx),$($center+$dz)"]=$true } }
+        }
+        $deadline = [datetime]::UtcNow.AddSeconds(120)
+        while ($required.Count -gt 0 -and [datetime]::UtcNow -lt $deadline) {
+            if ($server.HasExited -or ($clients | Where-Object { $_.process.HasExited })) { throw 'Native process exited before paired regions completed' }
+            foreach ($entry in [regex]::Matches((Get-Content -LiteralPath $serverLog -Raw),
+                'stage\.digest stage=noise chunk=(-?\d+,-?\d+) .*dimension=minecraft:overworld\b')) {
+                $required.Remove($entry.Groups[1].Value)
+            }
+            if ($required.Count) { Start-Sleep -Seconds 2 }
+        }
+        if ($required.Count) { throw "Native comparison region missing $($required.Count) terrain digests" }
+    } elseif ($Mode -eq 'assisted') {
         $owners = @($ownerIds | Select-Object -First $Players)
         if ($owners.Count -ne $Players) { throw 'Not all distinct owners registered' }
         Send-ServerCommand 'gamemode spectator @a'
@@ -234,7 +308,7 @@ finally {
     if (-not (Test-Path -LiteralPath $logCopy) -and (Test-Path -LiteralPath (Join-Path $serverRoot 'logs/latest.log'))) {
         Copy-Item -LiteralPath (Join-Path $serverRoot 'logs/latest.log') -Destination $logCopy
     }
-    $result = [ordered]@{schema='worldgen-assist.installed-native-scenario.v1';loader=$Loader;mode=$Mode;players=$Players;world=$world;success=$success;cleanup_safe=$cleanupSafe;loopback_only=$true;failure=$failure;mod_sha256=$modHash}
+    $result = [ordered]@{schema='worldgen-assist.installed-native-scenario.v1';loader=$Loader;mode=$Mode;players=$Players;world=$world;success=$success;cleanup_safe=$cleanupSafe;loopback_only=$true;failure=$failure;mod_sha256=$modHash;terrain_decisions=[bool]$TerrainDecisions;complete_terrain=[bool]$CompleteTerrain;view_distance=4;validation_cells=8}
     $result | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding utf8
 }
 if (-not $success) { throw $failure }

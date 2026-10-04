@@ -35,6 +35,16 @@ function P95([double[]]$Values) {
 function Stats([double[]]$Values) {
     if($Values.Count -eq 0){return $null}; return [ordered]@{count=$Values.Count;median=(Median $Values);p95=(P95 $Values);minimum=($Values|Measure-Object -Minimum).Minimum;maximum=($Values|Measure-Object -Maximum).Maximum}
 }
+function PairedStats([double[]]$Left,[double[]]$Right,[bool]$HigherIsBetter=$false) {
+    $rows=@();$ratios=@();$improved=0
+    for($i=0;$i -lt $Left.Count;$i++){
+        $ratio=if($Left[$i] -gt 0){$Right[$i]/$Left[$i]}else{$null}
+        if($null -ne $ratio){$ratios+=$ratio}
+        if($(if($HigherIsBetter){$Right[$i] -gt $Left[$i]}else{$Right[$i] -lt $Left[$i]})){$improved++}
+        $rows+=[ordered]@{repeat=$i+1;vanilla=$Left[$i];assisted=$Right[$i];delta=$Right[$i]-$Left[$i];ratio=$ratio}
+    }
+    return [ordered]@{definition='Same repeat/coordinates compared before aggregation; separate from ratio of condition medians';rows=$rows;ratios=(Stats ([double[]]$ratios));improved_repeats=$improved;repeats=$Left.Count}
+}
 function Key([object]$Result) {
     return @([string](Value $Result 'dimension'),[string](Value $Result 'players'),[string](Value $Result 'purpose'),[string](Value $Result 'cache_entries'),[string](Value $Result 'prediction'),[string](Value $Result 'validation_cells')) -join '|'
 }
@@ -131,6 +141,16 @@ function MeasurementConditions([object]$Record) {
         }
     }
     $flightPath=Join-Path $directory 'remote-evidence/flight-recording-config.json'
+    $windowPath=Join-Path $directory 'remote-evidence/pipeline-window-config.json'
+    if(Test-Path -LiteralPath $windowPath){
+        $window=Get-Content -LiteralPath $windowPath -Raw|ConvertFrom-Json
+        foreach($key in @('profile','owner_window','total_window','lookahead')){
+            $signature+='pipeline_window/'+$key+'='+(Value $window $key)
+        }
+    }
+    $kindPath=Join-Path $directory 'remote-evidence/remote-work-kind-config.json'
+    $signature+='remote_work_kind='+$(if(Test-Path -LiteralPath $kindPath){(Get-Content -LiteralPath $kindPath -Raw|ConvertFrom-Json).selected_work_kind}else{'historical-unspecified'})
+    $signature+='terrain_decisions_allowed='+$(if(Test-Path -LiteralPath $kindPath){[bool](Value (Get-Content -LiteralPath $kindPath -Raw|ConvertFrom-Json) 'terrain_decisions_allowed')}else{$false})
     $signature+='server_flight_recording='+[bool]$(if(Test-Path -LiteralPath $flightPath){(Get-Content -LiteralPath $flightPath -Raw|ConvertFrom-Json).enabled}else{$false})
     for($owner=0;$owner -lt [int](Value $Record.result 'players');$owner++){
         $options=@{}
@@ -218,24 +238,29 @@ foreach($identity in @($byKey.Keys|Sort-Object)){
         $summary.evidence=@{vanilla=$vanilla.path;assisted=$assisted.path}
         $sameWork = $null -ne $left -and $null -ne $right -and @($left).Count -eq @($right).Count
         if($sameWork){for($i=0;$i -lt @($left).Count;$i++){
-            if((Value $left[$i] 'completed_tasks') -ne (Value $right[$i] 'completed_tasks')){$sameWork=$false}
+            if((Value $left[$i] 'completed_tasks') -ne (Value $right[$i] 'completed_tasks') -or (Value $left[$i] 'repeat') -ne ($i+1) -or (Value $right[$i] 'repeat') -ne ($i+1)){$sameWork=$false}
         }}
         if(-not $sameWork){Issue $issues 'WORKLOAD_MISMATCH' "Completed task counts differ between paired repeats for $identity; ratios cannot establish performance." $root;$summary.status='INCOMPLETE'}
         $summary.equal_completed_work=$sameWork
         $sameWork=$sameWork -and $conditionsMatch -and (Value $vanilla.result 'artifact_sha256') -eq (Value $assisted.result 'artifact_sha256') -and (Value $vanilla.result 'source_manifest_after_sha256') -eq (Value $assisted.result 'source_manifest_after_sha256')
         if(-not $sameWork){$summary.status='INCOMPLETE'}
         $comparedMetrics=@('server_cpu_ms','tick_mean_ms','tick_p95_ms','throughput_tasks_per_second')
+        $summary.paired_repeat_metrics=[ordered]@{}
         if(@($left|Where-Object{$null -eq (Value $_ 'server_region_ready_ms')}).Count -eq 0 -and @($right|Where-Object{$null -eq (Value $_ 'server_region_ready_ms')}).Count -eq 0){$comparedMetrics+='server_region_ready_ms'}
         if(@($left|Where-Object{$null -eq (Value $_ 'server_full_region_ready_ms')}).Count -eq 0 -and @($right|Where-Object{$null -eq (Value $_ 'server_full_region_ready_ms')}).Count -eq 0){$comparedMetrics+='server_full_region_ready_ms'}
         foreach($metric in $comparedMetrics){
             $leftValues=[double[]]@($left|ForEach-Object{$value=Number (Value $_ $metric);if($null -ne $value){$value}});$rightValues=[double[]]@($right|ForEach-Object{$value=Number (Value $_ $metric);if($null -ne $value){$value}})
             if($null -eq $left -or $null -eq $right -or $leftValues.Count -ne $left.Count -or $rightValues.Count -ne $right.Count){Issue $issues 'MISSING_PERFORMANCE_METRIC' "Metric '$metric' is missing/non-finite for $identity." $root;$summary.status='INCOMPLETE';$summary.metrics[$metric]=$null}else{$leftStats=Stats $leftValues;$rightStats=Stats $rightValues;$summary.metrics[$metric]=[ordered]@{vanilla=$leftStats;assisted=$rightStats;median_delta=if($sameWork){$rightStats.median-$leftStats.median}else{$null};median_ratio=if(-not $sameWork -or $leftStats.median -eq 0){$null}else{$rightStats.median/$leftStats.median}}}
+            if($sameWork -and $null -ne $summary.metrics[$metric]){
+                $summary.paired_repeat_metrics[$metric]=PairedStats $leftValues $rightValues ($metric -eq 'throughput_tasks_per_second')
+            }
         }
         $leftReceipt=ClientReceiptSamples $vanilla;$rightReceipt=ClientReceiptSamples $assisted
         $summary.client_receipt_coverage=[ordered]@{vanilla=$leftReceipt.coverage;assisted=$rightReceipt.coverage}
         if($leftReceipt.complete -and $rightReceipt.complete){
             $leftStats=Stats $leftReceipt.samples;$rightStats=Stats $rightReceipt.samples
             $summary.metrics.client_region_receipt_ms=[ordered]@{vanilla=$leftStats;assisted=$rightStats;median_delta=if($sameWork){$rightStats.median-$leftStats.median}else{$null};median_ratio=if($sameWork -and $leftStats.median -gt 0){$rightStats.median/$leftStats.median}else{$null}}
+            if($sameWork){$summary.paired_repeat_metrics.client_region_receipt_ms=PairedStats $leftReceipt.samples $rightReceipt.samples}
         }else{
             Issue $issues 'INCOMPLETE_CLIENT_RECEIPT' "Client target-region receipt coverage is incomplete for $identity." $root
             $summary.status='INCOMPLETE'
