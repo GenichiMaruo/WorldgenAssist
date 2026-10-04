@@ -14,7 +14,8 @@ public record TerrainDensityJob(
 	int height,
 	int cellWidth,
 	int cellHeight,
-	TerrainWorkKind workKind
+	TerrainWorkKind workKind,
+	TerrainBeardifierData shaping
 ) {
 	public static final int CHUNK_SIDE = 16;
 	public static final int MAX_HEIGHT = 384;
@@ -26,11 +27,17 @@ public record TerrainDensityJob(
 		Identifier noiseSettings, int minY, int height, int cellWidth, int cellHeight) {
 		this(identity, worldSeed, generateStructures, noiseSettings, minY, height, cellWidth, cellHeight, TerrainWorkKind.DENSITY);
 	}
+	public TerrainDensityJob(TerrainJobIdentity identity, long worldSeed, boolean generateStructures,
+		Identifier noiseSettings, int minY, int height, int cellWidth, int cellHeight, TerrainWorkKind workKind) {
+		this(identity, worldSeed, generateStructures, noiseSettings, minY, height, cellWidth, cellHeight, workKind, TerrainBeardifierData.EMPTY);
+	}
 
 	public TerrainDensityJob {
 		Objects.requireNonNull(identity, "identity");
 		Objects.requireNonNull(noiseSettings, "noiseSettings");
 		Objects.requireNonNull(workKind, "workKind");
+		Objects.requireNonNull(shaping, "shaping");
+		if (workKind != TerrainWorkKind.COMPLETE_TERRAIN && !shaping.empty()) throw new IllegalArgumentException("Shaping is only complete terrain input");
 		if (workKind != TerrainWorkKind.DENSITY && (cellWidth != 1 || cellHeight != 1)) {
 			throw new IllegalArgumentException("Surface fields require block-aligned job geometry");
 		}

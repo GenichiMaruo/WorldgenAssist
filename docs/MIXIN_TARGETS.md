@@ -1,5 +1,30 @@
 # Mixin Targets
 
+## AG shaping accessor verified (dev.16/protocol12)
+
+Seven affected methods/three builds/Fabric gate225828-933 and fresh native
+gate232706-494 completed. Actual shaped terrain applied and matched vanilla:
+Fabric96 shared-region applications,Forge15/NeoForge13 in-workload applications.
+Accessor field descriptors work on all three runtimes; generated target-version
+source remains primary authority,including NeoForge's actual modified rigids.
+No subclass/custom-generator compatibility is implied. See TEST_RESULTS_LATEST
+for source/JAR identities. Following unrun notes retain implementation chronology.
+
+## AG shaping accessor implementation-time findings
+
+AG dev.16/protocol12 registers TerrainBeardifierAccessor263 in root/Forge lists
+(NeoForge consumes root). Targets pieces:Ljava/util/List;,junctions:Ljava/util/List;,
+affectedBox:Lnet/minecraft/world/level/levelgen/structure/BoundingBox;.
+Fabric/Forge private fields and NeoForge protected pieces/junctions share these
+descriptors. Source is in generated26.3 jars,inspected under
+.gradle/source-inspect-26.3/{fabric,forge,neoforge}. Capture actual output,
+including NeoForge PieceBeardifierModifier traversal; no copied traversal or
+sampler math. Reconstructed original Beardifier(List,List,BoundingBox) consumes
+ordered Rigid box/adjustment/ground delta and JigsawJunction sourceXYZ only;
+deltaY/projection do not affect its sampled values. Final applicator compares
+fresh actual shaping before any write. All AG gates are UNRUN; AF is the last
+verified code. Older proposed/unimplemented paragraphs describe earlier states.
+
 AF dev.15/protocol11 three builds/Fabric1,824 matching digests completed,using
 the unchanged original private invokers/locks. No native complete/peer runtime
 yet. Proposed structure-shape support is NOT registered or implemented:

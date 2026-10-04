@@ -105,7 +105,7 @@ class TerrainDecision263Test {
 		var grid=new RemoteDensityResultCache.Key(1,dim,0,0,fp,dim,-64,384,1,1,owner,1,TerrainWorkKind.GRID_AND_SURFACE);
 		var cache=new RemoteDensityResultCache(2);var result=new TerrainDensityResult(id,new double[99073],0);
 		cache.put(key,result);assertTrue(cache.takeResult(grid).isEmpty());assertSame(result,cache.takeResult(key).orElseThrow());
-		assertThrows(IllegalArgumentException.class,()->TerrainWorkKind.fromWire(6));assertEquals(11,WorldgenProtocolVersion.CURRENT.value());
+		assertThrows(IllegalArgumentException.class,()->TerrainWorkKind.fromWire(6));assertEquals(12,WorldgenProtocolVersion.CURRENT.value());
 		assertThrows(IllegalArgumentException.class,()->new WorldgenProtocolVersion(8).requireSupported());
 		assertThrows(IllegalArgumentException.class,()->new TerrainDensityJob(id,0,true,dim,-63,384,1,1,TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE));
 		assertThrows(IllegalArgumentException.class,()->new RemoteDensityResultCache.Key(1,dim,0,0,fp,dim,-64,384,4,8,owner,1,TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE));

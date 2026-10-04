@@ -137,8 +137,14 @@ public final class RemoteDensityResultCache {
 		int cellHeight,
 		UUID ownerId,
 		long ownerGeneration,
-		TerrainWorkKind workKind
+		TerrainWorkKind workKind,
+		io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData shaping
 	) {
+		public Key(long generation, Identifier dimension, int chunkX, int chunkZ, WorldgenContextFingerprint contextFingerprint,
+			Identifier noiseSettings, int minY, int height, int cellWidth, int cellHeight, UUID ownerId, long ownerGeneration, TerrainWorkKind workKind) {
+			this(generation, dimension, chunkX, chunkZ, contextFingerprint, noiseSettings, minY, height, cellWidth, cellHeight,
+				ownerId, ownerGeneration, workKind, io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData.EMPTY);
+		}
 		public Key(long generation, Identifier dimension, int chunkX, int chunkZ, WorldgenContextFingerprint contextFingerprint,
 			Identifier noiseSettings, int minY, int height, int cellWidth, int cellHeight, UUID ownerId, long ownerGeneration) {
 			this(generation, dimension, chunkX, chunkZ, contextFingerprint, noiseSettings, minY, height, cellWidth, cellHeight,
@@ -160,6 +166,8 @@ public final class RemoteDensityResultCache {
 			Objects.requireNonNull(contextFingerprint, "contextFingerprint");
 			Objects.requireNonNull(noiseSettings, "noiseSettings");
 			Objects.requireNonNull(workKind, "workKind");
+			Objects.requireNonNull(shaping, "shaping");
+			if (workKind != TerrainWorkKind.COMPLETE_TERRAIN && !shaping.empty()) throw new IllegalArgumentException("Shaping cache input requires complete terrain");
 			if (height <= 0 || height > TerrainDensityJob.MAX_HEIGHT) {
 				throw new IllegalArgumentException("Invalid cache-key height: " + height);
 			}

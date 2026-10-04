@@ -26,7 +26,6 @@ import net.minecraft.world.level.chunk.ProtoChunk;
 import net.minecraft.world.level.chunk.Strategy;
 import net.minecraft.world.level.chunk.UpgradeData;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
-import net.minecraft.world.level.levelgen.Beardifier;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseChunk;
@@ -103,7 +102,7 @@ public final class PrivateTerrainComputer {
 		};
 		BiomeManager manager = new BiomeManager(resolver, BiomeManager.obfuscateSeed(job.worldSeed()));
 		DensityVolume volume = BlockDensityData.volume(job);
-		try (NoiseChunk noise = new NoiseChunk(state, Beardifier.EMPTY, settings,
+		try (NoiseChunk noise = new NoiseChunk(state, job.shaping().sampler(), settings,
 			TerrainDecisionData.fluidPicker(settings), Blender.empty(), volume)) {
 			int acquired = 0;
 			try {

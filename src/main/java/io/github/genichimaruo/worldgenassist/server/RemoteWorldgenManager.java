@@ -552,7 +552,7 @@ public final class RemoteWorldgenManager {
 		}
 		var settings = context.settings().unwrapKey().orElseThrow().identifier();
 		var key = createCacheKey(owner, level, pos, fingerprint, settings, context.noise(),
-			io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(settings, context.settings().value()));
+			io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(settings, context.settings().value()), context.shaping());
 		return submitPreparedAhead(context, key, source, reserveForDemand,
 			candidate == null ? "prediction" : candidate.dependencyTask() ? "task_dependency" : candidate.earlyTask() ? "task" : "loaded",
 			candidate == null ? 0L : candidate.observedNanos());
@@ -643,6 +643,28 @@ public final class RemoteWorldgenManager {
 		}
 	}
 
+	/** An early EMPTY assumption must not occupy capacity once actual shaping is known. */
+	private void discardIncompatibleShaping(RemoteDensityResultCache.Key actual) {
+		var discarded = new java.util.ArrayList<java.util.Map.Entry<RemoteDensityResultCache.Key, PredictionAttempt>>();
+		synchronized (resultStateLock) {
+			if (!currentCacheKey(actual)) return;
+			for (var entry : predictedJobs.entrySet()) {
+				var key = entry.getKey();
+				if (samePosition(key, actual) && !key.shaping().equals(actual.shaping())) {
+					entry.getValue().abandoned().set(true);
+					if (predictedJobs.remove(key, entry.getValue())) discarded.add(entry);
+				}
+			}
+			resultCache.removeMatching(key -> samePosition(key, actual) && !key.shaping().equals(actual.shaping()));
+		}
+		for (var entry : discarded) {
+			var attempt = entry.getValue(); attempt.result().cancel(false); attempt.validation().cancel(false);
+			coordinator.cancelJob(attempt.ownerId(), attempt.job().identity());
+		}
+	}
+	private static boolean samePosition(RemoteDensityResultCache.Key a, RemoteDensityResultCache.Key b) {
+		return a.dimension().equals(b.dimension()) && a.chunkX() == b.chunkX() && a.chunkZ() == b.chunkZ();
+	}
 	private CompletableFuture<TerrainDensityResult> prepareValidation(RemoteJobCoordinator.Submission remote,
 		RemoteDensityResultCache.Key key, ServerLevel level, net.minecraft.world.level.levelgen.NoiseGeneratorSettings settings,
 		NoiseSettings noise, BoundedRemotePreparation<RemoteDensityValidator.Prepared, TerrainDensityResult>.Ticket ticket,
@@ -650,6 +672,10 @@ public final class RemoteWorldgenManager {
 		long queued = System.nanoTime();
 		var randomState = level.getChunkSource().randomState();
 		boolean completeTerrain = remote.job().workKind() == io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.COMPLETE_TERRAIN;
+		if (!remote.job().shaping().equals(key.shaping())) {
+			ticket.cancel(); coordinator.cancelJob(remote.ownerId(), remote.job().identity());
+			return CompletableFuture.failedFuture(new IllegalArgumentException("Assignment shaping differs from admitted key"));
+		}
 		CompleteTerrainAuditPolicy.Token<CompleteAuditContext> selected = null;
 		PeerAttempt admittedPeer = null;
 		try {
@@ -765,7 +791,7 @@ public final class RemoteWorldgenManager {
 		});
 		return result;
 	}
-	private CompleteAuditContext auditContext(RemoteDensityResultCache.Key key) {
+	static CompleteAuditContext auditContext(RemoteDensityResultCache.Key key) {
 		return new CompleteAuditContext(key.ownerId(), key.ownerGeneration(), key.generation(), key.dimension(), key.contextFingerprint());
 	}
 	private PeerOffer peerOffer(RemoteDensityResultCache.Key primary) {
@@ -778,7 +804,7 @@ public final class RemoteWorldgenManager {
 				|| !coordinator.ownerHasCapacity(owner)) continue;
 			var key = new RemoteDensityResultCache.Key(primary.generation(), primary.dimension(), primary.chunkX(), primary.chunkZ(),
 				primary.contextFingerprint(), primary.noiseSettings(), primary.minY(), primary.height(), primary.cellWidth(),
-				primary.cellHeight(), owner, ownerGenerations.getOrDefault(owner, -1L), primary.workKind());
+				primary.cellHeight(), owner, ownerGenerations.getOrDefault(owner, -1L), primary.workKind(), primary.shaping());
 			if (currentCacheKey(key) && completeAudits.trusted(auditContext(key))) return new PeerOffer(key);
 		}
 		return null;
@@ -793,7 +819,7 @@ public final class RemoteWorldgenManager {
 			var job = primary.job();
 			var admitted = coordinator.trySubmitForOwner(key.ownerId(), key.dimension(), key.chunkX(), key.chunkZ(), key.contextFingerprint(),
 				identity -> new TerrainDensityJob(identity, job.worldSeed(), job.generateStructures(), job.noiseSettings(), job.minY(),
-					job.height(), job.cellWidth(), job.cellHeight(), job.workKind()));
+					job.height(), job.cellWidth(), job.cellHeight(), job.workKind(), job.shaping()));
 			if (admitted.isEmpty()) { ticket.cancel(); return null; }
 			peer = admitted.get();
 			var checked = ticket.startPrepared(RemoteDensityValidator.Prepared.completeTerrain(peer.job(), null, 0), peer.result(), (value, prepared) -> {
@@ -1091,8 +1117,10 @@ public final class RemoteWorldgenManager {
 				fingerprint,
 				noiseSettings,
 				eligibleContext.noise(),
-				io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(noiseSettings, eligibleContext.settings().value())
+				io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(noiseSettings, eligibleContext.settings().value()),
+				eligibleContext.shaping()
 			);
+			if (!cacheKey.shaping().empty()) discardIncompatibleShaping(cacheKey);
 			AheadAvailability ahead = availableAhead(cacheKey);
 			Optional<TerrainDensityResult> cached = ahead.cached();
 			if (cached.isPresent()) {
@@ -1247,7 +1275,7 @@ public final class RemoteWorldgenManager {
 				if (cached.isPresent()) {
 				var result = cached.orElseThrow();
 				var job = new TerrainDensityJob(result.identity(), seed, structures, key.noiseSettings(), key.minY(), key.height(),
-					1, 1, key.workKind());
+					1, 1, key.workKind(), key.shaping());
 				field = new RemoteDensityField(job, result, settings, state);
 				target.worldgenAssist$installRemoteDensity(field);
 				prefetchUsed.increment();
@@ -1271,7 +1299,7 @@ public final class RemoteWorldgenManager {
 			if (currentCacheKey(key) && !startedTerrain.contains(key, System.nanoTime())) {
 				long now = System.nanoTime();
 				queuedTerrain.offer(key, demand.ownerId(), new RemoteWorldgenEligibility.SpeculativeContext(
-					context.level(), context.generator(), context.settings(), context.noise()), now, now + config.jobTimeout().toNanos());
+					context.level(), context.generator(), context.settings(), context.noise(), context.shaping()), now, now + config.jobTimeout().toNanos());
 			}
 		}
 		generationCandidates.offer(demand, chunk.getPos().x(), chunk.getPos().z(), key.generation(), key.ownerGeneration(),
@@ -1297,7 +1325,8 @@ public final class RemoteWorldgenManager {
 			eligibleContext.noise().height(),
 			1,
 			1,
-			io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(noiseSettings, eligibleContext.settings().value())
+			io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(noiseSettings, eligibleContext.settings().value()),
+			eligibleContext.shaping()
 		);
 	}
 
@@ -1315,19 +1344,15 @@ public final class RemoteWorldgenManager {
 			speculative.noise().height(),
 			1,
 			1,
-			io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(noiseSettings, speculative.settings().value())
+			io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(noiseSettings, speculative.settings().value()),
+			speculative.shaping()
 		);
 	}
 
-	private RemoteDensityResultCache.Key createCacheKey(
-		UUID ownerId,
-		ServerLevel level,
-		ChunkPos chunkPos,
-		WorldgenContextFingerprint fingerprint,
-		net.minecraft.resources.Identifier noiseSettings,
-		NoiseSettings noise,
-		io.github.genichimaruo.worldgenassist.common.TerrainWorkKind workKind
-	) {
+	private RemoteDensityResultCache.Key createCacheKey(UUID ownerId, ServerLevel level, ChunkPos chunkPos,
+		WorldgenContextFingerprint fingerprint, net.minecraft.resources.Identifier noiseSettings, NoiseSettings noise,
+		io.github.genichimaruo.worldgenassist.common.TerrainWorkKind workKind,
+		io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData shaping) {
 		return new RemoteDensityResultCache.Key(
 			cacheGeneration.get(),
 			level.dimension().identifier(),
@@ -1341,7 +1366,7 @@ public final class RemoteWorldgenManager {
 			1,
 			ownerId,
 			ownerGenerations.getOrDefault(ownerId, -1L),
-			workKind
+			workKind, shaping
 		);
 	}
 
@@ -1381,7 +1406,7 @@ public final class RemoteWorldgenManager {
 				&& currentCacheKey(entry.getKey()) && !entry.getValue().result().isDone());
 		}
 	}
-	private record CompleteAuditContext(UUID owner, long ownerGeneration, long generation,
+	record CompleteAuditContext(UUID owner, long ownerGeneration, long generation,
 		net.minecraft.resources.Identifier dimension, WorldgenContextFingerprint fingerprint) { }
 	private boolean hasCompleteAuditCapacity(RemoteDensityResultCache.Key key) {
 		return key.workKind() != io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.COMPLETE_TERRAIN

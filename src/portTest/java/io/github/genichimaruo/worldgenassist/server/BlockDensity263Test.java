@@ -87,7 +87,7 @@ class BlockDensity263Test {
 		var block=new RemoteDensityResultCache.Key(1,dim,0,0,fp,dim,-64,384,1,1,owner,1,TerrainWorkKind.BLOCK_DENSITY_AND_SURFACE);
 		var grid=new RemoteDensityResultCache.Key(1,dim,0,0,fp,dim,-64,384,1,1,owner,1,TerrainWorkKind.GRID_AND_SURFACE);
 		assertEquals(99073,block.sampleCount()); assertEquals(98304,TerrainDensityJob.MAX_SAMPLE_COUNT);
-		assertEquals(11,WorldgenProtocolVersion.CURRENT.value());
+		assertEquals(12,WorldgenProtocolVersion.CURRENT.value());
 		assertThrows(IllegalArgumentException.class,()->new WorldgenProtocolVersion(10).requireSupported());
 		assertThrows(IllegalArgumentException.class,()->new WorldgenProtocolVersion(6).requireSupported());
 		var cache=new RemoteDensityResultCache(2); var result=new TerrainDensityResult(id,new double[99073],0);

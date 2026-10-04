@@ -46,6 +46,10 @@ class CompleteTerrainPeer263Test {
 		assertThrows(IllegalArgumentException.class, () -> CompleteTerrainPeerVerifier.agree(submission(ownerA, a, first), submission(ownerB, a, second), () -> true, () -> {}, error -> {}));
 		var wrongSeed = new TerrainDensityJob(b.identity(), 1, b.generateStructures(), b.noiseSettings(), b.minY(), b.height(), 1, 1, b.workKind());
 		assertThrows(IllegalArgumentException.class, () -> CompleteTerrainPeerVerifier.agree(submission(ownerA, a, first), submission(ownerB, wrongSeed, second), () -> true, () -> {}, error -> {}));
+		var box = new TerrainBeardifierData.Box(0, 50, 0, 10, 70, 10);
+		var shape = new TerrainBeardifierData(java.util.List.of(new TerrainBeardifierData.Rigid(box, 2, 0)), java.util.List.of(), box);
+		var wrongShape = new TerrainDensityJob(b.identity(), b.worldSeed(), b.generateStructures(), b.noiseSettings(), b.minY(), b.height(), 1, 1, b.workKind(), shape);
+		assertThrows(IllegalArgumentException.class, () -> CompleteTerrainPeerVerifier.agree(submission(ownerA, a, first), submission(ownerB, wrongShape, second), () -> true, () -> {}, error -> {}));
 		var failed = CompleteTerrainPeerVerifier.agree(submission(ownerA, a, first), submission(ownerB, b, second), () -> true, () -> {}, error -> fail("Late comparison"));
 		second.completeExceptionally(new IllegalStateException("Disconnected")); assertTrue(failed.isCompletedExceptionally());
 		first.complete(TerrainDensityResult.fromCompleteTerrain(a.identity(), data(0), 0)); assertTrue(failed.isCompletedExceptionally());

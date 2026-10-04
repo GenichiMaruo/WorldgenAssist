@@ -113,7 +113,10 @@ try {
             $scenarioArguments=@('-File',(Join-Path $PSScriptRoot 'Run-InstalledNativeLoaderScenario.ps1'),
                 '-Loader',$loader,'-Mode',$mode,'-Players','2','-InstalledRoot',$installed,'-AssetsRoot',$assets,
                 '-OutputRoot',$case,'-TerrainDecisions')
-            if($prior.remote_work_kind -eq 'complete'){$scenarioArguments+='-CompleteTerrain'}
+            if($prior.remote_work_kind -eq 'complete'){
+                $scenarioArguments+=@('-CompleteTerrain','-CompleteVerification',$prior.complete_verification,'-RemoteApplicationProfile',$prior.remote_application_profile)
+                if($prior.test_profile -eq 'complete-shaping'){$scenarioArguments+='-StructuralShaping'}
+            }
             $steps+=Step "$loader-$mode" $scenarioArguments
             if(-not $steps[-1].success){throw "Native scenario failed: $loader/$mode"}
             }
@@ -121,6 +124,8 @@ try {
             if(-not $result.success -or -not $result.cleanup_safe -or -not $result.loopback_only -or
                 -not $result.terrain_decisions -or $result.mod_sha256 -ne $sha){throw 'Native identity/cleanup/profile mismatch'}
             if($prior.remote_work_kind -eq 'complete' -and -not $result.complete_terrain){throw 'Native complete terrain selection missing'}
+            if($prior.remote_work_kind -eq 'complete' -and ($result.complete_verification -ne $prior.complete_verification -or $result.remote_application_profile -ne $prior.remote_application_profile)){throw 'Native complete verification/application mode differs'}
+            if($prior.test_profile -eq 'complete-shaping' -and -not $result.structural_shaping){throw 'Native shaping fixture selection missing'}
         }
         $assistedLog=Join-Path $root "$loader/assisted/latest.log"
         $text=Get-Content -LiteralPath $assistedLog -Raw
@@ -132,6 +137,28 @@ try {
         if($prior.remote_work_kind -eq 'complete'){$comparisonArguments+='-CompleteTerrain'}
         $steps+=Step "$loader-comparison" $comparisonArguments 300
         if(-not $steps[-1].success){throw "$loader terrain mismatch"}
+        if($prior.remote_work_kind -eq 'complete'){
+            if($text -match 'job\.full_terrain_apply_rejected|Independent whole-terrain audit mismatch|peer_terrain_mismatch|Independent peer whole-terrain mismatch|worker\.quarantine'){throw "$loader complete terrain verification/application failed"}
+            $sent=@{};$applied=[Collections.Generic.HashSet[string]]::new();$peer=@{};$shaped=@{};$selected=$false
+            foreach($line in ($text -split "`n")){
+                if($line.Contains('CAWG_NATIVE_DECISIONS_BEGIN',[StringComparison]::Ordinal)){$selected=$true}
+                if(-not $selected){continue}
+                if($line -match 'job\.sent id=(\S+) chunk=(-?\d+,-?\d+) .*owner=(\S+)'){$sent[$Matches[1]]=@{chunk=$Matches[2];owner=$Matches[3]}}
+                if($line -match 'job\.complete id=(\S+) .*work_kind=COMPLETE_TERRAIN .*decision_samples=98304') {[void]$applied.Add($Matches[1])}
+                if($line -match 'job\.peer_terrain_applied id=(\S+) peer_owner=(\S+)'){$peer[$Matches[1]]=$Matches[2]}
+                if($line -match 'job\.shaped_terrain_applied id=(\S+) pieces=(\d+) junctions=(\d+)'){$shaped[$Matches[1]]=@{pieces=[int]$Matches[2];junctions=[int]$Matches[3]}}
+            }
+            $use=@()
+            foreach($owner in @('06b47fed-0490-3ea4-bd30-132cc3635f08','5caeb99e-d557-357d-9c19-ec1a763cd224')){
+                $jobs=@($sent.Keys|Where-Object {$sent[$_].owner -eq $owner -and $applied.Contains($_)})
+                $peerJobs=@($jobs|Where-Object {$peer.ContainsKey($_) -and $peer[$_] -ne $owner})
+                if($prior.complete_verification -eq 'peer' -and $peerJobs.Count -eq 0){throw "$loader distinct peer application missing for $owner"}
+                $use+=[ordered]@{owner=$owner;applied=$jobs.Count;peer_applied=$peerJobs.Count;shaped_applied=@($jobs|Where-Object {$shaped.ContainsKey($_)}).Count}
+            }
+            if($prior.test_profile -eq 'complete-shaping' -and @($shaped.Keys|Where-Object {$sent.ContainsKey($_) -and $applied.Contains($_)}).Count -eq 0){throw "$loader actual nonempty shaping was not exercised"}
+            # The preceding digest comparison requires EVERY counted in-workload application in vanilla and equal.
+            [IO.File]::WriteAllText((Join-Path $root "$loader/complete-terrain-use.json"),($use|ConvertTo-Json))
+        }
     }
     $after=Source-Manifest
     [IO.File]::WriteAllLines((Join-Path $root 'source-manifest-after.sha256'),$after)

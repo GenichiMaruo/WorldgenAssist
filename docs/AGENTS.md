@@ -1,5 +1,42 @@
 # Repository agent instructions
 
+## AG completed structural shaping (dev.16/protocol12; not beta)
+
+Gate225828-933/session59083 exited0: seven affected methods/three builds/profile,
+Fabric1,813 matching digests and96 actual shaped applications in the shared
+region;both owners used shaping and peers. Physical vanilla-first view32 paired
+FULL-2.24%/receipt-1.74%/CPU-20.53%,all three improved,tick p95+0.32%(two higher).
+Fresh native gate232706-494/session74196 exited0,reusing exact production
+source/JARs/unit/build evidence: Forge1,971/NeoForge2,002 matching digests,
+complete296/294,peer242/273 with both owners,shaped15/13(ownerA). Native view4
+and base overlap wait1s are functional evidence,not speed measurements.
+This is modest acceleration/useful CPU distribution,not substantial speedup or
+beta. Opposite-order AG is unrun; no new release. See TEST_RESULTS_LATEST for
+exact hashes and limits. Following unrun paragraphs preserve historical plans.
+
+## AG structural shaping implementation-time requirements (superseded)
+
+Current source is alpha.7-dev.16/protocol12; the last tested/committed candidate
+is AF dev.15/protocol11,cbe2f8b. AG introduces at most64 ordered rigid inputs and
+256 junctionXYZ inputs,exact affected bounds,max4,965-byte body. Capture actual
+server Beardifier via generated-source-verified accessor; never copy structural
+traversal or accept client-selected structure descriptors. Complete requests
+append bounded shaping; old work kinds require EMPTY. Key/primary/peer/cache
+reconstruction preserve the same immutable per-chunk shaping,final preflight
+compares actual shaping before writes. Base audit context deliberately excludes
+per-chunk shaping so first-two audits do not reset for each chunk. Early EMPTY
+predictions are canceled when incompatible actual shaping is known. Actual
+shaped applications have a distinct diagnostic. Unsupported classes/bounds or
+other work kinds retain original local fallback. No structure/feature placement
+or world tickets are delegated. Default remote/seed/complete/peer choices and
+audit frequency remain explicit. ALL AG tests/builds/runtime/performance are
+UNRUN. Source review and seven affected test methods/harness are complete.
+Run one sequential `Run-CompleteTerrainGate -Execute -StructuralShaping
+-ViewDistance32 -ConditionOrder vanilla-first` batch: affected methods, three
+builds, physical profile, fresh two-owner parity with actual NONEMPTY shaping
+in the shared digest region and peer use for both owners, then view32 comparison.
+Never claim AF evidence for changed AG artifacts.
+
 ## AF peer verification candidate (Fabric verified; not beta)
 
 Current candidate is alpha.7-dev.15/protocol11. Explicit server choice
@@ -26,7 +63,7 @@ Historical audit statements below describe default server mode.
 
 ## Scope and sources
 
-The published alpha.6 and current alpha.7-dev.15 candidate target Minecraft Java Edition **26.3** with
+The published alpha.6 and current alpha.7-dev.16 candidate target Minecraft Java Edition **26.3** with
 Fabric Loader **0.19.5** / Fabric API **0.161.0+26.3**, Forge **66.0.3**,
 and NeoForge **26.3.0.13-beta** on Java **25** (verification JDK 25.0.4).
 The earlier 26.2 Fabric alpha.3 remains on `mc/26.2` and is immutable.

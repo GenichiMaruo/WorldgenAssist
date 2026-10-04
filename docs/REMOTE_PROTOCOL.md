@@ -1,11 +1,39 @@
 # Remote Protocol
 
+## AG shaping request verified (dev.16/protocol12)
+
+Seven affected methods/three builds/Fabric and fresh Forge/NeoForge runtimes
+completed. Nonempty actual server shaping crossed requests,was computed by
+clients and applied with matching independent vanilla digests on all loaders.
+Base owner/epoch audits remain stable;shape isolates per-chunk results and peers.
+Protocol11 is refused. See TEST_RESULTS_LATEST for exact identity; no beta claim.
+Following unrun paragraphs preserve implementation-time chronology.
+
+## AG shaping request implementation-time specification
+
+Current source requires12 on both ends; old11 is refused. After COMPLETE_TERRAIN
+kind byte only, append VarInt body length13..4965 followed by immutable shaping
+body. Other kinds append nothing and must have EMPTY shaping. Body version1:
+int32 version/piece count/junction count,byte0/1 affected-box flag,optional six
+int32 bounds,ordered rigid rows(six int32 bounds,byte TerrainAdjustment ordinal,
+int32 ground delta),ordered junction rows(three int32 sourceXYZ). Maximum64
+pieces/256 junctions,strict exact framing,coordinate/extent/delta bounds before
+allocation. Duplicate/order semantics preserved; no arbitrary block IDs,NBT,
+entities,structure templates or client-originated mutation instructions.
+Server extracts original sampler data; client reconstructs original sampler,
+server independently audits and compares actual shaping before application.
+Peer job must have equal shaping and cache key carries the same server snapshot.
+Base audit cohort/digestv2/result envelope remain unchanged. Request batches
+remain max4 (~20KB shaping plus headers),existing quotas/deadlines unchanged.
+ALL AG gates are UNRUN; tested AF remains dev.15/protocol11/cbe2f8b.
+
 AF dev.15/protocol11 completed5 affected methods/three builds/Fabric1,824 matching
 digests and actual distinct peer applications for both owners. Physical view32
 paired FULL-4.27%/receipt-3.71%/CPU-17.10% all three improved,tick p95+6.18%.
 No substantial speedup,beta,native complete/peer or opposite-order AF evidence.
-Per-chunk structural shaping transport is only a proposed next hypothesis;
-current complete jobs still require empty Beardifier and unchanged protocol11.
+At the AF checkpoint, per-chunk structural shaping was only a proposed next
+hypothesis and AF complete jobs required empty Beardifier/protocol11. The AG
+request implementation above supersedes that restriction but is still unrun.
 Unrun paragraphs below retain implementation-time chronology.
 
 ## AF distinct-owner verification (dev.15; unchanged protocol11; unrun)

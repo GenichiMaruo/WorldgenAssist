@@ -1,5 +1,21 @@
 # Seed Confidentiality
 
+AG dev.16/protocol12 completed seven affected methods/three builds/Fabric/native
+parity including actual shaped applications and both-owner peer approval.
+This verifies behavior,not hostile-client proof or confidentiality. Raw seed and
+bounded structure-shaping inputs remain explicitly disclosed to trusted clients;
+peer collusion and seed secrecy are unresolved. Defaults stay off. Historical
+unrun paragraphs below retain chronology; see TEST_RESULTS_LATEST for identity.
+
+AG dev.16/protocol12 source adds server-issued bounded structural shaping for
+already-demanded complete jobs. This reveals rigid bounds/adjustments and
+junction positions under the existing trusted_raw opt-in; no seed or structure
+confidentiality claim. Primary and peer get the same immutable request inputs;
+client results cannot select shaping or place structures. Default off/seed
+denial/complete/peer gates,first2/default1/8 or eligible-peer1/64 full audits,
+whole peer equality and final pre-write checks remain. Unsupported contexts
+fall back locally. Source is incomplete/unbuilt/UNRUN; AF proof cannot attest AG.
+
 AF peer mode passed5 affected methods/three builds/Fabric1,824 matching digests
 with actual distinct peer applications596/620. This verifies the selected
 trusted-friend fixture,not collusion resistance,hostile safety or seed secrecy.

@@ -1,5 +1,37 @@
 # World Generation Pipeline Notes
 
+## AG per-chunk shaping completed (dev.16/protocol12; not beta)
+
+Actual ordered server sampler inputs now reach primary/peer/private computation
+and final preflight/cache keys. Fabric1,813/Forge1,971/NeoForge2,002 shared noise
+digests matched,with actual nonempty shaping applications96/15/13 respectively.
+Structures/features still execute on the server. Physical vanilla-first view32
+paired FULL-2.24%/receipt-1.74%/CPU-20.53%,all three improved,tick p95+0.32%.
+This is modest acceleration,useful CPU distribution,not beta. Retained JFR shows
+features23.44%,original BIOMES6.53%,private full audits4.93%,complete apply5.64%,
+local terrain workers28.29% inclusive/overlapping samples,not durations. Next
+work should address remaining original computation/critical dependencies;
+these shares do not prove a particular offload or timing change will help.
+Native view4/base wait1s is functional evidence only. Following unrun plans are
+historical; exact current evidence is in TEST_RESULTS_LATEST.
+
+## AG per-chunk structural shaping implementation-time findings
+
+AF removed much verification CPU but retained local terrain work. AG dev.16/
+protocol12 captures actual canonical Beardifier inputs,not structure generation
+itself. Request/key/peer assignment and cache reconstruction carry immutable
+ordered pieces/junctionXYZ/affected box; each body is bounded4,965 bytes,64
+pieces/256 junctions. The original private NoiseChunk receives reconstructed
+original Beardifier. Actual server shaping must still match at final preflight.
+Base owner/epoch/context audit cohort excludes shape while cache keys include
+shape. Thus variants do not force two full audits per chunk or share cached
+outputs. Incompatible early EMPTY assumptions are canceled/reclaimed when
+actual shaping arrives. Unsupported bounds/classes and intermediate kinds keep
+local fallback. Features/structure placement remain original server operations.
+No new worker/executor/world task/ticket,audit reduction or provisional drawing.
+Remaining affected tests/harness review must finish before one sequential batch.
+ALL AG tests/builds/runtime/performance are UNRUN; no AG speed/beta claim.
+
 AF dev.15/protocol11 completed5 affected methods/three builds/1,824 matching
 digests with actual peer use596/620. Physical assisted-first FULL-4.27%/
 receipt-3.71%/CPU-17.10% all three improved,tick p95+6.18% all higher. No beta.

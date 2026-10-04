@@ -5,7 +5,7 @@ param([switch]$Execute,[switch]$LocalOnly,[ValidateRange(2,32)][int]$ViewDistanc
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
     [ValidateSet('wide','deep')][string]$WindowProfile='wide',
     [ValidateSet('vanilla-first','assisted-first')][string]$ConditionOrder='vanilla-first',
-    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation','complete-peer')][string]$TestProfile='transport',
+    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation','complete-peer','complete-shaping')][string]$TestProfile='transport',
     [string]$ReuseBuildEvidence,[string]$ReuseCorrectnessEvidence)
 # Finish all implementation first; affected units/builds/runtime/performance are sequential.
 Set-StrictMode -Version Latest
@@ -56,12 +56,21 @@ if($TestProfile -eq 'complete-preparation'){
         'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedReplyBypassesBlockedPreparationWithoutReleasingItsRemoteSlot',
         'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedCancellationAndFailuresReleaseOnceAndIgnoreLateReplies');$expectedTests=4
 }
-$verification=if($TestProfile -eq 'complete-peer'){'peer'}else{'server'}
+$verification=if($TestProfile -in @('complete-peer','complete-shaping')){'peer'}else{'server'}
 if($TestProfile -eq 'complete-peer'){
     if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Peer terrain verification requires fresh affected build and overlap correctness evidence'}
     $selections=@('io.github.genichimaruo.worldgenassist.server.CompleteTerrainPeer263Test',
         'io.github.genichimaruo.worldgenassist.server.CompleteTerrain263Test.twoSuccessfulInitialAuditsGateFurtherWorkAndPrivateDraws',
         'io.github.genichimaruo.worldgenassist.server.CompleteTerrain263Test.cancellationEpochInvalidationAndAdmissionNeverAcceptStaleAudits');$expectedTests=5
+}
+if($TestProfile -eq 'complete-shaping'){
+    if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Structural shaping requires fresh affected build and overlap correctness evidence'}
+    $selections=@('io.github.genichimaruo.worldgenassist.common.TerrainBeardifier263Test',
+        'io.github.genichimaruo.worldgenassist.network.TerrainShapingPayload263Test',
+        'io.github.genichimaruo.worldgenassist.server.TerrainShapingCache263Test',
+        'io.github.genichimaruo.worldgenassist.server.CompleteTerrainPeer263Test.agreementRequiresDistinctAssignmentsAndEveryTerrainComponentAndFailsPromptly',
+        'io.github.genichimaruo.worldgenassist.server.BlockDensity263Test.shapeBoundsKindIsolationAndSigns',
+        'io.github.genichimaruo.worldgenassist.server.TerrainDecision263Test.operatorGateCodesAndTypedCacheAreBounded');$expectedTests=7
 }
 if($TestProfile -eq 'scheduling'){$selections=@('io.github.genichimaruo.worldgenassist.server.RemoteAwareScheduling263Test');$expectedTests=3}
 if($TestProfile -eq 'prefetch'){$selections=@('io.github.genichimaruo.worldgenassist.server.GenerationPrefetch263Test');$expectedTests=6}
@@ -265,18 +274,38 @@ try{
         $use=@()
         $peerUse=@()
         $peerApplications=@([regex]::Matches($log,'job\.peer_terrain_applied id=(\S+) peer_owner=(\S+)'))
-        if($TestProfile -eq 'complete-peer' -and $log -match 'peer_terrain_mismatch|Independent peer whole-terrain mismatch|worker\.quarantine'){throw 'Peer verification rejected terrain or quarantined a worker'}
+        if($verification -eq 'peer' -and $log -match 'peer_terrain_mismatch|Independent peer whole-terrain mismatch|worker\.quarantine'){throw 'Peer verification rejected terrain or quarantined a worker'}
         foreach($owner in $owners.PSObject.Properties){
             $jobs=@([regex]::Matches($log,'job\.sent id=(\S+) .*owner='+[regex]::Escape([string]$owner.Value)+'\b')|ForEach-Object {$_.Groups[1].Value}|Where-Object {$applied.Contains($_)})
             if($jobs.Count -eq 0){throw "No actual block-density application for $($owner.Name)"}
             $use+=[ordered]@{owner=$owner.Name;block_density_jobs_applied=$jobs.Count}
-            if($TestProfile -eq 'complete-peer'){
+            if($verification -eq 'peer'){
                 $peerJobs=@($peerApplications|Where-Object {$_.Groups[1].Value -in $jobs -and $_.Groups[2].Value -ne [string]$owner.Value})
                 if($peerJobs.Count -eq 0){throw "No distinct peer-verified actual terrain application for $($owner.Name)"}
                 $peerUse+=[ordered]@{owner=$owner.Name;peer_verified_jobs_applied=$peerJobs.Count;whole_terrain_equal=$true}
             }
         }
-        if($TestProfile -eq 'complete-peer'){[IO.File]::WriteAllText((Join-Path $root 'peer-terrain-use.json'),($peerUse|ConvertTo-Json))}
+        if($verification -eq 'peer'){[IO.File]::WriteAllText((Join-Path $root 'peer-terrain-use.json'),($peerUse|ConvertTo-Json))}
+        if($TestProfile -eq 'complete-shaping'){
+            $sent=@{};foreach($entry in [regex]::Matches($log,'job\.sent id=(\S+) chunk=(-?\d+,-?\d+) .*owner=(\S+)')){$sent[$entry.Groups[1].Value]=@{chunk=$entry.Groups[2].Value;owner=$entry.Groups[3].Value}}
+            $digests=@{}
+            foreach($mode in @('vanilla','assisted')){
+                $result=Get-Content -LiteralPath (Join-Path $correct "$mode/scenario-result.json") -Raw|ConvertFrom-Json
+                $digests[$mode]=@{};foreach($entry in $result.correctness.noise_digests){$digests[$mode][$entry.chunk]=$entry.digest}
+            }
+            $shapedUse=@()
+            foreach($entry in [regex]::Matches($log,'job\.shaped_terrain_applied id=(\S+) pieces=(\d+) junctions=(\d+)')){
+                $id=$entry.Groups[1].Value
+                if(-not $applied.Contains($id) -or -not $sent.ContainsKey($id)){continue}
+                $chunk=$sent[$id].chunk
+                # Assisted onboarding may generate extra coordinates; require actual shaping in the shared comparison region.
+                if(-not $digests.vanilla.ContainsKey($chunk) -or -not $digests.assisted.ContainsKey($chunk)){continue}
+                if($digests.vanilla[$chunk] -ne $digests.assisted[$chunk]){throw "Shaped terrain differs at $chunk"}
+                $shapedUse+=[ordered]@{id=$id;chunk=$chunk;owner=$sent[$id].owner;pieces=[int]$entry.Groups[2].Value;junctions=[int]$entry.Groups[3].Value;digest_equal=$true}
+            }
+            if($shapedUse.Count -eq 0){throw 'No nonempty shaping was actually applied in the shared vanilla/assisted comparison region'}
+            [IO.File]::WriteAllText((Join-Path $root 'shaped-terrain-use.json'),([ordered]@{applied_matching=$shapedUse.Count;chunks=$shapedUse}|ConvertTo-Json -Depth 5))
+        }
         [IO.File]::WriteAllText((Join-Path $root 'block-density-use.json'),($use|ConvertTo-Json))
         $lock.Dispose();$lock=$null
         $steps+=Step 'performance-pair' $pwsh @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-ConstrainedServerBenchmark.ps1'),'-Execute','-PhysicalServer','-ServerFlightRecording','-ViewDistance',[string]$ViewDistance,'-MeasureFullView','-QuietRemoteTrace','-AssistedNoiseBackend','cooperative','-VanillaNoiseBackend','cooperative','-WindowProfile',$WindowProfile,'-ConditionOrder',$ConditionOrder,'-RemoteApplicationProfile',$RemoteApplicationProfile,'-PrefetchLookahead',[string]$PrefetchLookahead,'-RemoteWorkKind',$RemoteWorkKind,'-CompleteVerification',$verification) 7200

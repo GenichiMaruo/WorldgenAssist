@@ -8,12 +8,17 @@ param(
     [Parameter(Mandatory)][string]$AssetsRoot,
     [string]$OptionsTemplate,
     [switch]$TerrainDecisions,
-    [switch]$CompleteTerrain
+    [switch]$CompleteTerrain,
+    [ValidateSet('server','peer')][string]$CompleteVerification='server',
+    [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='ready',
+    [switch]$StructuralShaping
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 if($CompleteTerrain){$TerrainDecisions=[switch]$true}
+if(($StructuralShaping -or $CompleteVerification -eq 'peer' -or $RemoteApplicationProfile -eq 'overlap') -and -not $CompleteTerrain){throw 'Shaping/peer/overlap native profiles require complete terrain'}
+$nativeCenters=if($StructuralShaping){@(@{x=1000;z=-2000},@{x=-1000;z=2000})}else{@(@{x=100;z=100},@{x=-200;z=-200})}
 $expectedWorkKind=if($CompleteTerrain){'COMPLETE_TERRAIN'}else{'TERRAIN_DECISIONS_AND_SURFACE'}
 $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $fixtureRoot = [IO.Path]::GetFullPath((Join-Path $workspace 'test-artifacts')).TrimEnd('\') + '\'
@@ -145,11 +150,17 @@ try {
             $serverEnvironment.WORLDGEN_ASSIST_REMOTE_WORK_KIND='complete'
             $serverEnvironment.WORLDGEN_ASSIST_REMOTE_ALLOW_TERRAIN_DECISIONS='false'
             $serverEnvironment.WORLDGEN_ASSIST_REMOTE_ALLOW_COMPLETE_TERRAIN='true'
+            $serverEnvironment.WORLDGEN_ASSIST_REMOTE_COMPLETE_VERIFICATION=$CompleteVerification
         }
         $serverEnvironment.WORLDGEN_ASSIST_REMOTE_CACHE_ENTRIES = '128'
         $serverEnvironment.WORLDGEN_ASSIST_REMOTE_PREFETCH = 'true'
         $serverEnvironment.WORLDGEN_ASSIST_REMOTE_PREFETCH_LOOKAHEAD = '0'
-        $serverEnvironment.WORLDGEN_ASSIST_REMOTE_READY_SURFACE_ONLY = 'true'
+        $serverEnvironment.WORLDGEN_ASSIST_REMOTE_READY_SURFACE_ONLY = ($RemoteApplicationProfile -eq 'ready').ToString().ToLowerInvariant()
+        if($RemoteApplicationProfile -eq 'overlap'){
+            # Functional native fixture only, not a speed comparison: allow the two-thread clients to finish.
+            $serverEnvironment.WORLDGEN_ASSIST_REMOTE_DEMAND_WAIT_MS='1000'
+            $serverEnvironment.WORLDGEN_ASSIST_REMOTE_ADAPTIVE_DEMAND_WAIT='true'
+        }
         $serverEnvironment.WORLDGEN_ASSIST_REMOTE_PREPARE_VALIDATION = 'true'
         $serverEnvironment.WORLDGEN_ASSIST_REMOTE_PREDICTION = 'false'
     }
@@ -193,8 +204,8 @@ try {
         $marker = 'CAWG_NATIVE_DECISIONS_BEGIN'
         Send-ServerCommand "say $marker"
         for ($index=0; $index -lt $Players; $index++) {
-            $base = if ($index -eq 0) { 1600 } else { -3200 }
-            Send-ServerCommand "execute in minecraft:overworld run tp $($ownerNames[$index]) $base 150 $base"
+            $center=$nativeCenters[$index]
+            Send-ServerCommand ("execute in minecraft:overworld run tp $($ownerNames[$index]) "+($center.x*16)+' 150 '+($center.z*16))
         }
         if ($Mode -eq 'assisted') {
             $deadline = [datetime]::UtcNow.AddSeconds(90)
@@ -211,11 +222,11 @@ try {
         # owner's coordinate also has independent vanilla comparison data.
         $required = @{}
         for ($index=0; $index -lt $Players; $index++) {
-            $center = if ($index -eq 0) { 100 } else { -200 }
+            $center=$nativeCenters[$index]
             foreach ($xs in @(@(-10,0),@(1,10))) { foreach ($zs in @(@(-10,0),@(1,10))) {
-                Send-ServerCommand ("execute in minecraft:overworld run forceload add " + (($center+$xs[0])*16) + ' ' + (($center+$zs[0])*16) + ' ' + (($center+$xs[1])*16) + ' ' + (($center+$zs[1])*16))
+                Send-ServerCommand ("execute in minecraft:overworld run forceload add " + (($center.x+$xs[0])*16) + ' ' + (($center.z+$zs[0])*16) + ' ' + (($center.x+$xs[1])*16) + ' ' + (($center.z+$zs[1])*16))
             } }
-            for ($dx=-10;$dx -le 10;$dx++) { for ($dz=-10;$dz -le 10;$dz++) { $required["$($center+$dx),$($center+$dz)"]=$true } }
+            for ($dx=-10;$dx -le 10;$dx++) { for ($dz=-10;$dz -le 10;$dz++) { $required["$($center.x+$dx),$($center.z+$dz)"]=$true } }
         }
         $deadline = [datetime]::UtcNow.AddSeconds(120)
         while ($required.Count -gt 0 -and [datetime]::UtcNow -lt $deadline) {
@@ -308,7 +319,7 @@ finally {
     if (-not (Test-Path -LiteralPath $logCopy) -and (Test-Path -LiteralPath (Join-Path $serverRoot 'logs/latest.log'))) {
         Copy-Item -LiteralPath (Join-Path $serverRoot 'logs/latest.log') -Destination $logCopy
     }
-    $result = [ordered]@{schema='worldgen-assist.installed-native-scenario.v1';loader=$Loader;mode=$Mode;players=$Players;world=$world;success=$success;cleanup_safe=$cleanupSafe;loopback_only=$true;failure=$failure;mod_sha256=$modHash;terrain_decisions=[bool]$TerrainDecisions;complete_terrain=[bool]$CompleteTerrain;view_distance=4;validation_cells=8}
+    $result = [ordered]@{schema='worldgen-assist.installed-native-scenario.v1';loader=$Loader;mode=$Mode;players=$Players;world=$world;success=$success;cleanup_safe=$cleanupSafe;loopback_only=$true;failure=$failure;mod_sha256=$modHash;terrain_decisions=[bool]$TerrainDecisions;complete_terrain=[bool]$CompleteTerrain;complete_verification=$CompleteVerification;remote_application_profile=$RemoteApplicationProfile;structural_shaping=[bool]$StructuralShaping;view_distance=4;validation_cells=8}
     $result | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding utf8
 }
 if (-not $success) { throw $failure }

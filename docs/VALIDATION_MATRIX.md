@@ -1,5 +1,28 @@
 # Validation matrix
 
+AG gate225828-933/session59083 and fresh native232706-494/session74196 exited0.
+Seven affected methods/three builds/profile,Fabric1,813 matching digests/96 actual
+shaped applications,both owners used peers. Physical vanilla-first view32 paired
+FULL-2.24%/receipt-1.74%/CPU-20.53%,all three improved,tick p95+0.32%(two higher).
+Native exact-source/JAR/unit/build reuse with fresh runtimes: Forge1,971/
+NeoForge2,002 matching digests,complete296/294,peer242/273 both owners,shaped15/13
+(ownerA). Native view4/base overlap wait1s is functional only. Opposite-order AG/
+beta remain unproved. Unrun paragraphs below preserve implementation chronology.
+
+AG dev.16/protocol12 implementation is complete but unrun. Seven affected methods cover original
+sampler bit parity/immutable bounded body,request/batch roundtrip and old-version
+refusal,shape-isolated caches with stable base audit cohort,distinct peer shape
+matching. Then three builds,fresh two-owner parity requiring actual NONEMPTY
+shaping applications in the shared digest region,then equal-work physical view32 pair.
+Use `Run-CompleteTerrainGate -Execute -StructuralShaping -ViewDistance32
+-ConditionOrder vanilla-first`; distinct peer application is required for both
+owners, and every counted shaped application must have matching vanilla digest.
+No unchanged fragment,
+biome cache,digest,preparation or whole matrix rerun. Finish all tests/harness/
+source work before a single batch. ALL AG gates are UNRUN,AF evidence cannot
+be relabeled for changed AG source/JAR. Native affected runtime remains required
+before publication/readiness claims.
+
 AF selected batch gate214306-614/session5870 exited0,csb214650-845 COMPLETE.
 Five affected methods/three builds/profile/Fabric1,824 shared digests all equal,
 actual peer applications596/620; no broader suite rerun. Physical assisted-first

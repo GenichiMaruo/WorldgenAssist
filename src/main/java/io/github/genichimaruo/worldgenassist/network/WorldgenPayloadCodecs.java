@@ -54,10 +54,13 @@ final class WorldgenPayloadCodecs {
 		buffer.writeVarInt(job.cellWidth());
 		buffer.writeVarInt(job.cellHeight());
 		buffer.writeByte(job.workKind().ordinal());
+		if (job.workKind() == TerrainWorkKind.COMPLETE_TERRAIN) {
+			byte[] shaping = job.shaping().encode(); buffer.writeVarInt(shaping.length); buffer.writeBytes(shaping);
+		}
 	}
 
 	static TerrainDensityJob readJob(RegistryFriendlyByteBuf buffer) {
-		return new TerrainDensityJob(
+		TerrainDensityJob base = new TerrainDensityJob(
 			readIdentity(buffer),
 			buffer.readLong(),
 			buffer.readBoolean(),
@@ -68,6 +71,15 @@ final class WorldgenPayloadCodecs {
 			buffer.readVarInt(),
 			TerrainWorkKind.fromWire(buffer.readUnsignedByte())
 		);
+		if (base.workKind() != TerrainWorkKind.COMPLETE_TERRAIN) return base;
+		int length = buffer.readVarInt();
+		if (length < 13 || length > io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData.MAX_BYTES) {
+			throw new IllegalArgumentException("Invalid shaping body bound");
+		}
+		byte[] encoded = new byte[length]; buffer.readBytes(encoded);
+		var shaping = io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData.decode(encoded);
+		return new TerrainDensityJob(base.identity(), base.worldSeed(), base.generateStructures(), base.noiseSettings(),
+			base.minY(), base.height(), base.cellWidth(), base.cellHeight(), base.workKind(), shaping);
 	}
 
 	static void writeResult(RegistryFriendlyByteBuf buffer, TerrainDensityResultEnvelope result) {

@@ -21,6 +21,7 @@ final class CompleteTerrainPeerVerifier {
 			|| !a.identity().contextFingerprint().equals(b.identity().contextFingerprint())
 			|| !a.identity().protocolVersion().equals(b.identity().protocolVersion())
 			|| a.worldSeed() != b.worldSeed() || a.generateStructures() != b.generateStructures()
+			|| !a.shaping().equals(b.shaping())
 			|| !a.noiseSettings().equals(b.noiseSettings()) || a.minY() != b.minY() || a.height() != b.height()
 			|| a.cellWidth() != b.cellWidth() || a.cellHeight() != b.cellHeight()) {
 			throw new IllegalArgumentException("Peer assignments are not independent matching terrain work");

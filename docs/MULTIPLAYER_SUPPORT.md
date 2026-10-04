@@ -1,5 +1,21 @@
 # Player-owned concurrent assistance
 
+AG dev.16/protocol12 completed Fabric/native gates225828-933/232706-494.
+Both owners had actual peer-approved complete terrain applications on all three
+loaders;nonempty shaping matched vanilla(Fabric96,Forge15,NeoForge13 counted
+applications). Native shaping was consumed only for ownerA;Fabric both owners.
+Physical view32 paired FULL-2.24%/receipt-1.74%/CPU-20.53%,all three improved,
+not substantial speedup/beta. Same caps/epochs/cancellation/opt-ins remain.
+Following unrun descriptions retain chronology; see TEST_RESULTS_LATEST.
+
+AG dev.16/protocol12 source carries the SAME actual per-chunk structural shaping
+in primary/peer assignments and cache keys. Base owner/epoch audit cohort stays
+unchanged; changing shape does not reset first-two audits or authorize a stale
+cached result. Final preflight compares actual server shaping,not client claims.
+Owner/view policy,peer-only cross-view verification,connection/global/owner/
+preparation bounds and disconnect cleanup remain. No structural/feature placement
+is delegated. ALL AG gates are UNRUN; AF is the last verified candidate.
+
 AF dev.15/protocol11 completed fresh Fabric two-owner parity1,824 shared digests/
 zero mismatch,actual complete applications633/695 including peer596/620.
 Physical view32 all three FULL/receipt/CPU improved modestly(-4.27%/-3.71%/

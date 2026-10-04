@@ -56,7 +56,8 @@ public final class CompleteTerrainApplicator {
 			|| !settings.noiseSettings().equals(settings.noiseSettings().clampToHeightAccessor(chunk))
 			|| settings.noiseSettings().minY() != job.minY() || settings.noiseSettings().height() != job.height()
 			|| state.seed() != job.worldSeed() || !blender.isEmpty()
-			|| Beardifier.forStructuresInChunk(structures, chunk.getPos()) != Beardifier.EMPTY
+			|| !job.shaping().equals(io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData.capture(
+				Beardifier.forStructuresInChunk(structures, chunk.getPos())))
 			|| !proto.getBlockEntities().isEmpty() || !proto.getBlockEntityNbts().isEmpty()
 			|| SharedConstants.DEBUG_DISABLE_SURFACE || SharedConstants.DEBUG_DISABLE_CARVERS
 			|| SharedConstants.DEBUG_ONLY_GENERATE_HALF_THE_WORLD || SharedConstants.debugVoidTerrain(chunk.getPos())) {

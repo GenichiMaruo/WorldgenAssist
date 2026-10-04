@@ -10,6 +10,7 @@
     "ChunkGenerationTaskHintsMixin263",
     "PrivateBiomeInvoker263",
     "PrivateTerrainInvoker263",
+    "TerrainBeardifierAccessor263",
     "NoiseBasedChunkGeneratorMixin",
     "NoiseChunkSurfaceSamplerMixin263",
     "ServerChunkCacheRemoteWaitMixin263",

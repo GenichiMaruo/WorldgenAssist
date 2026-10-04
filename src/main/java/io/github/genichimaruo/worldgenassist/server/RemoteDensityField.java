@@ -125,6 +125,9 @@ public final class RemoteDensityField {
 	public void recordCompleteTerrainApplication() {
 		if (completeTerrain == null) throw new IllegalStateException("Not complete terrain");
 		remoteSamplesServed += completeTerrain.blockCount(); decisionSamplesServed += completeTerrain.blockCount();
+		if (!job.shaping().empty()) io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
+			"[CAWG] job.shaped_terrain_applied id={} pieces={} junctions={}", jobId,
+			job.shaping().pieces().size(), job.shaping().junctions().size());
 		result.recordPeerApplication();
 	}
 	public boolean lastDecisionFluidUpdate() { return lastDecisionFluidUpdate; }

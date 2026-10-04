@@ -47,19 +47,29 @@ final class RemoteWorldgenEligibility {
 			return Optional.empty();
 		}
 		StructureManager structureManager = level.structureManager().forWorldGenRegion(region);
-		if (Beardifier.forStructuresInChunk(structureManager, chunk.getPos()) != Beardifier.EMPTY) {
-			return Optional.empty();
+		Beardifier beardifier = Beardifier.forStructuresInChunk(structureManager, chunk.getPos());
+		io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData shaping;
+		if (!io.github.genichimaruo.worldgenassist.common.CompleteTerrainMode.requested()) {
+			if (beardifier != Beardifier.EMPTY) return Optional.empty();
+			shaping = io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData.EMPTY;
+		} else {
+			try { shaping = io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData.capture(beardifier); }
+			catch (IllegalArgumentException unsupported) { return Optional.empty(); }
 		}
 
 		Holder<NoiseGeneratorSettings> settings = generator.generatorSettings();
 		if (settings.unwrapKey().isEmpty()) {
 			return Optional.empty();
 		}
+		if (!shaping.empty() && io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(
+			settings.unwrapKey().orElseThrow().identifier(), settings.value()) != io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.COMPLETE_TERRAIN) {
+			return Optional.empty();
+		}
 		NoiseSettings noise = settings.value().noiseSettings().clampToHeightAccessor(chunk.getHeightAccessorForGeneration());
 		if (!noise.equals(settings.value().noiseSettings()) || !hasProtocolGeometry(noise, level.getMinY(), level.getHeight())) {
 			return Optional.empty();
 		}
-		return Optional.of(new EligibleContext(level, generator, settings, noise, structureManager, blender));
+		return Optional.of(new EligibleContext(level, generator, settings, noise, structureManager, blender, shaping));
 	}
 
 	static Optional<SpeculativeContext> evaluatePrediction(ServerLevel level) {
@@ -116,7 +126,8 @@ final class RemoteWorldgenEligibility {
 		Holder<NoiseGeneratorSettings> settings,
 		NoiseSettings noise,
 		StructureManager structureManager,
-		Blender blender
+		Blender blender,
+		io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData shaping
 	) {
 	}
 
@@ -124,7 +135,11 @@ final class RemoteWorldgenEligibility {
 		ServerLevel level,
 		NoiseBasedChunkGenerator generator,
 		Holder<NoiseGeneratorSettings> settings,
-		NoiseSettings noise
+		NoiseSettings noise,
+		io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData shaping
 	) {
+		SpeculativeContext(ServerLevel level, NoiseBasedChunkGenerator generator, Holder<NoiseGeneratorSettings> settings, NoiseSettings noise) {
+			this(level, generator, settings, noise, io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData.EMPTY);
+		}
 	}
 }

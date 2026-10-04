@@ -1,5 +1,63 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## AG completed structural shaping (2026-10-04; dev.16/protocol12)
+
+After all implementation, gate225828-933/session59083 exited0,csb230204-612
+COMPLETE,vanilla-first. Seven affected methods/three builds/physical profile,
+Fabric1,813 shared format2 digests/zero mismatch. Actual complete688/782,
+peer665/663 for ownersA/B;96 actual shaped applications in the shared matching
+region cover both owners. No unchanged suites or broad matrix were repeated.
+Fabric C7A24AF865981DF86D8546A767194904B4BAF8DD18ABAFFAAEFDDC759B8CC858,
+Forge FD8FE5040F0D5EB3EF48670FACAAC67401F408E6D977C5AAAD976DE868612777,
+NeoForge CADB5B09D12E748741327454046B108549DE2AAFD08DE5834B1DF7D44333B32F.
+
+Physical same-region FULL97.080->93.499s,108.753->106.321s,
+102.045->100.734s: median paired-2.24%,all three faster. Receipt102.484->99.196s,
+114.968->112.971s,107.583->106.187s: paired-1.74%,all faster. Server CPU
+398.125->329.250s,442.063->333.484s,415.281->330.016s: paired-20.53%,all lower.
+Tick p95 paired+0.32%(two higher),mean-2.40%(two lower). Equal source/JAR/settings/
+coordinates/work;31,974 tasks per condition,3,461 receipts per owner/repeat,
+failed tasks/job timeouts0,issues empty. Demand wait fallbacks419/446/337 are
+separate from job timeouts. Complete applications8,407/9,669/8,811,shaped361/981/
+959,peer7,322/9,475/7,827. Audited accepted394/162/317,unaudited8,210/9,968/8,781;
+acceptance is not application. Apply rejection/quarantine0. Client compute
+means18.64/20.43/19.49ms;whole-process peaks2.907/2.461GB decimal and average
+1.750/1.784 CPU cores include startup/onboarding/warmup,not repeat-isolated.
+
+Offline retained JFR measured-window analysis: features23.44%,original
+doCreateBiomes6.53%,private full audits4.93%,complete apply5.64%,local terrain
+workers28.29%. Inclusive/overlapping samples are not CPU durations or end-to-end
+savings. They suggest remaining feature/biome/local computation,not causal
+AG-vs-AF timing attribution between different batches.
+
+Fresh native gate232706-494/session74196 exited0 using identical production
+source/JARs and original units/builds without rerunning them. Forge1,971/
+NeoForge2,002 shared digests/zero mismatch,every in-workload application exists
+and matches independent vanilla. Complete296/294,peer242/273 with both owners,
+shaped15/13(ownerA only). Native view4/2 client compute threads/base overlap
+wait1,000ms,same centers as physical correctness: functional only,no speed claim.
+Before-marker onboarding applications43/84 remain separately reported;some
+extra onboarding coordinates lack vanilla coverage and are not counted as
+compared in-workload applications. Cleanup/source snapshots/identity passed.
+
+Bounded server-issued shaping is supported,not arbitrary custom generation or
+structure/feature placement offload. Remote/seed/complete/peer remain explicit.
+Modest speed gain/useful CPU saving do not meet substantial acceleration/beta;
+opposite-order AG is unrun,no new release. AF checkpoint cbe2f8b and historical
+measurements retain their identities. The following unrun plans are historical.
+
+## AG implementation-time plan (superseded by completed evidence above)
+
+AF is committed in cbe2f8b; AF selected batch exited0 and modest physical gains
+are below. Current AG source introduces bounded actual server shaping accessor,
+request body/key/peer/cache propagation,original private sampler reconstruction
+and final actual-shaping preflight. Unsupported inputs fall back; base audit
+cohort remains stable across per-chunk shapes. Seven affected test methods and
+the complete-shaping batch harness are implemented and reviewed;
+NO AG tests/builds/runtime/performance have run. All implementation must finish
+before the next selected sequential batch. Native complete/peer and opposite-
+order AF remain unrun; no beta/release has been published from these candidates.
+
 ## AF completed peer verification (2026-10-04)
 
 Dev.15/protocol11 gate214306-614/session5870 exited0;csb214650-845 COMPLETE,
