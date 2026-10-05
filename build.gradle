@@ -111,6 +111,35 @@ tasks.register('inspectSavedDecoration', JavaExec) {
 	args providers.gradleProperty('savedDecorationDescriptor').map { [it] }.getOrElse([])
 }
 
+// Independent light invariant on already-saved blocks; no production runtime or generator.
+tasks.register('inspectSavedLighting', JavaExec) {
+	dependsOn testClasses
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'io.github.genichimaruo.worldgenassist.server.SavedLightingInspector263'
+	maxHeapSize = '2G'
+	args providers.gradleProperty('savedLightingDescriptor').map { [it] }.getOrElse([])
+}
+
+// Exact failed-window biome-history hypothesis; no terrain or Minecraft runtime.
+tasks.register('inspectPublicPeerCaptures', JavaExec) {
+	dependsOn testClasses
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'io.github.genichimaruo.worldgenassist.server.PublicPeerCaptureInspector263'
+	maxHeapSize = '2G'
+	args providers.gradleProperty('peerCaptureCase').map { [it, providers.gradleProperty('peerCaptureOutput').get()] }.getOrElse([])
+}
+
+tasks.register('inspectBiomeHistory', JavaExec) {
+	dependsOn testClasses
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'io.github.genichimaruo.worldgenassist.server.BiomeHistoryInspector263'
+	maxHeapSize = '2G'
+	args providers.gradleProperty('biomeHistoryOutput').map { [it,
+		providers.gradleProperty('biomeHistoryX').getOrElse('-2012'),
+		providers.gradleProperty('biomeHistoryZ').getOrElse('3041'),
+		providers.gradleProperty('biomeHistoryProfile').getOrElse('plain')] }.getOrElse([])
+}
+
 publishing {
 	publications {
 		create("mavenJava", MavenPublication) {

@@ -1,5 +1,64 @@
 # FEATURES pipeline experiment
 
+## Interleaved probe194623-235 complete; recovery proposal
+
+All4 cached/interleaved original biome histories match target voxels/digest/
+ordered carvers. Actual cause remains unproved. Next unimplemented candidate:
+for equal whole terrain/different biome hashes,retain both original outputs
+under dual current peer epochs,and choose only an exact authoritative3x3 server
+biome hash match before writes. Neither match falls back; true terrain mismatch
+still quarantines. No hash normalization or false speed/beta interpretation.
+
+## Dev.12 diagnostic checkpoint193053-041
+
+Target1method/build/ordinary reproduction/offline inspection pass:7822 exact
+captures,3574 matching assigned independent pairs,0quarantine. Previous actual
+mismatch not reproduced; no fix/speed/β attribution. FULL86.755682/104.064497/
+106.178332s includes capture IO,not new comparative evidence. Next one offline
+interleaved cache/carver biome-history probe at actual failed coordinate,UNRUN.
+4orders x81 job centers/121 original BIOMES chunks/history; original17x17 queries
+between jobs,all13824 target voxels/digest/final carver lists. No terrain run.
+
+## Dev.12 diagnostic implementation, UNRUN
+
+Actual dev.11 peer mismatch is biome-digest-only,not a feature scheduling fix.
+180713 original biome-history probe at newly failed coordinate found no voxel
+or carver-input differences. Add bounded defaultfalse public final-region
+client captures of original requests/results/full3x3 biome voxels and unused
+palette names,on existing private workers. Offline decode/digest reconstruction/
+actual server-pair joins will expose real values instead of a one-way hash.
+Only one updated probe method/Fabric build/same ordinary view32 reproduction
+and offline inspection run in one sequential batch after ALL edits. UNRUN,
+diagnostic only,no generation change or speed/β claim. Old failures preserved.
+
+## Latest diagnostic run174932-834 FAILED
+
+Dev.11 one affected probe method/Fabric build/ordinary assisted-parallel32
+reproduction completed. FULL88.818304/92.100694/98.403534s,10658 tasks each.
+One peer mismatch in repeat3 at-2051,3027: only biome_digest differs, terrain
+blocks/WG heights/ordered offsets identical. Both workers quarantined; reject
+speed/beta interpretation. Old-coordinate captures agree and do not contain
+the newly failed pair. Extend only offline original-code biome hypothesis
+probe to actual new coordinate; no terrain fix yet, no extra runtime tests.
+
+## Current dev.11 diagnosis, not a new speed candidate
+
+Dev.10 diagnostic172225-719 passed1method/Fabric/same assisted32,no mismatch
+reproduced. Two tiny offline probes show real failed-window4histories' biome/
+carver inputs equal; original synthetic tie is only a source witness. Dev.11
+adds defaultoff public-only one-coordinate bounded raw body/request capture to
+existing client workers. One new method/Fabric/single view32 batch unrun. No
+compute/scheduler/audit/equality change; beta/speed/control gap remains.
+
+## Ordinary reverse-order checkpoint failure; dev.10 diagnosis UNRUN
+
+170117-117 combined completes cleanly with83/94/112s FULL,but repeat3 actual
+peer mismatch at-2012,3041 quarantines both owners. Gate failed before original+
+remote/original controls; no repeatability/β claim. Strict guards caught the
+problem; lost assistance is present in slow third result. Dev.10 adds bounded
+failure component logging only,one existing method/Fabric build/single ordinary
+view32 reproduction after all edits. No shape/equality/audit/protection changes.
+
 ## Current checkpoint: dev.9 targeted gate complete, ordinary acceleration
 
 Gate155345-461 exited0, exact three dev.9 JARs/production and successful10-test/

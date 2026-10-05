@@ -18,6 +18,7 @@ param(
     [switch]$MeasureFullView,
     [switch]$QuietRemoteTrace,
     [switch]$ServerFlightRecording,
+    [switch]$ClientPeerProbe,
     [ValidateRange(1,10)][int]$WarmupRuns=1,
     [ValidateRange(1,10)][int]$MeasuredRepeats=3,
     [ValidateSet('vanilla','local','cooperative')][string]$NoiseBackend='vanilla',
@@ -63,6 +64,7 @@ if($FeatureReplayFile){
     $replay=Read-FeatureReplay $FeatureReplayFile
 }
 $measurementRadius = if($MeasureFullView){$ViewDistance}else{4}
+if($ClientPeerProbe -and ($Dimension -ne 'overworld' -or $Mode -ne 'assisted' -or $Seed -ne 8675309 -or $RemoteWorkKind -ne 'complete' -or $CompleteVerification -ne 'peer' -or $Purpose -ne 'performance')){throw 'Public peer probe requires only the explicit known Overworld complete/peer performance fixture'}
 $measurementShape = if($MeasureFullView){'view'}else{'square'}
 $measurementOffsets = @(Get-WorldgenMeasurementOffsets $measurementRadius $measurementShape)
 $clientLoad = @()
@@ -128,6 +130,10 @@ function Start-Client([string]$Name,[string]$Uuid,[int]$Index,[string]$AssetsRoo
     if($RemoteWorkKind -eq 'complete'){
         $argumentPath=$launch.Arguments[0].Substring(1)
         @('-Dworldgen_assist.client.worker_threads=4')+@(Get-Content -LiteralPath $argumentPath) | Set-Content -LiteralPath $argumentPath
+    }
+    if($ClientPeerProbe){
+        $argumentPath=$launch.Arguments[0].Substring(1)
+        @('-Dworldgen_assist.client.peer_probe=true')+@(Get-Content -LiteralPath $argumentPath) | Set-Content -LiteralPath $argumentPath
     }
     @('forward','back','left','right','jump','sneak','sprint','attack','use') |
         ForEach-Object { 'key_key.' + $_ + ':key.keyboard.unknown' } |
@@ -311,6 +317,7 @@ try {
     $result.feature_fixture = [bool]$FeatureFixture
     $result.feature_replay_sha256 = if($replay){$replay.sha256}else{'record'}
     $result.client_worker_threads = if($RemoteWorkKind -eq 'complete'){4}else{2}
+    $result.client_peer_probe = [bool]$ClientPeerProbe
     if($Purpose -eq 'correctness'){$path=Join-Path $output 'remote-evidence/correctness.json';$result.correctness=if(Test-Path -LiteralPath $path){Get-Content -LiteralPath $path -Raw|ConvertFrom-Json}else{[ordered]@{required_applied_chunks=@();noise_digests=@()}}}else{$path=Join-Path $output 'remote-evidence/performance.json';$result.performance=if(Test-Path -LiteralPath $path){Get-Content -LiteralPath $path -Raw|ConvertFrom-Json}else{[ordered]@{warmup_runs=1;measured_repeats=3;measured=@()}}}
     $result.scenario_client_load=$clientLoad
     Write-Json (Join-Path $output 'scenario-result.json') $result

@@ -60,7 +60,7 @@ final class ClientTerrainDensityComputer {
 		RandomState randomState = prepared.state();
 		if (job.workKind() == TerrainWorkKind.COMPLETE_TERRAIN) {
 			long started = System.nanoTime();
-			var terrain = prepared.terrainComputer().compute(job, prepared.generator(), randomState);
+			var terrain = prepared.terrainComputer().compute(job, prepared.generator(), randomState, session.probe);
 			return TerrainDensityResult.fromCompleteTerrain(job.identity(), terrain, System.nanoTime() - started);
 		}
 		if (job.workKind() == TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE) {
@@ -103,6 +103,8 @@ final class ClientTerrainDensityComputer {
 
 	/** Each worker owns its sampler compiler; at most three contexts per worker. */
 	static final class Session {
+		private final io.github.genichimaruo.worldgenassist.common.PublicPeerProbe probe = new io.github.genichimaruo.worldgenassist.common.PublicPeerProbe(
+			Boolean.getBoolean("worldgen_assist.client.peer_probe"),java.nio.file.Path.of("worldgen-assist-peer-probe"));
 		private final HolderLookup.Provider registries;
 		private final Map<Thread, Map<ContextKey, Prepared>> workers = new ConcurrentHashMap<>();
 		private final boolean reuse = !"false".equalsIgnoreCase(System.getProperty("worldgen_assist.client.reuse_context",

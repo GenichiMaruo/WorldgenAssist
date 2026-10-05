@@ -1,5 +1,60 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## Interleaved hypothesis194623-235 negative
+
+Original-code-only probe at-2051,3027,4 orders x81 centers/121 cached BIOMES
+chunks,4warm/history,interleaved17x17 biome queries:all13824 target voxels,
+full unused-inclusive digest and289 final ordered carver inputs agree. No
+terrain/new world/JUnit/build run; actual failed payload remains unavailable.
+Next unimplemented candidate retains both agreeing-terrain/different-biome
+outputs process-locally and chooses only a digest matching authoritative
+server3x3 biomes before writes. Neither match falls back; changed blocks/
+heights/offsets still rejects/quarantines. No digest normalization or β claim.
+
+## Dev.12 diagnostic gate193053-041 completed; no reproduction
+
+One affected probe method/build passed,FabricSHA256
+C87879AFF861622D7D4D89468AFD8BBCE614A6C60ECA7A83BF07F9A1693D5EA4.
+Ordinary weak-E/view32/two strong same-PC clients,warm1/repeats3 FULL
+86.755682/104.064497/106.178332s,10658 tasks each;0quarantines/clean stop.
+All7822 public-region captures validate original body decode/digest reconstruction
+from all13824 samples and unused palette names. All3574 actual server-issued
+independent matching-request pairs agree. No previously failed pair reproduced;
+NOT bug fixed/beta/speed proof. Capture-enabled timings include worker file IO.
+Analysis-only interleaved cache/carver biome-history profile implemented,UNRUN:
+4 orders x81 job centers/121 original BIOMES chunks,4warm/history,interleave
+original17x17 biome queries,compare full target9 chunks/final ordered carvers.
+No actual terrain/carvers/new world/unchanged JUnit or builds rerun for this.
+
+## Dev.12 capture expansion implemented; verification UNRUN
+
+Offline original biome probe180713-221 at actual-2051,3027:all4 histories,
+13824 quart voxels/exact digest and289 ordered carver inputs equal. No terrain
+or new runtime/test/build executed; this did not explain actual174932 failure.
+Dev.12 diagnostic captures exact public final-region requests/results/all3x3
+biome samples and unused palette names on private client workers. Explicit
+defaultfalse,seed8675309,stock Overworld region,4096 pairs/512MiB per process.
+Existing one probe method now covers exact snapshot/count/byte bounds; original
+body decoder and exact server-issued pair/input/voxel inspector added to the
+same single reproduction batch. No generation fix or weakened comparison.
+All dev.12 unit/build/runtime/inspection UNRUN; native builds unrun; no β claim.
+
+## Dev.11 diagnostic gate174932-834 FAILED on biome-only disagreement
+
+One new capture method passed; Fabric build passed with SHA256
+3F8C0BB1D909E6C2CE6C705D0E3F9EEA0F76993837E6916D9437C595B639811C.
+Ordinary natural weak E-server/two strong same-PC clients/view32,warm1/repeats3
+completed FULL88.818304/92.100694/98.403534s and10658 tasks/repeat. Clean stop
+does not imply correctness: repeat3 quarantined both workers for one real
+peer mismatch at-2051,3027. Diagnostic comparison finds only biome_digest
+different; blocks,WG heights and ordered postprocessing identical. Primary
+a2b44e76-9666-4b41-a053-717fa6667647,peer81ed8ace-ac66-416a-b45d-a9a86e852fc6.
+Captures at the older-2012,3041 coordinate are both99502 bytes and identical
+SHA85F8280AB205861E60F2B57DBFF37374D0CBB6B2CDA70FDAEA2FCBF2FD6CDE3C;
+they are NOT the newly failed pair. No generation fix or speed/beta proof.
+One analysis-only original biome-history probe at the newly failed coordinate
+is implemented,UNRUN; no unchanged tests/build/runtime repeated for it.
+
 ## AH dev.9 complete targeted gate; measurable combined gain, beta gaps remain
 
 Resume feature-pipeline-gate-20261005-155345-461/session17095 exited0. It checks
@@ -2801,3 +2856,81 @@ The previous 233-test batch, its four matching installs and 1,005 shared matchin
 digests, and its wrong-seed negative test are preserved in
 `TEST_RESULTS_20260905.md`; they are historical evidence, not a new run.
 See `VALIDATION_MATRIX.md` for current execution/recording rules.
+# Ordinary saved lighting batch: implemented, UNRUN
+
+165307-729 passed one reader method; three checks failed SKY(original4chunks/
+9764values,parallel3/9744,assisted3/9744),BLOCK0. Reader failed to account for
+original SerializableChunkData.copyOf omitting allocated all-zero layers.
+Geometry-only zero restoration and same-test coverage implemented; no expected
+light values substituted. Production unchanged. New same-scope batch pending.
+
+Initial saved-lighting-gate165202-401 stopped at compileTestJava before tests or
+world downloads:26.3 ChunkPos is a record and lacks BlockPos constructor. Helper
+now uses source-verified original ChunkPos.containing. Production remains exact
+dev.9; no generation failure evidence from this analysis-only compile error.
+
+Run-SavedLightingGate performs one new reader test and offline original-code
+recomputation from the three stopped155345-461 ordinary saved worlds. Current
+production artifacts unchanged; no runtime/build rerun. Per condition162 halo/
+50 interior chunks,10,649,600 values. Results pending; previous strict882 and
+performance evidence retain their original scope/identity. Commit04db0cb exists
+locally; no new public release.
+# Current offline outcome and next same-artifact performance control
+
+Saved-lighting-gate165556-107:1 reader method passes. Parallel and assisted both
+match every10,649,600 BLOCK/SKY value in50interior chunks/162halo. Original alone
+has20 SKY differences atY80..82 across adjacent1511,-2510/1512,-2510 (saved15/14
+versus recomputed12..14); BLOCK0. Overall gate FAILED,retained. No beta or proved
+cause; candidate-only exact invariant is narrow useful evidence.
+New Run-FeaturePerformanceControl UNRUN:reverse parallel+remote,original+remote,
+original/off,exact dev.9 JAR/source/child harness,ordinary view32,warmup1/repeats3.
+Only performance; no new tests/builds/fixtures. Explicit existing failed lighting
+control retained; no strict equality threshold lowered. Remaining original-only
+lighting cause, native ordinary evidence and repeated speed are beta gaps.
+# Current dev.10 diagnostic implementation / dev.9 ordinary mismatch
+
+Reverse-control170117-117 FAILED after combined runtime only. It stopped cleanly
+and completed10658 tasks per repeat,FULL83.311296/94.124625/111.626435s, but repeat3
+peer-compare failure at-2012,3041 quarantined both owners and used local fallback.
+Primary45e43bc2-3d1b-4a96-bb96-b8e570c25f76 / peer0d7cc924-2fba-43eb-8391-d3df9312c933.
+The third slower result includes lost assistance. Client-only and original are
+UNRUN; no new comparison. All dev.9 JAR identities unchanged during this batch.
+
+Dev.10/protocol12 adds only bounded failure component diagnostics,not equality
+normalization or approval changes. One existing comparison method covers its
+five already-tested differing fields. New single Run-PeerMismatchGate selects
+that1 method,Fabric build and one same-profile assisted32 reproduction after
+all implementation. Native builds/tests and speed claims excluded. All UNRUN.
+Climate last-leaf tie behavior is source-verified but only a cause hypothesis;
+the failed payloads were not retained. No β/new release from this checkpoint.
+# Current diagnostic result172225-719; isolated biome probe UNRUN
+
+One modified comparison method passes0fail/errors/skips,Fabric dev.10 builds.
+SHA6713F4D497F2DB938FFE822498B8C6CA93A3AAD3E08234B245554C4022094FE3.
+Single same-profile assisted/parallel ordinary32 completes FULL82.51034/
+92.444804/91.011366s and10658tasks each. Quarantines0/differences0,clean stop,
+manifest unchanged. Failure170117-117 did NOT reproduce; generation unchanged,
+no fixed/beta or performance-comparison claim. Native dev.10 unbuilt/unrun.
+New offline biome-history helper UNRUN:4 histories x9 chunks at-2012,3041,4warm
+chunks/history,original doCreateBiomes,13824quart values/window plus exact digest.
+Synthetic original tie witness control; no JUnit/build/runtime/terrain repeat.
+# Biome hypothesis173832-248: no witness in actual window
+
+Offline probe exits0,production JAR unchanged. Synthetic original two-leaf tie
+depends on history; all4 real failed-window histories match every13824 biome
+voxel and digest2e0b8cd0361520dd2ca3e45d3dceb2181a6997784eb52bb5caeb9923dce724ae.
+This does not reproduce actual peer cause. Helper now adds original17x17
+quartY0 carver-biome order and exact ordered registry-id lists,289 per history;
+same tiny offline batch extension UNRUN. No terrain generation or suite rerun.
+# Current dev.11 capture diagnostic UNRUN / biome probe negative
+
+Offline174130-580 exits0 with unchanged Fabric dev.10 JAR. All4 histories match
+every13824quart voxel/digest and289carver-biome/ordered-carver inputs. Synthetic
+history witness alone does not explain failure. Failed170117 client logs confirm
+both requests complete~14ms,raw99506 bytes,DEFLATE3512/3513; bodies weren't saved.
+Dev.11 now implements explicit default-off public-only selected-coordinate
+capture(max16 pairs/client) with original full bytes/request/shaping/thread id,
+no generation/authority changes. Run-PeerMismatchGate -Execute -CaptureProbe:
+one new scope/body/cap test,Fabric build,single same-view32 reproduction. Both
+actual owner captures and server peer assignment required. All UNRUN; no speed,
+fixed,beta,native or release claim.

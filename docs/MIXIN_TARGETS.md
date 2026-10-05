@@ -1,5 +1,112 @@
 # Mixin Targets
 
+## Interleaved probe194623-235 result / recovery proposal
+
+All4 original-code cache/carver history probes match; no cause witness. Proposed
+peer-biome alternative uses existing prewrite server3x3 biome hash validation,
+not a new game target. Keep both exact payloads locally,choose matching digest,
+otherwise reject before writes; no normalized digest/new wire authority or
+relaxed original game ownership. Candidate not implemented or verified.
+
+## Dev.12 diagnostic verification193053-041
+
+One affected method/Fabric build/ordinary runtime and offline7822 capture/3574
+server-pair comparisons passed; no mismatch reproduction or generation fix.
+New analysis-only cache-carvers profile combines the existing original
+ChunkGenerator.doCreateBiomes reflection with BiomeSource.createUncachedResolver
+and source-verified dx-outer/dz-inner17x17 quartY0 query order between81 jobs.
+Actual carving/surface and all Mixins unchanged. Profile UNRUN; no β proof.
+
+## Dev.12 diagnostic overload (no new game target)
+
+PrivateTerrainComputer adds optional client probe at immutable result extraction
+while all private9-chunk biome inputs are still owned. Existing server entry
+point invokes unchanged original methods with null probe. No Mixin,descriptor,
+thread handoff or biome selection change. Public-region fixture writes only on
+existing client compute workers,defaultfalse,bounded4096pairs/512MiB. Exact
+offline digest/voxel/pair inspector added; actual runtime mismatch unexplained.
+180713 original-code new-coordinate biome/carver history probe found no witness.
+Dev.12 targeted runtime/build/probe test pending.
+
+## Dev.11 ordinary mismatch checkpoint
+
+174932-834 confirms biome-digest-only peer disagreement at-2051,3027; all
+actual terrain blocks/WG heights/ordered offsets equal. No new Mixin or
+generation change. Analysis-only existing reflection target remains original
+ChunkGenerator.doCreateBiomes(Blender,RandomState,ChunkAccess)V, now selectable
+at either known public failure coordinate. Runtime cause remains unproved.
+
+## Dev.11 diagnostic capture (UNRUN; no game target change)
+
+174130-580 original failed-window biome and17x17carver input histories all equal.
+No relevant tie witness. New default-off PublicPeerProbe called only after
+private complete compute,on existing client worker,exact public seed/coordinate,
+bounded16 original result/request pairs. No Mixin/algorithm/source-target change.
+One new method/Fabric build/single public32 capture batch unrun. Native unbuilt.
+
+## Biome-history source probe173832-248 / carver extension
+
+Original synthetic tie reproduced; real9-chunk failed-window voxels/digest match
+all4 histories. No cause witness. Helper extension follows original target26.3
+NoiseBasedChunkGenerator.generateCarvers dx/dz=-8..8 and helper biome query
+quart(minBlockX),quartY0,quart(minBlockZ); public ChunkGenerator.
+getBiomeGenerationSettings returns the original ordered carver holders. UNRUN;
+no Mixin or production change and no copied carver generation.
+
+## Dev.10 diagnostic result and narrow original biome-history helper
+
+172225-719 passes modified1method/Fabric build/same ordinary32 reproduction;
+quarantine/difference0,not reproduction or generation fix. New analysis-only
+helper reflects exact ChunkGenerator.doCreateBiomes(Blender,RandomState,
+ChunkAccess)V,verified target26.3 private implementation used by existing
+PrivateBiomeInvoker263; retains original createResolverForChunk/bulk sampler/
+fillBiomesFromNoise and buffer-pool lifecycle. No new Mixin. Four warm/order
+histories compare exact9-chunk failed-coordinate biome window; UNRUN.
+
+## Dev.10 failure diagnosis (UNRUN; no Mixin change)
+
+Actual dev.9 ordinary peer mismatch170117-117 at-2012,3041 quarantines both,
+blocks further performance conditions. Failure-only component logging added,
+same exact comparison/domain checks/quarantine. One existing method/Fabric
+build/single32 reproduction unrun. No new targets or biome-selection changes.
+Primary26.2/target26.3 Climate.RTree.lastResult is ThreadLocal; search initializes
+candidate from previous leaf and SubTree.search uses strict minDistance greater
+than child/leaf distances,retaining ties. Lookup-history dependence is a source
+fact,not proof it caused this failure. Feature indirect light reads exist in
+MushroomBlock/CropBlock.canSurvive through WorldGenRegion's level light engine;
+direct feature-call scan alone cannot justify reduced conflict footprints.
+
+## Ordinary offline checkpoint165556-107 (not a runtime target change)
+
+Reader method passes; parallel/assisted each match every10,649,600 light value
+on50interior chunks/162halo. Original20SKY differences/Y80..82,two adjacent
+chunks,BLOCK0 keep overall gate failed. No new Mixins/JAR/production change.
+Reverse-order performance coordinator implemented,UNRUN; includes existing
+original+remote path. Ordinary differences/native/repro gaps remain explicit.
+
+## Offline ordinary lighting inspection (implemented, UNTESTED)
+
+165307-729 passed reader1 but all ordinary checks failed SKY due to omitted
+allocated zero-layer semantics. Original SerializableChunkData.copyOf excludes
+isEmpty layers. Saved reader now restores zero only at originally allocated
+geometry nodes,using recomputed storage's node presence,never values. Present
+raw bytes override those zero layers. Existing test adds omission coverage;
+new batch pending. This corrects analysis only,not production or saved evidence.
+
+No new Mixin/production target. Primary26.2 and target26.3 original protected
+SkyLightSectionStorage.getLightValue/onNodeAdded and BlockLightSectionStorage.
+getLightValue read raw cloned saved DataLayers with original missing-section
+semantics; original LayerLightSectionStorage.swapSectionMap publishes the view
+without propagation or repair. Sky top metadata is built by original onNodeAdded.
+Private ProtoChunks decode original PalettedContainer block-state codecs and
+original LevelChunkSection counts; original initializeLightSources and
+LevelLightEngine updateSectionStatus/setLightEnabled/propagateLightSources/
+runLightUpdates reconstruct expected light only. One unconditional update pass
+publishes original sky-filled layers even if hasLightWork is initially false.
+Two chunks of halo isolate the50 interior targets; unknown exterior original
+LightEngine uses BEDROCK. This narrow offline invariant is untested and does not
+replace strict882 fixture comparisons/native ordinary gameplay evidence.
+
 ## AH dev.9 runtime checkpoint COMPLETE (not beta)
 
 Gate155345-461 exited0 with exact dev.9 JARs/production inputs from142412-768.

@@ -35,10 +35,14 @@ final class CompleteTerrainPeerVerifier {
 				RemoteDensityValidator.Prepared.completeTerrain(a, null, 0).compare(first);
 				RemoteDensityValidator.Prepared.completeTerrain(b, null, 0).compare(second);
 				if (!first.completeTerrain().equals(second.completeTerrain())) {
-					throw new RemoteDensityValidator.RemoteDensityValidationException("Independent peer whole-terrain mismatch");
+					throw new RemoteDensityValidator.RemoteDensityValidationException("Independent peer whole-terrain mismatch: "
+						+ CompleteTerrainDifference.describe(first.completeTerrain(),second.completeTerrain()));
 				}
 				return first.withLocalApproval(current, applied);
 			} catch (RemoteDensityValidator.RemoteDensityValidationException error) {
+				io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.warn(
+					"[CAWG] job.peer_terrain_difference primary={} peer={} chunk={},{} reason={}",
+					a.identity().jobId(),b.identity().jobId(),a.identity().chunkX(),a.identity().chunkZ(),error.getMessage());
 				mismatch.accept(error); throw error;
 			}
 		}).whenComplete((value, error) -> {

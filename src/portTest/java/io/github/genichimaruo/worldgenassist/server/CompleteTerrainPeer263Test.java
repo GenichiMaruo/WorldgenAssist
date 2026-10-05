@@ -39,7 +39,12 @@ class CompleteTerrainPeer263Test {
 			first.complete(TerrainDensityResult.fromCompleteTerrain(a.identity(), data(0), 0)); assertFalse(agreed.isDone());
 			second.complete(TerrainDensityResult.fromCompleteTerrain(b.identity(), data(changed), 0));
 			if (changed == 0) { assertTrue(agreed.join().hasPeerVerification()); assertEquals(0, mismatches.get()); }
-			else { assertThrows(java.util.concurrent.CompletionException.class, agreed::join); assertEquals(1, mismatches.get()); }
+			else {
+				var failure = assertThrows(java.util.concurrent.CompletionException.class, agreed::join);
+				String[] fields = {"equal","blocks=","surface=","floor=","postprocessing_sections=","biome_digest=different"};
+				assertTrue(failure.getCause().getMessage().contains(fields[changed]));
+				assertEquals(1, mismatches.get());
+			}
 		}
 		var first = new CompletableFuture<TerrainDensityResult>(); var second = new CompletableFuture<TerrainDensityResult>();
 		assertThrows(IllegalArgumentException.class, () -> CompleteTerrainPeerVerifier.agree(submission(ownerA, a, first), submission(ownerA, b, second), () -> true, () -> {}, error -> {}));

@@ -57,6 +57,9 @@ public final class PrivateTerrainComputer {
 	}
 
 	public CompleteTerrainData compute(TerrainDensityJob job, NoiseBasedChunkGenerator generator, RandomState state) {
+		return compute(job,generator,state,null);
+	}
+	public CompleteTerrainData compute(TerrainDensityJob job, NoiseBasedChunkGenerator generator, RandomState state, PublicPeerProbe probe) {
 		var settings = generator.generatorSettings().value();
 		if (generator.getClass() != NoiseBasedChunkGenerator.class
 			|| !(generator.getBiomeSource() instanceof MultiNoiseBiomeSource biomes)
@@ -140,6 +143,10 @@ public final class PrivateTerrainComputer {
 		byte[] digest = TerrainBiomeWindow.digest(centerX, centerZ, job.minY(), job.height(),
 			(x, z) -> window[z - centerZ + 1][x - centerX + 1]);
 		CompleteTerrainData result = new CompleteTerrainData(job.minY(), job.height(), choices, surface, floor, offsets, digest);
+		if(probe!=null) try { probe.capture(job,result,(x,z) -> window[z-centerZ+1][x-centerX+1]); }
+		catch(java.io.IOException | RuntimeException error) {
+			io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.warn("[CAWG] public_peer_probe.failed job={} reason={}",job.identity().jobId(),error.toString());
+		}
 		if (++completedComputations % 128 == 0) io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
 			"[CAWG] private_biome_cache computations={} hits={} misses={} entries={}",
 			completedComputations, biomeCache.hits(), biomeCache.misses(), biomeCache.size());

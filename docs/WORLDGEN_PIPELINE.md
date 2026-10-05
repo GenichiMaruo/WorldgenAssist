@@ -1,5 +1,125 @@
 # World Generation Pipeline Notes
 
+## Interleaved probe194623-235 and proposed recovery
+
+All4 private-style cache/carver histories match at actual failed coordinate.
+Cause is unresolved. Proposed next change keeps both original immutable outputs
+when whole terrain agrees but provenance hashes differ,and existing original
+server3x3 biome validation selects only an exact matching output before writes.
+Neither matches:original local fallback; terrain mismatch still quarantine.
+Process-local alternative must carry both epochs,never enter packets,replace
+hashes or bypass audit/domain/shape/height/prewrite guards. Unimplemented.
+
+## Dev.12 diagnostic evidence193053-041
+
+Probe method/Fabric build/runtime/inspection pass:7822 exact body/window/digest
+captures and3574 actual server independent pairs agree,0quarantines. Previous
+real mismatch not reproduced; generation unchanged,NOT fixed/β/performance proof.
+New analysis profile interleaves original17x17 carver biome queries between
+81 private-style job centers with cached121 BIOMES chunks,4 traversal orders.
+Original bulk biome reflection plus original resolver,not copied terrain/carve
+or production state. Full target9-chunk digest/voxels/final carver lists compared.
+Profile UNRUN; ordinary client cache/interleaving hypothesis still unproved.
+
+## Dev.12 public biome diagnosis, UNRUN
+
+Existing private computer exposes an optional diagnostic overload,used only
+by clients. On its owned worker before cache reuse,capture immutable result,
+exact assigned shaping/context and full3x3 palette/voxel window. Defaultfalse,
+public8675309 final-region bounds,4096pairs/512MiB/process; no main/network wait
+or server filesystem write. Existing three-arg server calls use null probe.
+No original biome/terrain/surface/carver computation or authority change.
+Offline inspector reconstructs digestv2 from exact all13824 samples and unused
+palette names,validates original result decode and server-issued independent
+pair UUIDs/equal requests,then reports actual voxel/palette differences.
+180713 offline new-coordinate history probe found none; actual cause unproved.
+Dev.12 one affected probe method/build/single ordinary reproduction pending.
+
+## Diagnostic checkpoint174932-834
+
+Ordinary dev.11 view32 repeated a peer disagreement at-2051,3027. Immutable
+whole outputs match blocks,WG heights and ordered postprocessing; biome-window
+digest alone differs. Existing quarantine/fallback correctly rejects it. Its
+actual voxel/palette cause is unknown; original RTree history behavior alone
+is not proof. Probe at previous coordinate captured matching outputs instead.
+Analysis-only original bulk-biome helper can now select either known public
+failure coordinate without changing generation/Mixins/authority. New-coordinate
+offline run pending. No speed/beta claim or weakened comparison.
+
+## Dev.11 selected-coordinate evidence capture UNRUN
+
+174130-580 finds0biome/window-digest/carver-biome/ordered-carver differences
+across4 original histories. The actual failed pair's~14ms computations produced
+same99506 raw length but3512/3513 DEFLATE lengths; no bodies remained. New explicit
+public-only diagnostic saves at most16 original encoded bodies plus complete
+server request/shaping and worker thread per client for-2012,3041. Defaultoff,
+existing compute worker/fileIO only,does not normalize,repair,approve or change
+results. Its one-method/Fabric/same-view32 batch is UNRUN. Next compare actual
+component bytes/group identical assignments; no assumed cause or speed claim.
+
+## Biome history173832-248: target window stable in four orders
+
+Synthetic nearest-biome tie is history-sensitive but exact failed9-chunk window
+all13824voxels/digest equal4histories. Carver biome lookup separately reaches
+17x17 source chunks atquartY0 in dx/dz order. Helper now compares those289
+original resolved biome names and ordered carver registry inputs per history;
+extension UNRUN,still no terrain generation. Do not attribute failure to ties
+without a relevant witness. Actual failed result bodies remain unavailable.
+
+## Dev.10 reproduction outcome / next isolated biome hypothesis
+
+172225-719 ordinary assisted32 has0peer mismatches/quarantines,31,974 measured
+tasks,clean stop,one modified test/Fabric build passed. Original failure remains;
+diagnostics don't fix generation. New offline helper runs original private
+doCreateBiomes only over4 x9 failed-window chunks and4 warm chunks/history.
+Forward/reverse target order and earlier owner regions vary original search
+history; compare13824quart values plus exact digest. Synthetic Climate two-leaf
+history witness checks sensitivity. No actual failed payload retained,so any
+finding remains a cause hypothesis. No terrain/runtime/production change.
+
+## Dev.9 ordinary mismatch / dev.10 diagnostic hypothesis
+
+Reverse170117-117 ordinary combined repeat3 has an actual distinct-worker
+result mismatch at-2012,3041. Both quarantined; local original fallback reaches
+FULL but does not make peer correctness pass. Other comparisons blocked.
+Dev.10 adds bounded failure-only component breakdown before same strict peer
+rejection; compute/transport/authority untouched. One-method/Fabric/single-view32
+reproduction batch unrun. Candidate beta/readiness withdrawn pending diagnosis.
+Original Climate.RTree ThreadLocal last leaf plus strict distance replacement
+can retain equally fit biome by search history in both26.2/26.3. Private workers
+have different warm/cached lookup histories; whether that explains this payload
+is only a hypothesis until component evidence. Keep actual server biome digest
+and entire peer equality. Don't globally canonicalize authoritative biomes.
+
+## Ordinary saved-light checkpoint165556-107
+
+One reader test passes after original omitted-zero-layer fix. Parallel and
+assisted each match all10,649,600 light values in50interior/162halo own-block
+chunks. Original retains20 SKY mismatches across two adjacent chunks,Y80..82;
+BLOCK0. Gate stays failed. Ordinary stage ordering is a possible explanation,
+not proved; no saved data normalized. Next same-JAR reverse-order performance
+adds missing original+remote control without rerunning unchanged tests/builds.
+
+## Own-saved-block lighting invariant (implemented, UNTESTED)
+
+Initial165307-729 all three conditions failed only SKY,including original.
+Original serializer deliberately omits all-zero allocated DataLayers. Merely
+loading present SkyLight fields incorrectly treated those as absent topology,
+leaking above-layer15 into zero sections. Corrected reader uses only original
+allocated section geometry to restore omitted zero layers before raw saved
+overrides; no expected values are copied. One test now covers zero omission.
+Same offline batch pending; no ordinary generation bug conclusion.
+
+Analysis-only helper reconstructs private162 FULL chunks per ordinary condition
+from saved block-state palettes; initializes original chunk sky sources,registers
+original24 world sections, enables columns and propagates original block/sky
+light to quiescence. No world generator/features run. Every value in50 interior
+chunks incl Y=-80..335 is compared with a separate read-only saved-storage view
+using original sky top/missing-layer behavior and block missing=0. Raw saved
+bytes/presence remain untouched. Two-chunk halo exceeds light's15-step lateral
+reach. Baseline original is a necessary control for checker/boundary assumptions.
+No result yet; not cross-world voxel/decoration or general native parity proof.
+
 ## AH dev.9 completed targeted pipeline and ordinary view32 measurement
 
 Resume155345-461 completes with identical dev.9 JARs/production and retained
