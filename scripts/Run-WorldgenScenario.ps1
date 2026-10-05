@@ -26,6 +26,10 @@ param(
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
     [ValidateSet('grid','surface','density','block','decisions','complete')][string]$RemoteWorkKind='grid',
     [ValidateSet('server','peer')][string]$CompleteVerification='server',
+    [ValidateSet('off','serial','parallel')][string]$FeatureBackend='off',
+    [switch]$DecorationDigest,
+    [switch]$FeatureFixture,
+    [string]$FeatureReplayFile,
     [string]$RemoteHost = 'gen1c@100.117.255.71',
     [string]$RemoteRoot = 'C:/Users/gen1c/AppData/Local/Temp/WorldgenAssist-20260909/port26.3'
 )
@@ -51,6 +55,13 @@ $tunnel = $null; $server = $null; $clients = @(); $serverOut = $null; $serverErr
 $predictionEnabled = [bool]::Parse($Prediction)
 . (Join-Path $PSScriptRoot 'WorldgenMeasurementRegion.ps1')
 . (Join-Path $PSScriptRoot 'WorldgenScenarioConsole.ps1')
+. (Join-Path $PSScriptRoot 'FeatureFixtureEvidence.ps1')
+$replay=$null
+if($FeatureFixture -and (-not $DecorationDigest -or $Purpose -ne 'correctness' -or $Dimension -ne 'overworld' -or $Players -ne 2 -or $Seed -ne 8675309 -or $ViewDistance -gt 10)){throw 'Bounded two-owner diagnostic fixture required'}
+if($FeatureReplayFile){
+    if(-not $FeatureFixture -or -not [IO.Path]::GetFullPath($FeatureReplayFile).StartsWith($testRoot,[StringComparison]::OrdinalIgnoreCase)){throw 'Replay requires a fixture evidence child'}
+    $replay=Read-FeatureReplay $FeatureReplayFile
+}
 $measurementRadius = if($MeasureFullView){$ViewDistance}else{4}
 $measurementShape = if($MeasureFullView){'view'}else{'square'}
 $measurementOffsets = @(Get-WorldgenMeasurementOffsets $measurementRadius $measurementShape)
@@ -69,7 +80,7 @@ function Write-Utf8([string]$Path,[string]$Text) { [IO.File]::WriteAllText($Path
 function Write-Json([string]$Path,[object]$Value) { Write-Utf8 $Path ($Value | ConvertTo-Json -Depth 12) }
 function Get-Manifest {
     $files = @(Get-ChildItem -LiteralPath (Join-Path $workspace 'src') -File -Recurse)
-    foreach($relative in @('build.gradle','settings.gradle','gradle.properties','scripts/Get-WorldgenArtifact.ps1','scripts/New-InstalledFixtureClient.ps1','scripts/New-TwoClientFixtureClient.ps1','scripts/Prepare-InstalledFixtureAssets.ps1','scripts/Run-WorldgenScenario.ps1','scripts/Remote-WorldgenScenarioServer.ps1','scripts/WorldgenMeasurementRegion.ps1','scripts/WorldgenScenarioConsole.ps1')) { $files += Get-Item -LiteralPath (Join-Path $workspace $relative) }
+    foreach($relative in @('build.gradle','settings.gradle','gradle.properties','scripts/Get-WorldgenArtifact.ps1','scripts/New-InstalledFixtureClient.ps1','scripts/New-TwoClientFixtureClient.ps1','scripts/Prepare-InstalledFixtureAssets.ps1','scripts/Run-WorldgenScenario.ps1','scripts/Remote-WorldgenScenarioServer.ps1','scripts/WorldgenMeasurementRegion.ps1','scripts/WorldgenScenarioConsole.ps1','scripts/FeatureFixtureEvidence.ps1')) { $files += Get-Item -LiteralPath (Join-Path $workspace $relative) }
     return @($files | Sort-Object FullName | ForEach-Object { $relative=$_.FullName.Substring($workspace.Length+1).Replace('\','/'); "$(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256 | Select-Object -ExpandProperty Hash)  $relative" })
 }
 function Save-Manifest([string]$Name) {
@@ -168,6 +179,12 @@ try {
     Invoke-Remote ('New-Item -ItemType Directory -Force -Path "'+$RemoteRoot+'/mods","'+$RemoteRoot+'/retired-mods","'+$RemoteRoot+'/scenario-staging" | Out-Null')
     & scp.exe -q $artifact.Path $api $launcher (Join-Path $workspace 'run/eula.txt') (Join-Path $PSScriptRoot 'Remote-WorldgenScenarioServer.ps1') (Join-Path $PSScriptRoot 'WorldgenMeasurementRegion.ps1') (Join-Path $PSScriptRoot 'WorldgenScenarioConsole.ps1') ($RemoteHost + ':' + $RemoteRoot + '/scenario-staging/')
     if($LASTEXITCODE -ne 0){throw 'Remote scenario file transfer failed'}
+    if($replay){
+        Copy-Item -LiteralPath $replay.path -Destination (Join-Path $output 'feature-replay.json')
+        & scp.exe -q $replay.path ($RemoteHost+':'+$RemoteRoot+'/scenario-staging/feature-replay.json')
+        if($LASTEXITCODE -ne 0){throw 'Replay transfer failed'}
+        Invoke-Remote ('if((Get-FileHash -LiteralPath "'+$RemoteRoot+'/scenario-staging/feature-replay.json").Hash.ToLowerInvariant() -ne "'+$replay.sha256+'"){throw "Replay hash differs"}')
+    }
     if($ServerFlightRecording){
         $jfc=Join-Path $jdk 'lib/jfr/profile.jfc'
         if(-not(Test-Path -LiteralPath $jfc)){throw 'Pinned JDK profile.jfc is missing'}
@@ -194,6 +211,10 @@ try {
     $remoteCommand += ' -PrefetchLookahead '+$PrefetchLookahead
     $remoteCommand += ' -RemoteWorkKind '+$RemoteWorkKind
     $remoteCommand += ' -CompleteVerification '+$CompleteVerification
+    $remoteCommand += ' -FeatureBackend '+$FeatureBackend
+    if($DecorationDigest){$remoteCommand += ' -DecorationDigest'}
+    if($FeatureFixture){$remoteCommand += ' -FeatureFixture'}
+    if($replay){$remoteCommand += ' -FeatureReplaySha256 '+$replay.sha256}
     # Process-scoped policy for our transferred helper; no machine/user policy change.
     $encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($remotePrefix+$remoteCommand));$server=Start-Owned 'ssh.exe' @('-o','BatchMode=yes','-o','ConnectTimeout=15',$RemoteHost,"powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -OutputFormat Text -EncodedCommand $encoded");$serverErr=$server.StandardError.ReadToEndAsync()
     $ready=[DateTime]::UtcNow.AddSeconds(240)
@@ -285,6 +306,10 @@ try {
     $result.prefetch_lookahead = $PrefetchLookahead
     $result.remote_work_kind = $RemoteWorkKind
     $result.complete_verification = $CompleteVerification
+    $result.feature_backend = $FeatureBackend
+    $result.decoration_digest = [bool]$DecorationDigest
+    $result.feature_fixture = [bool]$FeatureFixture
+    $result.feature_replay_sha256 = if($replay){$replay.sha256}else{'record'}
     $result.client_worker_threads = if($RemoteWorkKind -eq 'complete'){4}else{2}
     if($Purpose -eq 'correctness'){$path=Join-Path $output 'remote-evidence/correctness.json';$result.correctness=if(Test-Path -LiteralPath $path){Get-Content -LiteralPath $path -Raw|ConvertFrom-Json}else{[ordered]@{required_applied_chunks=@();noise_digests=@()}}}else{$path=Join-Path $output 'remote-evidence/performance.json';$result.performance=if(Test-Path -LiteralPath $path){Get-Content -LiteralPath $path -Raw|ConvertFrom-Json}else{[ordered]@{warmup_runs=1;measured_repeats=3;measured=@()}}}
     $result.scenario_client_load=$clientLoad

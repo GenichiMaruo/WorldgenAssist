@@ -22,6 +22,35 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ChunkStatusTasks.class)
 abstract class ChunkStatusTasksMixin {
+	@Inject(method = "generateSpawn", at = @At("HEAD"))
+	private static void worldgenAssist$observeFinalDecoration(WorldGenContext context, ChunkStep step,
+		StaticCache2D<GenerationChunkHolder> chunks, ChunkAccess chunk,
+		CallbackInfoReturnable<CompletableFuture<ChunkAccess>> callback) {
+		if (!io.github.genichimaruo.worldgenassist.server.FeatureFixture263.captured(context,chunk))
+			io.github.genichimaruo.worldgenassist.server.DecorationStageDigestLogger.log(context, chunk);
+	}
+
+	@WrapMethod(method = "generateSpawn")
+	private static CompletableFuture<ChunkAccess> worldgenAssist$fixtureSpawn(WorldGenContext context, ChunkStep step,
+		StaticCache2D<GenerationChunkHolder> chunks, ChunkAccess chunk, Operation<CompletableFuture<ChunkAccess>> original) {
+		return io.github.genichimaruo.worldgenassist.server.FeatureFixture263.spawn(context,chunk,
+			() -> original.call(context,step,chunks,chunk));
+	}
+
+	@WrapMethod(method = "generateFeatures")
+	private static CompletableFuture<ChunkAccess> worldgenAssist$scheduleFeatures(WorldGenContext context, ChunkStep step,
+		StaticCache2D<GenerationChunkHolder> chunks, ChunkAccess chunk, Operation<CompletableFuture<ChunkAccess>> original) {
+		return io.github.genichimaruo.worldgenassist.server.FeatureStageDispatcher.generate(context, step, chunk,
+			() -> original.call(context, step, chunks, chunk));
+	}
+
+	@WrapMethod(method = "initializeLight")
+	private static CompletableFuture<ChunkAccess> worldgenAssist$ownLightInitialization(WorldGenContext context, ChunkStep step,
+		StaticCache2D<GenerationChunkHolder> chunks, ChunkAccess chunk, Operation<CompletableFuture<ChunkAccess>> original) {
+		return io.github.genichimaruo.worldgenassist.server.FeatureStageDispatcher.initializeLight(context, step, chunk,
+			() -> original.call(context, step, chunks, chunk));
+	}
+
 	@WrapMethod(method = "full")
 	private static CompletableFuture<ChunkAccess> worldgenAssist$observeFull(WorldGenContext context, ChunkStep step,
 		StaticCache2D<GenerationChunkHolder> chunks, ChunkAccess chunk, Operation<CompletableFuture<ChunkAccess>> original) {
@@ -59,11 +88,13 @@ abstract class ChunkStatusTasksMixin {
 			chunk,
 			local
 		);
+		Supplier<CompletableFuture<ChunkAccess>> phased = io.github.genichimaruo.worldgenassist.server.FeatureFixture263.enabled()
+			? () -> io.github.genichimaruo.worldgenassist.server.FeatureFixture263.terrain(context,chunk,operation) : operation;
 		if (NoiseStageDigestLogger.isEnabled()) {
-			return WorldgenStageMetrics.NOISE.measureAndThen(chunk.getPos(), operation,
+			return WorldgenStageMetrics.NOISE.measureAndThen(chunk.getPos(), phased,
 				generated -> NoiseStageDigestLogger.computeAndLog(generated, context.level().dimension().identifier()));
 		}
 
-		return WorldgenStageMetrics.NOISE.measure(chunk.getPos(), operation);
+		return WorldgenStageMetrics.NOISE.measure(chunk.getPos(), phased);
 	}
 }

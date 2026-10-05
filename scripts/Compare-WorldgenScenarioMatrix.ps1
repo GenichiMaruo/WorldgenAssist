@@ -1,5 +1,6 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$RunRoot, [string]$AnalysisDirectory, [string[]]$ScenarioResultPath = @())
+param([Parameter(Mandatory)][string]$RunRoot, [string]$AnalysisDirectory, [string[]]$ScenarioResultPath = @(),
+    [string]$BaselineResultPath,[string]$CandidateResultPath)
 
 # Read-only final aggregation. The validation runner invokes this only after all
 # scenario processes finish; this script never launches a game or tails logs.
@@ -7,6 +8,14 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $culture = [Globalization.CultureInfo]::InvariantCulture
 $root = (Resolve-Path -LiteralPath $RunRoot -ErrorAction Stop).Path
+$explicitPair= -not [string]::IsNullOrWhiteSpace($BaselineResultPath) -or -not [string]::IsNullOrWhiteSpace($CandidateResultPath)
+if($explicitPair){
+    if(-not $BaselineResultPath -or -not $CandidateResultPath -or $ScenarioResultPath.Count){throw 'Explicit comparison requires exactly baseline and candidate paths'}
+    $BaselineResultPath=(Resolve-Path -LiteralPath $BaselineResultPath).Path
+    $CandidateResultPath=(Resolve-Path -LiteralPath $CandidateResultPath).Path
+    if($BaselineResultPath -eq $CandidateResultPath){throw 'Cannot compare a scenario to itself'}
+    $ScenarioResultPath=@($BaselineResultPath,$CandidateResultPath)
+}
 $output = if ([string]::IsNullOrWhiteSpace($AnalysisDirectory)) { Join-Path $root 'analysis' } else { [IO.Path]::GetFullPath($AnalysisDirectory) }
 . (Join-Path $PSScriptRoot 'WorldgenMeasurementRegion.ps1')
 if (Test-Path -LiteralPath $output) { throw "Refusing to overwrite analysis evidence: $output" }
@@ -202,11 +211,12 @@ foreach($file in $files){
         $records+=[pscustomobject]@{path=$file.FullName;result=$result;key=(Key $result)}
     }catch{Issue $issues 'INVALID_SCENARIO_RESULT' $_.Exception.Message $file.FullName}
 }
-$byKey=@{};foreach($record in $records){if(-not $byKey.ContainsKey($record.key)){$byKey[$record.key]=@{}};$mode=[string](Value $record.result 'mode');if($byKey[$record.key].ContainsKey($mode)){Issue $issues 'DUPLICATE_SCENARIO' "Duplicate $mode evidence for $($record.key)." $record.path}else{$byKey[$record.key][$mode]=$record}}
+$byKey=@{};foreach($record in $records){if(-not $byKey.ContainsKey($record.key)){$byKey[$record.key]=@{}};$mode=if($explicitPair){if($record.path -eq $BaselineResultPath){'vanilla'}else{'assisted'}}else{[string](Value $record.result 'mode')};if($byKey[$record.key].ContainsKey($mode)){Issue $issues 'DUPLICATE_SCENARIO' "Duplicate $mode evidence for $($record.key)." $record.path}else{$byKey[$record.key][$mode]=$record}}
 $correctness=@();$performance=@()
 foreach($identity in @($byKey.Keys|Sort-Object)){
     $pair=$byKey[$identity];if(-not $pair.ContainsKey('vanilla') -or -not $pair.ContainsKey('assisted')){Issue $issues 'MISSING_BASELINE_PAIR' "No complete vanilla/assisted pair for $identity." $root;continue}
     $vanilla=$pair.vanilla;$assisted=$pair.assisted;$purpose=[string](Value $vanilla.result 'purpose')
+    if($explicitPair -and $purpose -ne 'performance'){Issue $issues 'INVALID_EXPLICIT_PAIR' 'Explicit roles are available only for performance comparisons.' $root;continue}
     if($purpose -ne [string](Value $assisted.result 'purpose')){Issue $issues 'PURPOSE_MISMATCH' "Purposes differ for $identity." $root;continue}
     if([string](Value $vanilla.result 'artifact_sha256') -ne [string](Value $assisted.result 'artifact_sha256')){Issue $issues 'ARTIFACT_MISMATCH' "JAR hashes differ for $identity." $root}
     if([string](Value $vanilla.result 'source_manifest_after_sha256') -ne [string](Value $assisted.result 'source_manifest_after_sha256')){Issue $issues 'SOURCE_MANIFEST_MISMATCH' "Source manifests differ for $identity." $root}
@@ -221,12 +231,17 @@ foreach($identity in @($byKey.Keys|Sort-Object)){
     }else{
         $left=Samples $vanilla.result $issues $vanilla.path;$right=Samples $assisted.result $issues $assisted.path;$summary=[ordered]@{identity=$identity;status='COMPLETE';warmup_excluded=$true;metrics=@{};remote_assistance=@{};reliability=@{}}
         $implementationSettings=[ordered]@{}
-        foreach($member in @($vanilla,$assisted)){
+        foreach($role in @('vanilla','assisted')){
+            $member=$pair[$role]
             $backendPath=Join-Path (Split-Path -Parent $member.path) 'remote-evidence/noise-backend-config.json'
-            $implementationSettings[$member.result.mode]=if(Test-Path -LiteralPath $backendPath){Get-Content -LiteralPath $backendPath -Raw|ConvertFrom-Json}else{[ordered]@{noise_backend='vanilla';historical_default=$true}}
+            $implementationSettings[$role]=if(Test-Path -LiteralPath $backendPath){Get-Content -LiteralPath $backendPath -Raw|ConvertFrom-Json}else{[ordered]@{noise_backend='vanilla';historical_default=$true}}
         }
         $summary.implementation_settings=$implementationSettings
         $summary.comparison_scope=if($implementationSettings.vanilla.noise_backend -ne $implementationSettings.assisted.noise_backend){'Combined terrain backend and remote assistance; not isolated client assistance'}else{'Remote assistance with matching terrain backend'}
+        if($explicitPair){
+            $summary.comparison_scope='Explicit baseline/candidate conditions; inspect actual condition roles. Legacy metric keys vanilla/assisted mean baseline/candidate only.'
+            $summary.condition_roles=[ordered]@{baseline=[ordered]@{path=$vanilla.path;mode=$vanilla.result.mode;feature_backend=$vanilla.result.feature_backend};candidate=[ordered]@{path=$assisted.path;mode=$assisted.result.mode;feature_backend=$assisted.result.feature_backend};raw_results_modified=$false}
+        }
         $conditionsMatch=$false
         try{
             $leftConditions=MeasurementConditions $vanilla;$rightConditions=MeasurementConditions $assisted
@@ -266,6 +281,7 @@ foreach($identity in @($byKey.Keys|Sort-Object)){
             Issue $issues 'INCOMPLETE_CLIENT_RECEIPT' "Client target-region receipt coverage is incomplete for $identity." $root
             $summary.status='INCOMPLETE'
         }
+        if($assisted.result.mode -eq 'assisted'){
         foreach($metric in @('client_compute_mean_ms','client_encode_mean_ms','rtt_mean_ms','server_decode_mean_ms','encoded_bytes_mean','apply_mean_ms','remote_total_mean_ms')){
             $values=[double[]]@($right|ForEach-Object{$value=Number (Value $_ $metric);if($null -ne $value){$value}})
             if($null -eq $right -or $values.Count -ne $right.Count){Issue $issues 'MISSING_REMOTE_METRIC' "Assisted metric '$metric' is missing/non-finite for $identity." $assisted.path;$summary.status='INCOMPLETE';$summary.remote_assistance[$metric]=$null}else{$summary.remote_assistance[$metric]=Stats $values}
@@ -273,6 +289,7 @@ foreach($identity in @($byKey.Keys|Sort-Object)){
         if([int](Value $assisted.result 'validation_cells') -gt 0){
             $values=[double[]]@($right|ForEach-Object{$value=Number (Value $_ 'validation_mean_ms');if($null -ne $value){$value}})
             if($null -eq $right -or $values.Count -ne $right.Count){Issue $issues 'MISSING_REMOTE_METRIC' "Assisted validation timing is missing for $identity." $assisted.path;$summary.status='INCOMPLETE';$summary.remote_assistance.validation_mean_ms=$null}else{$summary.remote_assistance.validation_mean_ms=Stats $values}
+        }
         }
         foreach($metric in @('attempted_tasks','completed_tasks','timeouts','fallbacks','failed_tasks')){
             $leftValues=@($left|ForEach-Object{Number (Value $_ $metric)});$rightValues=@($right|ForEach-Object{Number (Value $_ $metric)})
@@ -291,7 +308,7 @@ foreach($identity in @($byKey.Keys|Sort-Object)){
         $performance+=$summary
     }
 }
-$plan=Join-Path $root 'matrix-plan.json';if(Test-Path -LiteralPath $plan){try{foreach($expected in @((Get-Content -LiteralPath $plan -Raw|ConvertFrom-Json).runtime_and_performance_cases)){$key=Key $expected;$mode=[string](Value $expected 'mode');if(-not $byKey.ContainsKey($key) -or -not $byKey[$key].ContainsKey($mode)){Issue $issues 'EXPECTED_SCENARIO_MISSING' "Planned scenario '$($expected.id)' has no result." $root}}}catch{Issue $issues 'INVALID_MATRIX_PLAN' $_.Exception.Message $plan}}else{Issue $issues 'MISSING_MATRIX_PLAN' 'Expected coverage cannot be determined without matrix-plan.json.' $plan}
+$plan=Join-Path $root 'matrix-plan.json';if(Test-Path -LiteralPath $plan){try{foreach($expected in @((Get-Content -LiteralPath $plan -Raw|ConvertFrom-Json).runtime_and_performance_cases)){$key=Key $expected;$mode=[string](Value $expected 'mode');$found=if($explicitPair){@($records|Where-Object {$_.key -eq $key -and $_.result.mode -eq $mode -and $_.result.feature_backend -eq $expected.feature_backend}).Count -gt 0}else{$byKey.ContainsKey($key) -and $byKey[$key].ContainsKey($mode)};if(-not $found){Issue $issues 'EXPECTED_SCENARIO_MISSING' "Planned scenario '$($expected.id)' has no result." $root}}}catch{Issue $issues 'INVALID_MATRIX_PLAN' $_.Exception.Message $plan}}else{Issue $issues 'MISSING_MATRIX_PLAN' 'Expected coverage cannot be determined without matrix-plan.json.' $plan}
 $fatal=@($issues|Where-Object{$_.code -in @('REQUIRED_DIGEST_MISMATCH','SHARED_DIGEST_MISMATCH','UNSAFE_RUNTIME','SCENARIO_NOT_SUCCESSFUL')});$status=if($fatal.Count -gt 0){'FAILED'}elseif($issues.Count -gt 0){'INCOMPLETE'}else{'COMPLETE'}
 $report=[ordered]@{schema='worldgen-assist.scenario-matrix-analysis.v1';run_root=$root;created_at=(Get-Date).ToString('o');status=$status;performance_claim=if($status -eq 'COMPLETE' -and $performance.Count -gt 0 -and @($performance|Where-Object status -eq 'INCOMPLETE').Count -eq 0){'DESCRIPTIVE_ONLY'}else{'NOT_EVALUATED_INCOMPLETE_EVIDENCE'};correctness_pairs=$correctness;performance_pairs=$performance;issues=$issues.ToArray()}
 $report|ConvertTo-Json -Depth 14|Set-Content -LiteralPath (Join-Path $output 'scenario-matrix-analysis.json') -Encoding utf8

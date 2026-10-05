@@ -5,6 +5,11 @@
 	"mixins": [
 		"ChunkAccessRemoteDensityMixin",
 		"ChunkStatusTasksMixin",
+		"ChunkMapFeatureSchedulerMixin263",
+		"CommandsFeatureFixtureMixin263",
+		"ServerPlayerFeatureFixtureMixin263",
+		"ServerMoveFeatureFixtureMixin263",
+		"NativeEntityFeatureFixtureMixin263",
 		"ChunkMapLoadOpportunityMixin263",
 		"ChunkGenerationTaskHintsMixin263",
 		"PrivateBiomeInvoker263",

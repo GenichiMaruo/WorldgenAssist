@@ -7,6 +7,8 @@ logoFile="icon.png"
 description='''Experimental client-assisted world generation.'''
 [[mixins]]
 config="worldgen_assist.mixins.json"
+[[mixins]]
+config="worldgen_assist.neoforge.mixins.json"
 [[dependencies.worldgen_assist]]
 modId="neoforge"
 type="required"

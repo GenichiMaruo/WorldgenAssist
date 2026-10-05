@@ -74,7 +74,11 @@ public final class NeoWorldgenAssist implements WorldgenLoaderHooks {
         NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent event) -> {
             if (event.getEntity() instanceof ServerPlayer player) ServerSettingsMenu.onDisconnect(player.getUUID());
         });
-        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> ServerSettingsMenu.onServerStopped());
+        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> {
+            ServerSettingsMenu.onServerStopped();
+            io.github.genichimaruo.worldgenassist.server.SavedStructureDigestLogger.log(event.getServer());
+            io.github.genichimaruo.worldgenassist.server.FeatureFixture263.stopped(event.getServer());
+        });
     }
     @Override public void registerRemote(RemoteWorldgenConfig config) {
         RemoteWorldgenManager.register(config, new NeoRemoteJobSender(), manager -> {

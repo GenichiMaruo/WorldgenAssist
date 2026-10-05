@@ -1,6 +1,209 @@
 # Mixin Targets
 
-## Candidate FEATURES boundary (2026-10-05; not registered)
+## AH dev.9 runtime checkpoint COMPLETE (not beta)
+
+Gate155345-461 exited0 with exact dev.9 JARs/production inputs from142412-768.
+Ten affected methods/three builds and physical/Forge strict882 four-stage parity
+retain original identity. Fresh Neo assisted passes every882 noise/decoration/
+structures/light, actual100/100/200 canonical hook and1254 nonconflicting pairs.
+All three ordinary view32 modes complete without fixtures,Mixin errors or failed
+tasks/timeouts. Combined paired FULL-16.33%/receipt-15.35%/CPU-20.63%;parallel
+alone slower. No source/target change for coordinator weight fix. Ordinary
+mixed-stage final lighting and reverse-order/source-identical remote-on off-
+feature control remain beta gaps; controlled fixture is not that proof.
+
+## Historical dev.9 partial target verification (superseded)
+
+Gate142412-768 passes10methods/3builds, physical/Forge strict882 four-stage
+parity and Neo original runtime. Actual Neo hook marker shows100/100/200,
+matching pinned loader datamap JSON. Coordinator's1/1/2 expectation failed;
+only coordinator changed for restricted exact-input/JAR resume. Native Neo
+assisted/parity and ordinary performance still pending; no new Mixin target.
+
+Neo-only MonsterRoomFixtureMixin263 targets
+net.neoforged.neoforge.common.MonsterRoomHooks.getRandomMonsterRoomMob
+(Lnet/minecraft/util/RandomSource;)Lnet/minecraft/world/entity/EntityType; with
+WrapMethod; class remap=false (loader-owned symbol), private static shadow
+monsterRoomMobs. Registered separate worldgen_assist.neoforge.mixins.json in
+Neo mods.toml, defaultRequire1. Absent from Fabric/Forge artifacts.
+Installed Neo API source MonsterRoomHooks25..28 builds original list directly
+from registry datamap entrySet,37..38 selects using supplied RNG. Generated Neo
+MonsterRoomFeature.randomEntityId130..131 delegates hook; primary26.2 129..130,
+Fabric26.3 128..129 use fixed MOBS array; Forge130..131 delegates DungeonHooks,
+whose default WeightedList builder16 has explicit order (selection81).
+Generated WeightedList.getRandom
+one nextInt(totalWeight),unwrap preserves Weighted entries. Dev.9 fixture-only
+sorted-id helper preserves original entries/weights and selector/random calls.
+ThreadLocal current scoped feature level exists only during original invocation,
+cleared in finally; original hook outside active public-seed fixture. Cached
+ordering invalidates on original list identity replacement/reload. Actual marker
+and10 affected methods/native parity require gate; completed scope above.
+Dev.8 Neo real spawner-id10 differences remain failed evidence, not normalized.
+
+## Historical dev.8 implementation-time targets (superseded)
+
+## AH dev.8 ownership/fixture changes (implemented, UNTESTED)
+
+No new Mixin targets. Retain dev.7 initializeLight wrapper and optional native
+Entity.setPosRaw call wrapper. Existing buildTerrain wrapper coordinates its
+already-original body future through explicit fixture-only terrain barrier
+before original NOISE diagnostic/status callbacks. All1682 demanded terrain
+bodies finish before1458 FEATURES; scoped initialization delegates only after
+all1458 feature futures finish. Original methods/futures remain, performance
+forbids fixture controls. Expected counts verified from dev.7 actual logs and
+stock target ChunkPyramid FULL terrain accumulatedradius2/FORCED FULLradius2.
+Production queue now separates executing permits<=2 from bounded async owned
+footprints<=128. Completion publication-before-release retained. Nine affected
+methods only; all dev.8 runtime/build proof UNRUN.
+Dev.7 strict light25/intermediate decoration2 differences remain failed. Saved
+block/final-heightmaps all882 equal is narrower proof, not light normalization.
+
+## Historical dev.7 implementation-time targets (superseded)
+
+## AH dev.7 native fixture load and light initialization (implemented, UNTESTED)
+
+NativeEntityFeatureFixtureMixin263 wraps Entity.setPosRaw(DDD)V's invocation
+Level.getChunk(II)LevelChunk, discarded return, only active named fixture
+ServerPlayers. Generated Forge3963..3993 (call3991),Neo3958..3987(call3985)
+add this synchronous FULL side effect even on unchanged positions. Primary26.2
+3794..3819/Fabric26.3 3917..3942 lack it; require0 intentionally permits absence.
+Root/Forge registration,Neo usesroot. Guard entire active fixture,including
+connection-tick absSnapTo, not just first teleport. Ordinary entities/movement
+and default fixturefalse call original. Dev.6 Forge crash retained at
+test-artifacts/port26.3-forge-installed/server/crash-reports/crash-2026-10-05_12.56.19-server.txt.
+
+ChunkStatusTasksMixin additionally WrapMethod initializeLight with same
+WorldGenContext/ChunkStep/StaticCache2D/ChunkAccess arguments and CF return as
+generateFeatures. Source:primary26.2 142(scan146/engine147),Fabric26.3
+146(scan150/engine151),Forge/Neo157(scan161/engine162). Both generation and
+loading pyramids call it:primary38/52,target loaders30/42. Original body/future
+unchanged; original ThreadedLevelLightEngine PRE/POST scheduling retained.
+Owned queue coordinates point initialization withR8 feature footprint through
+async completion and stage callbacks. Both stock layers radius1 require18
+reservation. Unexpected geometry globalserial. No runtime proof for dev.7yet.
+Dev.6 nine methods/builds/four physical fixtures and882 parity passed; native
+failed on positioning before arm, performance unrun. Light parity is new/unrun.
+
+## Historical dev.6 implementation-time targets (superseded)
+
+## AH dev.6 shared position/collision helper (implemented, UNTESTED)
+
+ServerMoveFeatureFixtureMixin263 now targets
+ServerGamePacketListenerImpl.handlePlayerPositionChange(DDDFFZZ)V HEAD instead
+of public handleMovePlayer. Verified helper Fabric1102,Forge1116,Neo1136;
+callers movement Fabric1087/Forge1101/Neo1121 and teleport acknowledgement
+Fabric562/Forge570/Neo590. Both callers already perform original PacketUtils
+thread checks and invalid-value/id checks;do not cancel the acknowledgement or
+its thread handoff. This private helper itself is synchronous on server thread.
+Primary26.2 acknowledgement527 lacks this helper/position flow; do not backport
+target assumptions. Dev.5 first public-only guard missed ack collision wait:
+original complete but main tick27,980ms,only one pause marker;strict gate failed.
+Dev.6 helper and retained ServerPlayer.tick/doTick targets require fresh runtime
+on all loaders. Default fixturefalse,exact named two/publicseed/stock geometry
+scope and completion/failure/close release remain. No extra test methods,9 total.
+
+## AH dev.5 explicit fixture player pause (implemented, UNTESTED)
+
+ServerPlayerFeatureFixtureMixin263 injects tick/doTick HEAD,cancellable only for
+the two named public-seed fixture participants while1250 SPAWN completions await.
+Verified primary26.2 574/641,Fabric26.3 581/651,Forge588/658,Neo598/668.
+ServerMoveFeatureFixtureMixin263 injects handleMovePlayer(ServerboundMovePlayerPacket)
+HEAD;original PacketUtils.ensureRunningOnSameThread(packet,this,player.level())
+retained before cancellation,so no fixture map/world access on network thread.
+Verified handler primary1050,Fabric1062,Forge1076,Neo1096;public player field
+primary239,all targets242. Original GamePacketListener.tick and keepConnectionAlive
+not canceled:primary293/300/318(player.doTick),all targets301/308/327.
+TickRateManager.isEntityFrozen excludes Player;ordinary world freeze alone does
+not prevent player collision FULL waits. Registration root/Forge (Neo usesroot).
+No player pause with default startup fixture flagfalse or after completion/failure/
+close;performance forbids fixture controls. Nine affected methods include pause
+lifetime in existing fixture tests. All new targets runtime/build UNRUN.
+Dev.4 serial strict882 noise/decoration/saved structures passed;parallel fixture
+main tick blocked31,247ms and clients timed out,so that runner failed. No native
+or AH speed evidence. Historical source/runtime identities below remain original.
+
+## AH dev.4 completion and fixture placement source findings (UNTESTED)
+
+No additional Mixin targets. Original ChunkStep.apply thenApply and persisted
+status update: primary26.2 lines24/32,Fabric26.3 29/38,Forge31/40,Neo31/40.
+ProtoChunk.setBlockState selects getPersistedStatus().heightmapsAfter():
+primary147,all target146. Owned queue must publish original completion callbacks
+before allowing a conflicting feature body to observe stage-dependent state.
+Original async body ownership/no retry/defaultoff unchanged.
+ServerPlayer.teleportTo(ServerLevel,double,double,double,Set<Relative>,float,
+float,boolean) and setGameMode(GameType):primary1675/1730,Fabric1727/1782,
+Forge1769/1824,Neo1824/1870. PlayerList.getPlayers primary814,Fabric818,
+Forge841,Neo849;Entity.getScoreboardName primary3256,Fabric3370,Forge3405,
+Neo3407. Original /tp's extra victim.setOnGround(true):primary239,Fabric235,
+Forge256,Neo261. Supporting-block collision reads can reach original FULL
+ServerChunkCache.getChunk/managedBlock (Fabric162/163). Explicit fixture uses
+original player teleport operation with exact named two-owner/public-seed scope,
+actual coordinate/creative checks before882 existing test tickets. Ordinary
+teleport command/gameplay unchanged. All dev.4 runtime/build findings UNRUN.
+Dev.3 fresh physical constructor/wrappers ran; strict parallel882 parity passed
+once,serial2 intermediate height/terrain differences and assisted harness failed.
+Native targets and ordinary performance remain unverified.
+
+## AH dev.3 diagnostic fixture targets (implemented, UNTESTED)
+
+CommandsFeatureFixtureMixin263 injects Commands constructor TAIL,registering
+only when explicit fixture flag is set. Constructor is
+(Commands.CommandSelection,CommandBuildContext);getDispatcher() returns the
+public original brigadier dispatcher. Primary26.2 lines190/458;26.3 Fabric192/
+462,Forge192/477,Neo192/475. CommandSourceStack.getEntity/getServer verified:
+primary390/422,Fabric399/431,Forge398/430,Neo388/420. Nonentity source plus
+original owner permission required. No ordinary client command registration.
+ChunkMap scheduler wrapper now captures original OFF scheduler only for fixture;
+enabled replacement retains production behavior. ChunkStatusTasksMixin wraps
+original generateSpawn (same arguments/future on all26.3 loaders),holding the
+fixture scoped original operation until all snapshot coverage is ready. Existing
+HEAD diagnostics skip only snapshots already captured by that fixture. No
+copied generation body. Fabric/Forge/Neo stopped callbacks close fixture state.
+
+Original ServerChunkCache.updateChunkForced delegates TicketStorage without
+synchronous FULL wait: primary514,targetFabric504/Forge509/Neo509.
+TicketStorage.updateChunkForced primary383/Fabric383/Forge383/Neo393 uses
+ChunkMap.FORCED_TICKET_LEVEL (all126),ENTITY_TICKING level31. ServerLevel
+setChunkForced synchronously calls getChunk after ticket update and cannot arm
+the multi-chunk barrier. ServerTickRateManager.setFrozen all28 calls original
+tick state publication. Actual fixture checks isFrozen,not configuration alone.
+Default fixture off,seed8675309/exact stockOverworld/geometry gates; no production
+extra tickets. Native source/Mixin runtime and dev.3 fixture are UNRUN.
+
+## AH dev.2 runtime outcome
+
+All four physical constructors/wrappers ran; strict decoration parity failed
+even serial (284/882). Other components and saved structures matched. Generated
+source checks/builds are insufficient proof;native/runtime/performance remain
+unproved. Historical UNRUN text below was the preexecution checkpoint.
+
+## AH feature scheduling targets (alpha.8-dev.2/protocol12; enabled runtime UNRUN)
+
+ChunkMapFeatureSchedulerMixin263 wraps NEW ChunkTaskDispatcher in ChunkMap's
+constructor,whose source-verified args are TaskScheduler and Executor:
+`(Lnet/minecraft/util/thread/TaskScheduler;Ljava/util/concurrent/Executor;)V`.
+Capture constructor's unique ServerLevel and ChunkGenerator arguments via
+Local(argsOnly=true),verified all three source constructors. Replace only
+scheduler.name()==worldgen for exact Overworld noise generators,close the still-empty original queue;
+light remains on its original executor. Registered root/Forge lists (Neo uses
+root). ChunkStatusTasksMixin wraps source-verified generateFeatures and injects
+at generateSpawn HEAD for optional final-decoration diagnostics. Both have the
+same WorldGenContext/ChunkStep/StaticCache2D/ChunkAccess arguments and future
+return on all three generated26.3 loaders. Original task bodies are retained.
+Dev.1 three builds and original/off runtime passed,but constructor replacement
+and changed enabled runtime ordering are UNTESTED;
+source verification alone is not Mixin/runtime proof. Existing AG tests do not
+cover these targets. Harness is complete; run the single affected feature gate.
+
+Read primary26.2 ChunkMap190 and ChunkStatusTasks126 as baseline; target26.3
+wrapping retains the actual version's body (including26.2/26.3 heightmap
+priming difference). Fabric lifecycle4.1.9 MinecraftServerMixin72/74 injects
+SERVER_STOPPED at stopServer TAIL. Native generated MinecraftServer invokes
+handleServerStopped after stopServer: Forge796/NeoForge793,in finally. Saved
+structure diagnostics additionally require clean exit/nonempty completion and
+all required coordinates; an event alone does not prove successful saving.
+
+## Pre-AH candidate FEATURES boundary (2026-10-05; then not registered)
 
 All three generated26.3 sources contain static
 ChunkStatusTasks.generateFeatures(WorldGenContext,ChunkStep,StaticCache2D,

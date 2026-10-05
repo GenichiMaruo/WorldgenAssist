@@ -1,5 +1,257 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## AH dev.9 complete targeted gate; measurable combined gain, beta gaps remain
+
+Resume feature-pipeline-gate-20261005-155345-461/session17095 exited0. It checks
+original before/after manifests and every current input except coordinator,
+plus retained/current all3 exact JAR hashes. Ten methods/three builds/physical/
+Forge proofs remain at142412-768; no test/build rerun. Original marker failure
+stays. Neo original from parent+fresh assisted match EVERY882 noise/decoration/
+structures/light,0missing/changed;1254 feature overlaps,0feature/init conflicts.
+Required Neo194complete/60peer/6shaped,both ownerscomplete+peer.
+
+Ordinary performance on natural weak i7-7700K4physical/8logical E-drive server,
+two client processes on one strong i7-12700K,actual server+clients32,one excluded
+warmup/three relocations; all fixture/freeze/replay controls disabled. Every
+condition31,974 completed tasks and3461 receipts/owner/repeat;0failed tasks/job
+timeouts,cleanup_safe and clean stopped,identical sources/artifact/profile/work.
+
+| Same-repeat comparison | FULL paired median | Receipt paired median | Server CPU paired median | FULL faster repeats |
+| --- | ---: | ---: | ---: | ---: |
+| parallel/off vs original/off | +5.84% | +5.55% | +0.95% | 0/3 |
+| parallel/on vs parallel/off | -18.02% | -17.33% | -21.38% | 3/3 |
+| parallel/on vs original/off | -16.33% | -15.35% | -20.63% | 3/3 |
+
+Combined FULL97.873->81.419s,109.315->91.459s,106.133->101.965s;receipt
+103.493->87.141s,115.134->97.460s,111.322->107.276s. ServerCPU395.281->326.156s,
+433.813->334.391s,409.938->325.359s. Combined tickp95+7.25% and mean+23.08%,all
+three higher (p95 actual12.84/12.93/12.05ms versus11.97/11.71/11.47ms).
+Improvement is meaningful but varies3.93..16.81%; not reproduced in opposite
+order,not beta. Same-JAR original/on unmeasured,so not proof feature scheduling
+improves existing assistance. Controlled phases do not prove ordinary mixed-
+stage saved lighting; next verify it from original game recomputation on actual
+saved blocks and reverse three-condition order. No public release yet.
+Remote mean per-repeat medians:compute18.27ms,encode0.308ms,decode0.201ms,
+RTT62.12ms,apply7.20ms,validation5.42ms; these overlap and cannot be summed
+as a critical path. Required functional scope/all JAR hashes remain below.
+
+## Historical dev.9 partial verification checkpoint (superseded)
+
+Gatefeature-pipeline-gate-20261005-142412-768/session87436 exited1 after Neo
+original completed.10methods0fail/errors/skips,three builds,E environment,
+all4 physical runners/3comparisons,Forge pair/comparison,Neo original passed.
+Every882 physical/Forge noise/decoration/structures/light equal,0missing/changed.
+Actual parallel/assisted overlaps and footprints retained in original summaries.
+Required physical616complete/419peer/4shaped;Forge294/54/4,both ownerscomplete+peer.
+Neo actual scoped marker skeleton100/spider100/zombie200 matches pinned loader
+datamap JSON; coordinator incorrectly required1/1/2, preventing Neo assisted
+and ALL performance. Production hook/order/weights worked in original runtime.
+Correct coordinator marker only; restricted resume compares every input except
+coordinator, original before/after manifests, retained/current three JAR hashes,
+successful steps and882 comparisons. Prior failure/results are not overwritten.
+Fresh remaining Neo assisted/comparison and view32 trio UNRUN; no speed/beta.
+
+Dev.9 immutable hashes:
+Fabric A9B7D323BB7A50C4DCEA5B6403BBBD2ECA944654BFD403ECFB0D008279D24501;
+Forge 67A183C9C72E7A320138FE7AD739CC3F0B6494998EB76330DDAA6312094950E2;
+Neo 8BFB1BC011A865707DB39F10BEF7885F81D45491C7EB554B47CB71383201AD84.
+
+## Historical dev.8 results and dev.9 implementation checkpoint (superseded)
+
+Gate135417-522 exited1 at neoforge-decoration.9 methods0fail/errors/skips,3builds,
+all4physical+4native runners passed. Physical serial/parallel/assisted and Forge
+EVERY882noise/decoration/saved structures/light equal,0missing/changed. Actual
+feature overlaps1329/1350/1329,0conflicts; Neo1396overlaps0conflicts but10block-
+entity-only decoration differences; every other component and882noise/structures/
+light equal. Physical593complete/428peer/9shaped;Forge261/75/10 in required scope,
+both ownerscomplete+peer. Neo assistance gate not reached; performance allUNRUN.
+Saved-native inspection141051-985:every882x98,304voxels/final-height/light equal,
+10real saved spawner-id differences (spider/skeleton),loot seeds equal. No new
+generation/JUnit for this offline original-codec read. Neo unsorted datamap
+mob list source is order-confound hypothesis; gameplay ids remain strict.
+Dev.8 hashes:Fabric834A1B6AC0F885A9E62E85A19BF601CAF49214ECC218C5F719D41930D38F5880;
+ForgeAF7CAD85ABB020A1C0895BCBA7F8FC031D2B8934B65D4933203D3DBC6B08BC50;
+NeoDBC056B2433685E4B3247C9801BDDD0FF5B9735605A7E4B92B3772E7B65871FC.
+
+Dev.9 scoped fixture-only Neo sorted weighted mob list retains weights/RNG and
+ordinary hook unchanged; no digest normalization.10affected methods/3builds/
+fresh physical/native/ordinary32 gate UNRUN. Controlled-phase limitations and
+beta/speed gaps remain. No commit/release of AH yet.
+
+## Historical dev.7 completed checkpoint (superseded)
+
+## AH dev.7 stopped on light/intermediate parity; dev.8 UNTESTED
+
+Gatefeature-pipeline-gate-20261005-132808-665 exited1 at decoration-serial.
+Nine methods0fail/errors/skips,3 builds/E and all four physical runners passed.
+Strict serial+offline parallel/assisted each:noise882/structures882 equal,
+decoration880 equal/2changed,light857 equal/25changed,0missing. Parallel1043/
+assisted1054 overlapping feature pairs,0R8/feature-init/init-init conflicts.
+Native/performance were NOT run. Read-only original-codec inspector134027-413
+over all882x98,304 saved voxels:0changed blocks/chunks and0changed saved final
+heightmap tags for all3. Light25 actually differs (nibbles and presence),not only
+NBT order. Intermediate/saved-light strict gate remains failed; no speed claim.
+Light mean original invocation0.079/0.175/0.172ms, async ownership46.75/34.17/
+36.72ms for original/serial/parallel; these are functional timing,not performance.
+
+Dev.7 immutable JAR hashes:FabricA0DB2B5C41E64961C3CFEE8B2B09CD96334F7340566ECD58E1EF8BAD61D1D807;
+Forge64075B6D8EEC1E767EEE684894528CD7458DDE66614B1201ABF07781A0C4EC4C;
+Neo5516758A809D9A83DC563FDE5C2FD44076150F7856252FABDAF9E80131F33080.
+Dev.8 changes execution-permit ownership separation and correctness-only
+terrain/feature/light phases, preserving all882 strict fields. All dev.8 builds/
+runtime/performance UNRUN. Nine affected methods only; beta gap includes ordinary
+mixed-stage correctness in addition to substantial/reproducible speed. No release.
+
+## Historical dev.6 completed checkpoint (superseded)
+
+## AH dev.6 physical parity passed; dev.7 implemented, UNTESTED
+
+Gatefeature-pipeline-gate-20261005-124814-850 terminalexit1 at Forge original.
+Nine affected methods0fail/errors/skips,3 builds,E profile passed. All four
+fresh physical fixtures complete/cleanly stopped1458 FEATURES/1250 snapshots/
+SPAWN. Serial/parallel/assisted each882noise+882decoration+882saved structures
+equal,0changed/missing. Parallel1224/assisted1283 actual overlapping pairs,
+peak2/0R8 conflicts. Required-region assistance742/peer629/shaped22; both owners
+actually complete+peer. Whole-run1429/1249/72 includes work outside882 scope;
+do not confuse these counts or functional invocation timings with performance.
+Forge original failed before fixture.armed: native Entity.setPosRaw invokes
+synchronous FULL while participant teleport occurs before all tickets, triggering
+60secwatchdog. Cleanup_safe true but no successful native parity/clean fixture
+proof. Native assisted/Neo pairs/view32 performance all UNRUN.
+
+Original dev.6 hashes:
+Fabric376EE3553A2CFC5E46A1BD8C36E6ABB107E77AAAE756013DD3C3A725B54493C2;
+Forge6C9E47DA6C2C0D523C4F7BAD97C0F11E9954E84F1745F4D40E3CE7739819BF58;
+NeoD33E08F516A7F9C04F9D6656C658E98250FFA4C5CA4F54A60AB9D396DA6ADB8F.
+Dev.7 changes native fixture-only position loading and protects original light
+initialization in the same queue (reservation18); adds exact saved-light flag/
+arrays to strict882 comparison. Existing9 methods expanded only for affected
+admission/async-point/canonical-light behavior. ALL dev.7 builds/runtime/light
+parity/performance UNRUN. No beta or new speed claim, no commit/release yet.
+
+## Historical dev.5 completed checkpoint (superseded)
+
+## AH dev.5 completed partial batch; dev.6 UNTESTED
+
+Gatefeature-pipeline-gate-20261005-124024-423 passed9 methods0fail/errors/skips,
+three builds/E profile and original runner. Required1458 FEATURES/1250 snapshots/
+SPAWN and clean stopped/saved structure diagnostics complete,but strict fixture
+coverage fails because only ownerB pause marker;main tick blocked27,980ms. No
+serial/parallel/assisted/native/performance stages ran. Keep failure recorded.
+Dev.5 immutable original batch hashes:
+FabricBDC2442703942F2AA6728BD0B3745ADE3B42EC67AE0927BEF8D91B6380B8A642;
+ForgeA8DF598373A662F399B977BF50C546D19A2525270292447E31867B5CF694973E;
+Neo58A4E030B129AA9F072D8A15D2E577C480B4CB9C55EAC0451F86980393F4A165.
+
+Current alpha.8-dev.6/protocol12 moves fixture collision guard into private
+handlePlayerPositionChange shared by both movement packets and26.3 teleport
+acknowledgements. Original caller checks/ack/keepalive stay. Nine selected
+methods/three builds/fresh physical/native/performance are UNRUN. No beta claim.
+
+## Historical dev.5 implementation-time checkpoint (superseded)
+
+## AH dev.4 completed partial batch; dev.5 UNTESTED
+
+Gatefeature-pipeline-gate-20261005-122734-215 exited1 at correctness-parallel.
+Nine affected methods0fail/errors/skips,three builds/E-host profile passed.
+Original/serial completed cleanly; strict offline-compare-serial all882 noise,
+decoration and saved structures equal (0missing/changed). Prior2 intermediate
+differences did not recur after result-before-conflict-release correction.
+Parallel1458 FEATURES/1250 snapshots/SPAWN completed but main tick blocked
+31,247ms and both clients timed out30s. They had disconnected before the
+post-measurement kick/wait; runner failed its disconnect marker. Cleanup_safe true
+but no clean stopped diagnostic proof. Do not relabel it successful or erase failure.
+Assisted/native/performance stages UNRUN. Dev.4 immutable original batch hashes:
+Fabric6A2E1A0EE1B70A8CA0EACDB210E726946B84FCADE58C1187EC4A9F1DEFED2D30;
+Forge8D4D61995A85D769E350576B14E595F2842124BCDB3925E509D6A6D7BDCAD87C;
+Neo2FB951C1EC9666432E5D973D2CB8E0CCF0CE9A15A5E1BD95AB524339E55171C9.
+
+Current alpha.8-dev.5/protocol12 pauses ONLY active public-seed fixture players'
+tick/doTick/movement collision validation,retaining network keepalive/context/
+result processing. Existing fixture methods verify pause releases on completion/
+failure/close. Nine-method/three-build/fresh physical/native/performance batch
+UNRUN. No beta/substantial speedup claim; publicalpha.7 unchanged.
+
+## Historical dev.4 implementation-time checkpoint (superseded)
+
+## AH dev.3 completed partial batch; dev.4 implementation UNTESTED
+
+Gatefeature-pipeline-gate-20261005-120419-660 exited1 at correctness-assisted.
+Eight affected methods0fail/errors/skips;three builds/weak E profile passed.
+Original/serial/parallel success and clean complete1458 FEATURES/1250 snapshots/
+SPAWN. Existing results analyzed offline after batch stopped:
+offline-compare-parallel all882 noise/decoration/saved structures equal;
+1295 actual overlapping pairs,0 conflicts,peak2. Serial882 noise/structures
+equal,880 decoration equal/2changed,0missing; changed terrain/height components,
+biomes/block entities/entities/ticks equal. Saved-decoration-inspection122017-437
+exited0,original game codecs+retained remote/download hashes: all882 final saved
+chunks'98,304 voxels equal (0changed). No new generation/JUnit run for analysis.
+This does not prove intermediate equality or exonerate untested native hooks.
+
+Assisted snapshots completed1458/1250 but runner failed stable-digest/assistance
+wait; actual50 complete jobs0peer/0shaping were warmup,none in fixed882 scope.
+Participant spectator/ordinary tp+creative command ordering and evidence offset
+were unsuitable after atomic fixture demand. Cleanup_safe true but no ordinary
+fixture.stopped/SavedStructure completion proof there; not reusable success.
+No native or AH performance stages executed. Dev.3 original hashes:
+Fabric10F006661ACD9E9AEF6494BEC51684F5AE3B39C0F4B8DDDAF8A45D6B99B6B8CD;
+Forge36BFD08DBC606934746C7A08A7C61EA3729EB21ADDFE3844299EBBBEDD294DD3;
+Neo55C69D8AB17607EB5D8D81F8AD278B3453A2CE8474192CF62EAC896C29B80B4C.
+
+Current alpha.8-dev.4/protocol12 fixes completion publication before conflicting
+feature dispatch and fixture placement/offset. Added1 focused stage-order method
+(nine selected total). All current tests/builds/runtime are UNRUN. Strict882
+comparison/both owners complete+peer+shaping remain gates. No beta/speed claim.
+
+## Historical dev.3 implementation-time checkpoint (superseded)
+
+## AH dev.2 completed batch; dev.3 UNTESTED
+
+Gatefeature-pipeline-gate-20261005-110251-394 exited1 at decoration-serial.
+Six affected methods0fail/errors/skips;three builds/actual weak E-host profile
+passed. All four physical functional runs succeeded/cleaned up. Required882
+noise and saved FULL structure tags equal for all; decoration changed284serial,
+377parallel-off,366parallel-assisted. Actual feature overlapping pairs46/116
+for parallel-off/assisted,zero observed radius8 conflicts; functional overlap
+is not performance evidence. NO fresh native AH or performance stages executed.
+Dev.2 original hashes: FabricBD914A20E6D27A894801456B5356C8FC259D77B8E39828D64D6B5541A0945990;
+ForgeC456785B4013EA6B396403FD9D44268ACCBF4D4F212735A66DB3A20952C96951;
+Neo6B4B1140CBAB026E3606162C4CB10A41ECAC05C155653BA15EF407DDD0354E17.
+
+Prior dev.1 original versus dev.2 original decoration changed272/882 (0missing).
+214 class entries same except SavedStructureDigestLogger.class; metadata also
+differs. This is not exact-JAR control,so it does not exonerate the candidate.
+Read-only saved-decoration-inspection-20261005-111749-831 exited0: original game
+RegionFile/NbtIo16MiB/PalettedContainer codec decoded every882x98,304 voxel with
+retained remote/download SHA256 identities. Changed chunks/blocks vs dev.2
+original: prior-original315/30,304;serial317/29,248;parallel395/39,401;
+assisted482/33,777. Stone variants/ores,kelp/water,leaves/air are real changes.
+No Minecraft world generation or additional JUnit run during inspection.
+
+Current alpha.8-dev.3/protocol12 adds bounded record/replay/frozen/all-pre-SPAWN
+fixture and two focused methods. Implementation complete; eight methods/three
+builds/fresh fixture correctness/native/performance are UNRUN. All882 strict
+comparisons remain required. Public alpha.7 identities remain immutable.
+
+## Historical dev.2 implementation-time pending status (superseded)
+
+## AH current working candidate (alpha.8-dev.2/protocol12; runtime pending)
+
+First sandbox attempt105656-443 stopped before compilation due denied Gradle
+network access. Escalated batch105748-629 completed all six methods (0 failures/
+errors/skips),three builds and actual E-host profile. Original/off correctness
+runner succeeded,including required decoration completion,then the strict gate
+stopped on saved_structures.failed. Diagnostic incorrectly read root/region;
+generated26.2/26.3 DimensionType.getStorageFolder puts Overworld under
+dimensions/minecraft/overworld. Fixed using that original API in dev.2.
+No enabled-scheduler runtime, saved-structure parity, or AH performance was run.
+Original dev.1 SHA256 Fabric D59CD2923FB4063891942D8694DFE899B071680145830818F9FE56893C16B13A;
+Forge A15273249F3A3F5C5D6D91F0D73727135D286A01385643303F721594BDC4B7CF;
+NeoForge EA22C7B43C9DE5FD6441E174F78CA9A2E4221B8CB6137F644D1CB4321200A2E8.
+Those proofs cannot be relabeled for changed dev.2 artifacts. Implementation is
+finished; rerun the same selected sequential gate with the corrected diagnostic.
+Published alpha.7/AG identities below remain immutable,not AH evidence.
+
 ## Alpha.7 release packaging (2026-10-05)
 
 All three alpha.7/protocol12 builds passed metadata-only comparison against

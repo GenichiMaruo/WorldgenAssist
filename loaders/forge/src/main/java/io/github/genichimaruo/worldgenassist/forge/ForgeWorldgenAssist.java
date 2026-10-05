@@ -41,6 +41,8 @@ public final class ForgeWorldgenAssist implements WorldgenLoaderHooks {
         ServerStoppedEvent.BUS.addListener(event -> {
             ServerSettingsMenu.onServerStopped();
             ForgeResultAssembler.clear();
+            io.github.genichimaruo.worldgenassist.server.SavedStructureDigestLogger.log(event.getServer());
+            io.github.genichimaruo.worldgenassist.server.FeatureFixture263.stopped(event.getServer());
         });
     }
     @Override public void registerRemote(RemoteWorldgenConfig config) {

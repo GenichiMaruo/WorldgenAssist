@@ -25,7 +25,11 @@ param(
     [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='ready',
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
     [ValidateSet('grid','surface','density','block','decisions','complete')][string]$RemoteWorkKind='grid',
-    [ValidateSet('server','peer')][string]$CompleteVerification='server'
+    [ValidateSet('server','peer')][string]$CompleteVerification='server',
+    [ValidateSet('off','serial','parallel')][string]$FeatureBackend='off',
+    [switch]$DecorationDigest,
+    [switch]$FeatureFixture,
+    [string]$FeatureReplaySha256
 )
 
 # Remote half of the all-dimension trusted-raw scenario.  It owns only the
@@ -57,6 +61,13 @@ $env:TMP=$taskTemp
 $predictionEnabled = [bool]::Parse($Prediction)
 $dimensionId = if ($Dimension -eq 'fixture') { 'worldgen_assist:fixture' } else { 'minecraft:' + $Dimension }
 if ($predictionEnabled -and $CacheEntries -eq 0) { throw 'Prediction requires CacheEntries greater than zero' }
+if($DecorationDigest -and ($Purpose -ne 'correctness' -or $Dimension -ne 'overworld')){throw 'Decoration comparison is only the affected Overworld correctness fixture; disabled for performance'}
+if($FeatureFixture -and (-not $DecorationDigest -or $Players -ne 2 -or $Seed -ne 8675309 -or $ViewDistance -gt 10)){throw 'Bounded diagnostic fixture required'}
+$featureReplay=''
+if($FeatureReplaySha256){
+    $featureReplay=Join-Path $resolved 'scenario-staging/feature-replay.json'
+    if(-not $FeatureFixture -or $FeatureReplaySha256 -notmatch '^[a-f0-9]{64}$' -or (Get-Item -LiteralPath $featureReplay).Length -gt 131072 -or (Get-FileHash -LiteralPath $featureReplay).Hash.ToLowerInvariant() -ne $FeatureReplaySha256){throw 'Replay identity differs'}
+}
 
 $lock = [IO.File]::Open((Join-Path $resolved 'scenario-run.lock'), 'OpenOrCreate', 'ReadWrite', 'None')
 $case = 'scenario-' + $Dimension + '-' + $Mode + '-p' + $Players + '-' + $Purpose + '-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff')
@@ -335,21 +346,24 @@ function Complete-CorrectnessRegion {
         $cx = if ($ownerIndex -eq 0) { 1000 } else { -1000 }
         $cz = if ($ownerIndex -eq 0) { -2000 } else { 2000 }
         # Four rectangles keep each command below vanilla's 256-chunk limit.
-        foreach($xs in @(@(-10,0),@(1,10))){foreach($zs in @(@(-10,0),@(1,10))){
+        if(-not $FeatureFixture){foreach($xs in @(@(-10,0),@(1,10))){foreach($zs in @(@(-10,0),@(1,10))){
             Send-Command ('execute in ' + $dimensionId + ' run forceload add ' + (($cx+$xs[0])*16) + ' ' + (($cz+$zs[0])*16) + ' ' + (($cx+$xs[1])*16) + ' ' + (($cz+$zs[1])*16))
-        }}
+        }}}
         for ($dx=-10; $dx -le 10; $dx++) { for ($dz=-10; $dz -le 10; $dz++) { $required[([string]($cx+$dx)+','+($cz+$dz))] = $true } }
     }
-    $deadline = [DateTime]::UtcNow.AddSeconds(120)
+    $decorationRemaining=if($DecorationDigest){$required.Clone()}else{@{}}
+    if($DecorationDigest){@($required.Keys|Sort-Object)|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $evidence 'decoration-required-chunks.json')}
+    $deadline = [DateTime]::UtcNow.AddSeconds($(if($DecorationDigest){300}else{120}))
     while ([DateTime]::UtcNow -lt $deadline) {
         foreach ($match in [regex]::Matches((Log-Text), 'stage\.digest stage=noise chunk=(?<chunk>-?\d+,-?\d+) .* dimension='+[regex]::Escape($dimensionId)+'\b')) {
             $required.Remove($match.Groups['chunk'].Value)
         }
-        if ($required.Count -eq 0) { return }
+        if($DecorationDigest){foreach($entry in [regex]::Matches((Log-Text),'stage\.digest stage=decoration chunk=(-?\d+,-?\d+) .* dimension='+[regex]::Escape($dimensionId)+'\b')){$decorationRemaining.Remove($entry.Groups[1].Value)}}
+        if ($required.Count -eq 0 -and $decorationRemaining.Count -eq 0 -and (-not $FeatureFixture -or (Log-Text) -match 'fixture.complete ')) { return }
         if ($process.HasExited) { throw 'Server exited before the comparison region completed' }
         Start-Sleep -Milliseconds 500
     }
-    throw "Missing $($required.Count) comparison-region NOISE digests"
+    throw "Missing $($required.Count) comparison-region NOISE and $($decorationRemaining.Count) final-decoration digests"
 }
 
 try {
@@ -387,6 +401,12 @@ try {
     [ordered]@{enabled=[bool]$ServerFlightRecording;warmup_runs=$WarmupRuns;measured_repeats=$MeasuredRepeats} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'flight-recording-config.json')
     [ordered]@{noise_backend=$NoiseBackend;worker_override=$null;queue_override=$null} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'noise-backend-config.json')
     $start.EnvironmentVariables['WORLDGEN_ASSIST_NOISE_BACKEND']=$NoiseBackend
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_FEATURE_BACKEND']=$FeatureBackend
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_DECORATION_DIGEST']=([bool]$DecorationDigest).ToString().ToLowerInvariant()
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_FEATURE_FIXTURE']=([bool]$FeatureFixture).ToString().ToLowerInvariant()
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_FEATURE_REPLAY']=$featureReplay
+    if($featureReplay){Copy-Item -LiteralPath $featureReplay -Destination (Join-Path $evidence 'feature-replay.json')}
+    [ordered]@{mode=$FeatureBackend;workers=switch($FeatureBackend){'serial'{1} 'parallel'{2} default{0}};capacity=128;message_reservation=18;decoration_digest=[bool]$DecorationDigest} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'feature-backend-config.json')
     foreach($setting in @('WORLDGEN_ASSIST_LOCAL_WORKERS','WORLDGEN_ASSIST_LOCAL_QUEUE_PER_WORKER')){$start.EnvironmentVariables.Remove($setting)}
     $assisted = $Mode -eq 'assisted'
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE'] = if($assisted){'true'}else{'false'}
@@ -451,8 +471,10 @@ try {
     foreach($name in $ownerNames){ Wait-Log ([regex]::Escape($name)+' joined the game') 180 | Out-Null; if($assisted){$owners[$name]=New-OwnerUuid $name; Wait-Log ('worker\.register owner='+[regex]::Escape($owners[$name])+' status=ACCEPTED') 60 | Out-Null} }
     $owners | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'owner-map.json')
     if ($assisted) { Warm-AssistedOwners }
+    $fixtureOffset=(Log-Text).Length
+    if($FeatureFixture){Send-Command 'worldgenassist_feature_fixture_start';Wait-Log 'fixture.armed tickets=882 features=1458 spawns=1250 frozen=true' 30|Out-Null}
     if($Purpose -eq 'correctness') {
-        $offset=(Log-Text).Length; Start-Location 0; Send-Command 'gamemode creative @a'
+        if($FeatureFixture){$offset=$fixtureOffset}else{$offset=(Log-Text).Length; Start-Location 0; Send-Command 'gamemode creative @a'}
         Wait-CorrectnessComplete $offset $assisted
         $required=@()
         if ($assisted) {

@@ -11,12 +11,17 @@ param(
     [switch]$CompleteTerrain,
     [ValidateSet('server','peer')][string]$CompleteVerification='server',
     [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='ready',
-    [switch]$StructuralShaping
+    [switch]$StructuralShaping,
+    [ValidateSet('off','serial','parallel')][string]$FeatureBackend='off',
+    [switch]$DecorationDigest,
+    [switch]$FeatureFixture,
+    [string]$FeatureReplayFile
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 if($CompleteTerrain){$TerrainDecisions=[switch]$true}
+if($DecorationDigest -and -not $CompleteTerrain){throw 'Decoration comparison requires the bounded complete-terrain region fixture'}
 if(($StructuralShaping -or $CompleteVerification -eq 'peer' -or $RemoteApplicationProfile -eq 'overlap') -and -not $CompleteTerrain){throw 'Shaping/peer/overlap native profiles require complete terrain'}
 $nativeCenters=if($StructuralShaping){@(@{x=1000;z=-2000},@{x=-1000;z=2000})}else{@(@{x=100;z=100},@{x=-200;z=-200})}
 $expectedWorkKind=if($CompleteTerrain){'COMPLETE_TERRAIN'}else{'TERRAIN_DECISIONS_AND_SURFACE'}
@@ -24,6 +29,13 @@ $workspace = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $fixtureRoot = [IO.Path]::GetFullPath((Join-Path $workspace 'test-artifacts')).TrimEnd('\') + '\'
 $installed = [IO.Path]::GetFullPath($InstalledRoot)
 $output = [IO.Path]::GetFullPath($OutputRoot)
+. (Join-Path $PSScriptRoot 'FeatureFixtureEvidence.ps1')
+$replay=$null
+if($FeatureFixture -and (-not $DecorationDigest -or -not $StructuralShaping -or $Players -ne 2)){throw 'Bounded structural two-owner diagnostic fixture required'}
+if($FeatureReplayFile){
+    if(-not $FeatureFixture -or -not [IO.Path]::GetFullPath($FeatureReplayFile).StartsWith($fixtureRoot,[StringComparison]::OrdinalIgnoreCase)){throw 'Replay requires fixture evidence child'}
+    $replay=Read-FeatureReplay $FeatureReplayFile
+}
 foreach ($path in @($installed,$output)) {
     if (-not $path.StartsWith($fixtureRoot,[StringComparison]::OrdinalIgnoreCase)) {
         throw 'Native loader scenarios must remain under test-artifacts'
@@ -123,6 +135,7 @@ function Owner-Completes([string]$Log,[string]$Owner,[string]$Marker) {
 try {
     if (Get-NetTCPConnection -State Listen -LocalPort 25575,25585 -ErrorAction SilentlyContinue) { throw 'Fixture ports already listening' }
     New-Item -ItemType Directory -Force -Path $output | Out-Null
+    if($replay){Copy-Item -LiteralPath $replay.path -Destination (Join-Path $output 'feature-replay.json');if((Get-FileHash -LiteralPath (Join-Path $output 'feature-replay.json')).Hash.ToLowerInvariant() -ne $replay.sha256){throw 'Copied replay identity differs'}}
     $properties = $previousProperties
     foreach ($entry in @{
         'server-ip'='127.0.0.1';'server-port'='25585';'online-mode'='false';
@@ -139,6 +152,10 @@ try {
         WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT = '8'
         WORLDGEN_ASSIST_REMOTE_VALIDATION_SAMPLE_CELLS = '8'
         WORLDGEN_ASSIST_NOISE_DIGEST = 'true'
+        WORLDGEN_ASSIST_FEATURE_BACKEND = $FeatureBackend
+        WORLDGEN_ASSIST_DECORATION_DIGEST = ([bool]$DecorationDigest).ToString().ToLowerInvariant()
+        WORLDGEN_ASSIST_FEATURE_FIXTURE = ([bool]$FeatureFixture).ToString().ToLowerInvariant()
+        WORLDGEN_ASSIST_FEATURE_REPLAY = if($replay){Join-Path $output 'feature-replay.json'}else{''}
     }
     if ($TerrainDecisions) {
         $serverEnvironment.WORLDGEN_ASSIST_NOISE_BACKEND = 'cooperative'
@@ -203,10 +220,11 @@ try {
     if ($TerrainDecisions) {
         $marker = 'CAWG_NATIVE_DECISIONS_BEGIN'
         Send-ServerCommand "say $marker"
-        for ($index=0; $index -lt $Players; $index++) {
+        if($FeatureFixture){Send-ServerCommand 'worldgenassist_feature_fixture_start';Wait-Log $serverLog 'fixture.armed tickets=882 features=1458 spawns=1250 frozen=true' 30 $server $server.StartTime.ToUniversalTime()}
+        else{for ($index=0; $index -lt $Players; $index++) {
             $center=$nativeCenters[$index]
             Send-ServerCommand ("execute in minecraft:overworld run tp $($ownerNames[$index]) "+($center.x*16)+' 150 '+($center.z*16))
-        }
+        }}
         if ($Mode -eq 'assisted') {
             $deadline = [datetime]::UtcNow.AddSeconds(90)
             $ready = $false
@@ -223,21 +241,26 @@ try {
         $required = @{}
         for ($index=0; $index -lt $Players; $index++) {
             $center=$nativeCenters[$index]
-            foreach ($xs in @(@(-10,0),@(1,10))) { foreach ($zs in @(@(-10,0),@(1,10))) {
+            if(-not $FeatureFixture){foreach ($xs in @(@(-10,0),@(1,10))) { foreach ($zs in @(@(-10,0),@(1,10))) {
                 Send-ServerCommand ("execute in minecraft:overworld run forceload add " + (($center.x+$xs[0])*16) + ' ' + (($center.z+$zs[0])*16) + ' ' + (($center.x+$xs[1])*16) + ' ' + (($center.z+$zs[1])*16))
-            } }
+            } }}
             for ($dx=-10;$dx -le 10;$dx++) { for ($dz=-10;$dz -le 10;$dz++) { $required["$($center.x+$dx),$($center.z+$dz)"]=$true } }
         }
-        $deadline = [datetime]::UtcNow.AddSeconds(120)
-        while ($required.Count -gt 0 -and [datetime]::UtcNow -lt $deadline) {
+        $decorationRemaining=if($DecorationDigest){$required.Clone()}else{@{}}
+        if($DecorationDigest){@($required.Keys|Sort-Object)|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $output 'decoration-required-chunks.json')}
+        $deadline = [datetime]::UtcNow.AddSeconds($(if($DecorationDigest){300}else{120}))
+        while (($required.Count -gt 0 -or $decorationRemaining.Count -gt 0) -and [datetime]::UtcNow -lt $deadline) {
             if ($server.HasExited -or ($clients | Where-Object { $_.process.HasExited })) { throw 'Native process exited before paired regions completed' }
             foreach ($entry in [regex]::Matches((Get-Content -LiteralPath $serverLog -Raw),
                 'stage\.digest stage=noise chunk=(-?\d+,-?\d+) .*dimension=minecraft:overworld\b')) {
                 $required.Remove($entry.Groups[1].Value)
             }
-            if ($required.Count) { Start-Sleep -Seconds 2 }
+            if($DecorationDigest){foreach($entry in [regex]::Matches((Get-Content -LiteralPath $serverLog -Raw),'stage\.digest stage=decoration chunk=(-?\d+,-?\d+) .*dimension=minecraft:overworld\b')){$decorationRemaining.Remove($entry.Groups[1].Value)}}
+            if ($required.Count -or $decorationRemaining.Count) { Start-Sleep -Seconds 2 }
         }
         if ($required.Count) { throw "Native comparison region missing $($required.Count) terrain digests" }
+        if ($decorationRemaining.Count) { throw "Native comparison region missing $($decorationRemaining.Count) final-decoration digests" }
+        if($FeatureFixture){Wait-Log $serverLog 'fixture.complete ' 120 $server $server.StartTime.ToUniversalTime()}
     } elseif ($Mode -eq 'assisted') {
         $owners = @($ownerIds | Select-Object -First $Players)
         if ($owners.Count -ne $Players) { throw 'Not all distinct owners registered' }
@@ -320,6 +343,10 @@ finally {
         Copy-Item -LiteralPath (Join-Path $serverRoot 'logs/latest.log') -Destination $logCopy
     }
     $result = [ordered]@{schema='worldgen-assist.installed-native-scenario.v1';loader=$Loader;mode=$Mode;players=$Players;world=$world;success=$success;cleanup_safe=$cleanupSafe;loopback_only=$true;failure=$failure;mod_sha256=$modHash;terrain_decisions=[bool]$TerrainDecisions;complete_terrain=[bool]$CompleteTerrain;complete_verification=$CompleteVerification;remote_application_profile=$RemoteApplicationProfile;structural_shaping=[bool]$StructuralShaping;view_distance=4;validation_cells=8}
+    $result.feature_backend=$FeatureBackend
+    $result.decoration_digest=[bool]$DecorationDigest
+    $result.feature_fixture=[bool]$FeatureFixture
+    $result.feature_replay_sha256=if($replay){$replay.sha256}else{'record'}
     $result | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding utf8
 }
 if (-not $success) { throw $failure }

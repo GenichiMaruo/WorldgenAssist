@@ -1,5 +1,270 @@
 # Repository agent instructions
 
+## Current AH dev.9/protocol12 (targeted gate COMPLETE; not beta)
+
+Resume gate155345-461/session17095 exited0, retaining exact production/test/
+build/child-harness identity and all three dev.9 JARs from142412-768. Only the
+coordinator's Neo weight assertion/resume changed. Ten affected methods/three
+builds remain their original successful evidence; no rerun. Fresh Neo assisted
+matches EVERY882 noise/decoration/structures/light,1254 feature overlaps and0
+conflicts,required194complete/60peer/6shaped,both owners complete+peer. Physical/
+Forge strict882 results and original failure identities remain below.
+
+Three ordinary view32 conditions passed; all fixture controls disabled. Natural
+weak i7-7700K4physical/8logical onE, two client processes on one i7-12700K,
+warmup1/repeats3,31,974 tasks/condition and3461 receipts/owner/repeat,0job timeouts/
+failed tasks,clean stop and identical inputs/JARs. Paired medians:
+parallel alone FULL+5.84%/receipt+5.55% (all slower),CPU+0.95%(2higher);
+client effect with parallel FULL-18.02%/receipt-17.33%/CPU-21.38%(all improved);
+combined versus original FULL-16.33%/receipt-15.35%/CPU-20.63%(all improved),
+tick p95+7.25%(all higher). Combined FULL improvements vary3.93..16.81%.
+This is meaningful descriptive acceleration, not reproducibility/beta proof.
+The same-build remote-on/feature-off condition is still unmeasured, so don't
+attribute the gain to feature scheduling versus the existing distributed path.
+Next close concrete gaps: reverse-order original/off, original/assisted and
+parallel/assisted comparison with exact artifacts, plus ordinary saved-state
+lighting verification against original game code from each world's own blocks.
+Controlled fixture does not prove ordinary mixed-stage equality. Do not lower
+strict882 fields, normalize gameplay ids/light, relabel old evidence or publish
+beta before these gaps are resolved. Default feature/remote remain off.
+
+## Historical dev.9 partial verification checkpoint (superseded)
+
+Gate142412-768 exited1 on the Neo original marker assertion, not generation.
+10 affected methods/3 builds, all4 physical runners/comparisons, Forge pair/
+comparison and Neo original passed. Every882 physical/Forge noise/decoration/
+structures/light equal; no conflicts. Physical616complete/419peer/4shaped and
+Forge294/54/4, both owners complete+peer. Neo original actually logs preserved
+weights skeleton100/spider100/zombie200, matching the installed Neo datamap;
+the coordinator incorrectly expected1/1/2. Correct only that expectation.
+No production/test/build/child harness changed. Restricted coordinator resume
+checks original before/after manifests, every current input except itself,
+all three retained/current JAR hashes, successful steps and strict comparisons.
+Keep prior evidence identities and failure. Reuse Neo original, run fresh Neo
+assisted/comparison and all three ordinary view32 conditions in one batch.
+Neo parity/performance remain UNRUN. No speed/beta/release claim yet.
+
+Dev.8 gate135417-522 passed9 methods/3 builds and all physical/native runners.
+Physical serial/parallel/assisted and Forge match ALL882 noise/decoration/
+structures/light. Both physical/Forge owners actually complete+peer and nonempty
+shaping. Neo noise/terrain/heights/structures/light match882, but10 decoration
+block-entity differences stop gate; performance unrun. Saved Neo inspection
+141051-985 finds0changed voxels/heights/light and10 real spawner SpawnData.id
+changes; loot seeds unchanged. Never normalize gameplay entity ids away.
+Source Neo MonsterRoomHooks constructs weighted mobs from unsorted datamap
+entrySet; ordinary separate-process order is a comparison confound hypothesis.
+Primary/Fabric keep fixed mob arrays; Forge uses an ordered DungeonHooks builder. Exact source/order diagnosis and
+dev.8 hashes remain in TEST_RESULTS_LATEST.
+
+Dev.9 adds Neo-only wrapper of getRandomMonsterRoomMob: only inside the exact
+active public-seed fixture feature body, use sorted registry id order with
+original Weighted entries/weights and original WeightedList selector/random.
+Ordinary/native gameplay, clients and all performance retain original hook.
+Root feature body ThreadLocal cleared in finally; no async propagation. Native
+fixture requires actual canonical-order/weights marker. One necessary weighted
+selection/RNG-consumption test adds to existing9, now10 methods; no other suites.
+Original dev.9 implementation checkpoint required10 methods/3 builds/fresh
+functional/ordinary view32; completed scope and remaining resume are above.
+Keep phase-controlled scope and beta mixed-stage gap explicit. Default off.
+
+## Historical dev.8 implementation-time instructions (superseded)
+
+## Current AH dev.8/protocol12 (implementation complete, UNTESTED)
+
+Dev.7 gate132808-665 passed9 methods/3 builds/E and all four physical runners,
+then strict serial parity failed. Offline parallel/assisted also fail: every882
+noise/structures equal,decoration2 changed,saved light25 changed,all3 conditions
+same differences. Read-only original-codec inspection134027-413 confirms ALL882
+final block voxels and saved final heightmaps equal,actual light values/presence
+differ25. Do not normalize away light or claim correctness. Native/performance
+were not run. Dev.7 light invocation mean<0.2ms versus async ownership35-47ms
+reveals occupied CPU permits while awaiting external light completion.
+
+Dev.8 separates executing original bodies (<=2) from retained async footprints
+(still total admitted<=128). Original future/stage-callback ownership, conflict
+FIFO, cancellation and close remain; idle permits admit disjoint work. Existing
+async test adds a third owned future before the first two finish; no new method.
+Fixture now phases the same existing tickets: all1682 original TERRAIN bodies
+before1458 canonical FEATURES before1458 original light initializations,then
+all1250 snapshots before SPAWN. No added ticket/coordinate or normalized digest.
+Assert actual phase ordering/counts. This isolates scheduling from early light
+and lazy intermediate height creation; it does NOT prove ordinary mixed-stage
+gameplay parity. Original dev.7 failure remains. Nine affected methods/3 builds/
+fresh physical/native/ordinary view32 batch all UNRUN. Default off; beta/speed
+still unproved. Finish all edits before the next single sequential batch.
+
+## Historical dev.7 implementation-time instructions (superseded)
+
+## Current AH dev.7/protocol12 (implementation complete, UNTESTED)
+
+Dev.6 gate124814-850 passed9 affected methods/3 builds/E profile and all four
+physical fixtures. Serial/parallel/assisted each matched every882 noise,
+decoration and saved structures; parallel1224/assisted1283 overlapping pairs,
+0R8 conflicts. Required-region assistance742/peer629/shaped22, both owners
+actually used complete and peers. These are functional, not speed measurements.
+Forge original then failed: native Entity.setPosRaw synchronously gets FULL
+during participant positioning, before882 tickets exist, deadlocking the fixture.
+No native parity/performance ran. Keep original dev.6 evidence/hash identity.
+
+Dev.7 skips only that discarded native position-load call for the two explicitly
+active fixture players; it is absent in primary26.2/Fabric26.3, so require0 is
+intentional. Ordinary movement/entity loads remain original. Also protect
+INITIALIZE_LIGHT source scan, light-engine attachment and original async future
+using the same128-body queue, global serial or point footprint (parallel).
+FEATURES remainsR8. Reserve18 jobs/message for both stock radius1 layers;
+replay still drains9 features/message. No extra executor or blocking wait.
+Strict saved FULL light flag and all present2048-byte arrays including exterior
+sections are now compared for every882 coordinate; no normalization of bytes or
+presence. Existing9 methods cover combined stock admission, async point
+ownership and canonical light bounds/identity. All dev.7 builds/runtime/light
+parity/performance are UNRUN. Finish edits before one sequential gate. Do not
+claim old noise/decoration parity proves lighting or beta. Default remains off.
+
+## Historical dev.6 implementation-time instructions (superseded)
+
+## Current AH dev.6/protocol12 (implementation complete, UNTESTED)
+
+Dev.5 gate124024-423 passed9 affected methods/3 builds and original runner,then
+stopped at strict fixture coverage:only ownerB player-pause marker,main tick
+27,980ms blocked. All1458/1250 generation/snapshots/SPAWN and clean stopped
+diagnostics completed. Enabled/assisted/native/performance were NOT run.
+Source diagnosis:26.3 teleport acknowledgement additionally calls private
+handlePlayerPositionChange after accepting id/position;guarding public movement
+packets alone missed that collision FULL wait. Primary26.2 lacks this helper.
+Dev.6 moves movement fixture guard to shared private(DDDFFZZ)V helper (verified
+all three26.3 sources),retaining both callers' original thread/domain/id checks
+and acknowledgement handling. Player tick/doTick pause stays. Default fixture
+off/no ordinary movement change. No extra test method; existing pause lifecycle
+and stage publication gates still9. All implementation/harness edits complete;
+single9-method/3-build/fresh physical/native/view32 gate is UNRUN. Strict882,
+both actual player-pause markers,in-scope both-owner complete/peer/shaping and
+clean stopped proof remain required. No beta or substantial speed claim.
+
+## Historical dev.5 implementation-time instructions (superseded)
+
+## Current AH dev.5/protocol12 (implementation complete, UNTESTED)
+
+Dev.4 gate122734-215 passed nine affected methods/three builds. Original/serial
+completed and strict offline serial comparison matched all882 noise/decoration/
+saved structures,including the prior2 differences. Parallel completed1458 features/
+1250 snapshots/SPAWN but its main tick waited31,247ms,clients timed out at30s,
+then normal post-measurement disconnect wait failed. Cleanup_safe true; no clean
+stopped diagnostic proof,so do not reuse as successful runtime. Assisted/native/
+performance stages unrun. Completion publication fix has fresh serial evidence;
+earlier dev.3 parallel evidence retains original identity.
+
+Ordinary tick freeze excludes Player entities. Dev.5 explicitly pauses the
+exact two fixture players' tick/doTick and movement collision validation ONLY
+while this public-seed fixture awaits all scoped SPAWN completions. Original
+connection/keepalive/context/result processing stays active; retain original
+PacketUtils main-thread handoff before fixture movement cancellation. Completion,
+failure or close releases the player pause. No production/performance player
+behavior change (startup flag defaultfalse). Existing two fixture methods now
+check pause lifetime/failure/close; still nine affected methods,not extra suites.
+Assert both actual pause markers plus full882 strict comparison,both-owner
+complete/peer/shaping,clean stopped proof before ordinary performance. All
+implementation/harness complete but tests/builds/runtime UNRUN. One sequential
+gate only after all edits. Native/new Mixins source verified,not runtime verified.
+Beta/substantial acceleration remain unmet.
+
+## Historical dev.4 implementation-time instructions (superseded)
+
+## Current AH dev.4/protocol12 (implementation complete, UNTESTED)
+
+Dev.3 gate120419-660 passed eight affected methods/three builds. Original,
+serial and parallel physical fixtures completed1458 features/1250 snapshots and
+SPAWN futures. Offline strict parallel comparison: all882 noise/decoration/
+saved structures equal,1295 actual overlapping feature pairs,0 radius8 conflicts.
+Serial:882 noise/structures equal,2 decoration differences (terrain+heights),
+other components equal. Saved inspection122017-437 confirms every882x98,304
+final block voxel equal between original/serial. This is not intermediate
+parity; strict failure stays. Assisted fixture generated/snapshotted all1250 but
+runner timed out: participants stayed spectator until ordinary tp/creative
+commands ran; all50 completed complete-terrain jobs were warmup,0peer/0shaping.
+No clean fixture-stopped proof there,so failed runtime cannot be reused as a gate.
+No native/performance stages ran. Original dev.3 identities remain retained.
+
+Dev.4 publishes original result/stage callbacks BEFORE releasing the feature
+footprint and dispatching conflicting work. Source confirms ChunkStep.thenApply
+sets persisted status and ProtoChunk writes choose heightmaps by that status.
+This is a concrete ordering bug/candidate cause,not yet verified explanation of
+the2 differences. Added one focused completion-order method (nine total),plus
+explicit shutdown synchronization for its changed publication timing.
+Fixture command now places the exact two test owners using original teleportTo
+and creative mode BEFORE the same882 tickets; source-verified /tp additionally
+calls setOnGround/supporting-block collision queries which can wait for FULL.
+No copied movement/generation logic or ordinary gameplay teleport changes.
+Physical evidence offset and native marker precede arm,avoiding lost early work.
+Assert actual participant coordinates/eligibility before demand. All changes are
+implemented; finish every edit before one sequential nine-method/three-build/
+fresh physical/native/ordinary view32 gate. Strict882 scope stays. Default off,
+seed/authority/queue/worker guards stay. No beta/substantial acceleration claim.
+
+## Historical dev.3 implementation-time instructions (superseded)
+
+## AH feature scheduling candidate (alpha.8-dev.3/protocol12; fixture implementation complete, UNTESTED)
+
+Dev.2 gate110251-394 passed six affected methods/three builds and all four
+physical two-owner runs. Strict882-coordinate parity failed even for serial:
+noise882/saved structures882 equal,decoration284 changed (parallel377,assisted366).
+Performance/native stages were NOT run. Earlier original/off versus dev.2
+original/off also differed272 decoration chunks;214 production classes were
+identical except the stopped saved-path diagnostic. This control is not exact
+JAR identity and does not prove enabled safety. Read-only saved voxel inspection
+111749-831 confirmed real block differences: prior original30,304,serial29,248,
+parallel39,401,assisted33,777 against dev.2 original. No world rerun for that inspection.
+
+Dev.3 adds a strictly explicit public-seed correctness fixture: record/replay
+1458 FEATURES admissions,freeze actual ticks,hold1250 original SPAWN futures,
+capture all1250 decoration snapshots before any scoped SPAWN. Keep all882
+required comparisons. Register the same882 FORCED tickets atomically through
+original ServerChunkCache.updateChunkForced; ServerLevel.setChunkForced's
+synchronous FULL wait would deadlock the barrier. No production ticket change.
+Replay scope/order/file are bounded; accepted original bodies never retry.
+Capture the existing original or replacement worldgen scheduler; replay drains
+at most9 features per message through the normal128-body admission. Fixtures
+require seed8675309,stock Overworld,explicit diagnostics and a nonentity owner
+command source. No fixture control in performance; normal defaults remain off.
+Two additional focused fixture methods (eight total) and updated one-batch
+harness are implemented but UNRUN. Complete all edits before the single
+Run-FeaturePipelineGate -Execute batch. Native comparisons record their own
+original sequence. Actual fixture completion/freeze/replay identity, all882
+noise/decoration/saved structures,nonconflicting overlap and both owners' real
+complete/peer/shaping applications are gates before three ordinary view32
+performance conditions. Do not relabel old snapshots or lower parity scope.
+No beta or substantial speedup evidence. See FEATURE_PIPELINE_EXPERIMENT.md.
+
+## Historical AH dev.2 implementation checkpoint (superseded by results above)
+
+Experimental off/serial/parallel feature scheduler core,constructor replacement,
+bounded128-body admission and9-per-message asynchronous backpressure are now
+implemented. Parallel exact stock Overworld jobs reserve entire radius8 read
+regions; conflicting active/earlier queued work retains FIFO. Original task
+bodies/futures and draining ownership remain. No wire change. Five affected
+scheduler methods and one canonical-NBT method passed on dev.1; dev.2 proof pending.
+New pre-SPAWN decoration digest covers blocks/biomes/heights/postprocessing,
+block entities,feature entities (only UUID normalized) and saved ticks. It is
+not final saved-world/FULL evidence. Separate optional ServerStopped diagnostics
+read saved FULL chunks' entire structures tags using original RegionFile/NbtIo
+and bounded NBT quota,covering persisted shared piece flags. Those hooks and
+coverage remain unproved. First dev.1 batch105748-629 passed six methods/three
+builds and original/off decoration completion,then stopped on a diagnostic
+saved-path error before enabled runtime/performance. Dev.2 fixes the path using
+original DimensionType.getStorageFolder (source-verified26.2/26.3). New artifact
+proof is pending; prior dev.1 hashes stay original. Implementation and harness are complete.
+Run `scripts/Run-FeaturePipelineGate.ps1 -Execute` as one batch: six affected
+methods/three builds, fresh physical off/serial/parallel/parallel-assisted
+correctness, native original/parallel-assisted pairs, then three view32
+conditions (original/off, parallel/off, parallel/on). No unchanged wire suites.
+Comparison requires every882 coordinate for noise/decoration/saved structures,
+actual nonconflicting feature overlap, and in-region complete/peer applications
+for both owners plus shaping. Performance disables decoration diagnostics.
+Raw performance identities remain unchanged; explicit comparator roles mean
+baseline/candidate even where both actual modes are vanilla. Source/harness and
+exact loader JAR hashes are retained. AH enabled correctness/performance is UNRUN;
+AG/alpha.7 proofs cannot be relabeled for AH.
+See FEATURE_PIPELINE_EXPERIMENT.md for current scope and remaining work.
+
 ## Alpha.7 public packaging checkpoint (2026-10-05)
 
 Source version is now0.1.0-alpha.7+mc26.3/protocol12. AG implementation is
@@ -16,7 +281,7 @@ The goal of substantial acceleration/beta remains unmet.
 
 Next source-verified hypothesis: synchronous FEATURES occupies the consecutive
 worldgen dispatcher on all three26.3 loaders. See FEATURE_PIPELINE_EXPERIMENT.md.
-No feature scheduling implementation or its tests have run. Preserve original
+At the public alpha.7 checkpoint feature scheduling was unimplemented. Preserve original
 stage futures,neighbor order and shared structure state; noise-only parity is
 insufficient for any feature scheduler change.
 

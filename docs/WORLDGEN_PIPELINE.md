@@ -1,6 +1,250 @@
 # World Generation Pipeline Notes
 
-## Next hypothesis: serial FEATURES dispatcher (2026-10-05; unimplemented)
+## AH dev.9 completed targeted pipeline and ordinary view32 measurement
+
+Resume155345-461 completes with identical dev.9 JARs/production and retained
+142412-76810-test/three-build/physical/Forge proofs. Fresh Neo strict882 all4
+stages match,1254 feature overlaps/0conflicts and both owners complete+peer.
+All ordinary performance fixtures/replay/freeze are disabled. Parallel alone
+slows FULL5.84%/receipt5.55%;parallel+clients versus original/off shortens FULL
+16.33%/receipt15.35%,serverCPU20.63% paired medians,all3 improve,while tickp95
+worsens7.25%. Same31,974 tasks/condition,3461 receipts/owner/repeat,0timeouts/
+failed tasks,clean stops. This demonstrates useful client distribution with
+this scheduler,not superiority over original+clients (unmeasured) or beta.
+Source review: old synchronous feature bodies sum~40s in repeat1;parallel body
+compute mean4.15ms versus queue15.21ms/light queue8.02ms. These measured waits
+suggest broad async conflict ownership offsets parallelism; they are not a
+proved causal decomposition. Keep R8/point ownership until a source-verified
+safe change. First close reverse-order/control and ordinary saved-light proof.
+
+## Historical dev.9 partial pipeline verification (superseded)
+
+Gate142412-768:10methods/3builds, four physical fixtures+strict comparisons,
+Forge original/assisted+strict comparison and Neo original runtime pass.
+Every882 physical/Forge terrain/decoration/structures/light equal. Neo hook
+preserves actual datamap100/100/200 and logs canonical skeleton/spider/zombie.
+Only coordinator expected1/1/2 and stopped. Pinned Neo data_maps/entity_type/
+monster_room_mobs.json verifies actual weights. Correct marker, restrict resume
+to identical production/tests/builds/child harness and all three JAR hashes,
+keep original failure. Neo assisted/parity and view32 trio remain pending.
+
+Dev.8 fixed-phase physical+Forge strict882 noise/decoration/structures/light
+match. Neo10block-entity differences remain and prevented performance. Saved
+inspection141051-985 uses original codecs over882:0changed voxels/final-height/
+light,10 spawner SpawnData.id differences (spider/skeleton),loot seeds equal.
+Neo API MonsterRoomHooks25..28 builds WeightedList from unsorted datamap map
+entries;37..38 selects with original feature RNG. Generated MonsterRoomFeature
+delegates hook; primary26.2/Fabric fixed arrays, Forge ordered DungeonHooks
+builder. Unordered registry iteration
+is a comparison confound hypothesis; no ordinary off/off runtime was run.
+
+Dev.9 fixes order only during an actual scoped fixture feature body, sorted by
+registered mob id, retaining exact original Weighted values/weights and selector.
+Root ThreadLocal sets real fixture level for original body invocation and removes
+in finally. No normal mob-choice change, no client/performance fixture behavior.
+Neo-only Mixin/remapfalse/separate config(defaultRequire1); cache changes with
+original list identity. Log actual order weights. One focused weighted/RNG method
+added,now10; completed scope above, remaining runtime/performance pending. Strict ids remain in NBT
+comparison. Fixed-phase fixture does not prove ordinary mixed-stage gameplay;
+beta gap and original failed results remain explicit.
+
+## Historical dev.8 implementation-time pipeline (superseded)
+
+## AH dev.8 free idle CPU permits; canonical fixture phases (UNTESTED)
+
+Dev.7 all four physical runs complete,but strict comparisons fail2 intermediate
+decoration/25 saved light coordinates in all serial/parallel/assisted conditions.
+Read-only saved inspector134027-413 confirms all882x98,304 final voxels and final
+saved Heightmaps tags equal; light includes real changed nibbles and presence.
+Do not classify as harmless or erase failure. Native/performance were unrun.
+
+Initialization original invocation averages<0.2ms; original future ownership
+averages35-47ms. Dev.8 separates actual execution permits (max2) from retained
+async ownership (total admittedmax128). A returned future frees its worker
+permit, while conflict region and original completion/status callbacks stay
+owned until finish. Same FIFO/bypass/failure/observer cancellation/draining.
+No new executor or uncoordinated body. Existing async test adds third distinct
+owned future before first two complete; active ownership may exceed workers,
+executing/peakExecuting diagnostics distinguish CPU permits from ownership.
+
+Fixture-only phases remove uncontrolled terrain/feature/initial-light timing:
+hold1682 demanded TERRAIN completions until original bodies ready,then1458
+FEATURES canonical order,then1458 original INITIALIZE_LIGHT jobs via existing
+message/owned queue. Snapshot every1250 before original SPAWN. Same882 tickets,
+no expanded equality scope or dropped fields. Geometry stock FULL Terrainradius2
+plus FORCED FULLradius2 implies scope14 (two29x29); actual dev.7 logs cover1682.
+Require actual phase/order/counts. Pure controlled-fixture proof is not ordinary
+mixed-stage gameplay correctness; that remains a beta gap. All fixtures false
+in ordinary view32 performance. Nine methods/3 builds/fresh physical/native/
+performance dev.8 all UNRUN. Keep primary26.2 and actual26.3 sources distinguished.
+
+## Historical dev.7 implementation-time pipeline (superseded)
+
+## AH dev.7 FEATURES and INITIALIZE_LIGHT ownership (UNTESTED)
+
+Dev.6 four physical fixtures passed all882 noise/decoration/saved structures
+comparisons (serial/parallel/assisted), actual disjoint overlap and both-owner
+complete/peer/nonempty shaping. Forge fixture failed before arm because native
+Entity.setPosRaw forces FULL synchronously, before all882 tickets are inserted.
+Dev.7 guards only that discarded call for active two fixture players; unchanged
+ordinary movement/other entities. Primary26.2/Fabric target lack that call;
+require0 explicit. Native/performance dev.6 unrun; current dev.7 allproofunrun.
+
+Original initializeLight scans sky sources then sets ProtoChunk.lightEngine.
+Neighbor FEATURES may update blocks while source scan and engine attachment
+are separated when FEATURES are asynchronous. This is a source risk, not a
+measured regression. Dev.7 reserves point ownership for stock INITIALIZE_LIGHT,
+R8 for FEATURES,globalserial for unexpected geometry,through original future
+and synchronous stage publication before release. Same bounded128-body queue,
+1/2 workers; no extra executor, joins, tickets or retries. Generation/loading
+stock FULL accumulate radius1 for both stages, so message reservation18;
+fixture replay still<=9FEATURES per message. Propagation stays original.
+
+Source initializeLight:primary142/146/147,Fabric146/150/151,Forge/Neo157/161/162.
+ChunkStep.Builder default write radius=-1; generation/loading init directradius0.
+ThreadedLevelLightEngine target initializeLight138 uses PRE section state and
+POST enable/retainData. Light interval covers original async completion, not
+CPU compute time. Feature timings remain synchronous original invocation only.
+SerializableChunkData copies nonempty block/sky arrays:primary345/346,
+Fabric334/335,Forge336/337,Neo374/375; writes primary438/442/flag453,
+Fabric419/423/434,Forge421/425/436,Neo473/477/488. SavedLightDigest preserves
+flag=true and every present2048-byte array, sorted sectionY including exterior
+-5/20. UniqueY/bounds<=26 enforced; no byte/presence normalization. Require all882
+saved-light equality in addition to prior comparisons before performance.
+Nine affected methods only; dev.7 tests/builds/runtime/performance UNRUN.
+
+## Historical dev.6 implementation-time pipeline (superseded)
+
+## AH dev.6 fixture guards both movement and teleport acknowledgement (UNTESTED)
+
+Dev.5 original completed generation/snapshots/clean stop,but main tick27,980ms
+and only one player pause marker failed fixture coverage. No enabled/assisted/
+native/performance ran. Actual26.3 teleport acknowledgement also validates client
+position through private handlePlayerPositionChange,unlike primary26.2. Guarding
+public movement packets alone cannot prevent its collision FULL wait.
+Dev.6 guards the shared synchronous(DDDFFZZ)V helper,after callers' original
+thread/id/value checks. Acknowledgement clears original state normally;network
+keepalive/context/results stay active. Exact two fixture players' tick/doTick
+and this collision helper pause only until scoped SPAWN completion/failure/close.
+Ordinary/performance behavior unchanged. Strict two actual pause markers,all882
+comparisons,both-owner complete/peer/shaping and clean stopped proof remain.
+All dev.6 selected9 methods/builds/runtime/performance UNRUN. Beta unproved.
+
+## AH dev.5 fixture keeps server connection loop progressing (UNTESTED)
+
+Dev.4 serial strict882 noise/decoration/saved structures now match after
+completion publication correction. Parallel1458 features/1250 snapshots/SPAWN
+completed,but main tick waited31,247ms on FULL while the fixture held SPAWN;
+both clients timed out and runner failed disconnect wait. No assisted/native/
+performance executed. This is fixture liveness failure,not ordinary speed proof.
+
+Vanilla frozen ticks deliberately exclude Player entities. Explicit dev.5
+fixture pause affects only exact two named players while scoped SPAWN completion
+is outstanding:cancel ServerPlayer.tick/doTick and movement collision validation.
+Original PacketUtils dispatches movement to main thread before cancellation;
+network keepalive/context/remote-result handlers remain unchanged and active.
+Once all1250 original SPAWN futures finish (or fixture fails/closes),pause ends.
+No production/player/performance change with startup flagfalse. Existing fixture
+methods assert pause lifetime;still9 selected methods. Require actual pause
+markers,both-owner in-scope complete/peer/shaping and strict882 comparisons.
+All dev.5 tests/builds/runtime are UNRUN. Beta and substantial speedup unproved.
+
+## AH dev.4 source-based completion-order correction (implemented, UNTESTED)
+
+Dev.3 fresh physical parallel fixture matched all882 noise/decoration/saved
+structures with1295 actual overlapping pairs/0 conflicts. Serial2 intermediate
+terrain+height digest differences remain,despite all882 saved final block voxels
+matching in read-only inspection. No native/performance executed; assisted
+fixture completed generation but failed actual in-scope assistance/onboarding.
+
+Feature queue released its active footprint before completing result callbacks.
+Original ChunkStep.thenApply updates ProtoChunk persisted status; neighboring
+setBlockState chooses heightmaps by persisted status. Dev.4 completes original
+result and synchronous stage callbacks first,then releases and dispatches next
+conflicting work. This corrects a source-proven ordering risk; causal explanation
+for the2 differences remains a hypothesis until fresh strict comparison.
+New stage-order latch method verifies conflict cannot start while status commit
+callback is executing; shutdown gate synchronizes changed publication order.
+
+The fixture now installs scope/freezes,puts exact two named participants into
+creative at their actual fixed centers via original ServerPlayer.teleportTo,
+then inserts the same882 tickets. Ordinary /tp additionally grounds entities,
+whose supporting-block collisions can wait for existing demanded FULL before
+later creative/second-owner commands. Marker/offset must precede atomic arm.
+No general demand-policy or ordinary gameplay movement change. Performance
+forbids fixture control and still uses ordinary view32 workload. Nine affected
+methods/three builds/fresh physical/native/performance are UNRUN. Beta unproved.
+
+## AH dev.3 correctness-only fixture (implemented, UNTESTED)
+
+Dev.2 physical runs show equal882 NOISE/saved-structure tags but decoration
+differences284serial/377parallel/366assisted. Original controls also differed272;
+read-only saved voxels confirm real block changes. Production214 class entries
+match between controls except stopped storage logger; control JAR identities
+are not identical. Strict safety remains unmet,no AH performance executed.
+
+Fixed882 original FORCEDlevel31 tickets imply FULLradius2 (1250) and
+FEATURESradius3 (1458),observed identical inventory in all four prior runs.
+Explicit public-seed fixture inserts all882 tickets via original ChunkSource
+update API before waiting; ordinary forceload/ServerLevel.setChunkForced waits
+on one FULL and would deadlock the barrier. Existing worldgen scheduler is
+captured even for OFF. Baseline records1458 original starts; other fixtures
+replay complete bounded fixed-coordinate admission,at most9 per guarded message.
+Normal owned128-body admission/conflict/FIFO bounds remain. Scoped SPAWN futures
+wait for all1458 FEATURES and1250 SPAWN arrivals; all1250 snapshots precede any
+scoped original SPAWN body. Actual original frozen tick manager is checked at
+arm/body/snapshot. Original features/stage futures and local fallback unchanged.
+Default fixture off;diagnostics/seed8675309/stockOverworld/-64,384 gates. This
+changes test scheduling only; performance explicitly forbids fixture markers,
+uses ordinary full view32 workload and original/off,parallel/off,parallel/on.
+Two fixture methods plus prior six and all runtime/build evidence are UNRUN.
+General custom/native feature hook safety,hostile-client seed/confidentiality,
+final gameplay state and beta-level speed/stability remain unresolved.
+
+## AH experimental feature scheduling core (alpha.8-dev.2/protocol12; enabled runtime unrun)
+
+The original FEATURES operation now has an explicit off/serial/parallel wrapper.
+Enabled mode replaces only the original worldgen consecutive message scheduler.
+Before an original message,space for stock maximum9 feature jobs is required;
+capacity exhaustion pauses the message lane via a completion wake,not a thread
+wait. Existing generation messages remain FIFO; no extra world task or ticket.
+The owned body queue caps128 jobs/one or two workers. Exact Overworld noise/
+stock step geometry can use whole direct-read radius8 footprints; all conflicts
+with active or earlier queued jobs retain FIFO. Constructor admission is exact
+Overworld NoiseBasedChunkGenerator only; other dimensions/generators keep their
+original scheduling. Region StructureManager resolves
+every shared start through region.getChunk(...,STRUCTURE_STARTS),so a shared
+start holder is included in both footprints. Other contexts serialize through
+the same queue when step geometry differs. General mod/native hooks remain unproved.
+
+Original body and stage future retain authority/dependencies; no copied feature
+math. Hold ownership through asynchronous completion and drain accepted work
+on close,including canceled observers. New decoration snapshot is pre-SPAWN,
+after original neighboring FEATURES/LIGHT dependencies,not final saved-world
+state. New optional ServerStopped diagnostics read saved FULL Overworld chunks'
+entire structures tags,including shared piece flags,through original RegionFile/
+NbtIo and16MiB NBT quota. All three hooks are untested. Post-load effects and
+general readiness still need appropriate verification. Core/six affected methods
+and sequential harness are written; every882 required coordinate is compared
+for noise/final decoration/saved structure tags. Controlled view32 performance
+separates scheduler-only and additional client assistance. First dev.1 six
+methods/three builds passed; original/off decoration completed but saved-path
+diagnostic failed. Dev.2 uses DimensionType.getStorageFolder(OVERWORLD,root)
+then region,not root/region. Primary26.2 DimensionType114 and target26.3 at113
+both resolve dimensions/minecraft/overworld; LevelStorageSource509 delegates
+to the same API. Enabled runtime/saved-structure parity/performance remain unrun.
+No speed/beta claim.
+
+Primary26.2 reference rechecked: ChunkMap190 creates the consecutive worldgen
+executor,ChunkStatusTasks.generateFeatures126 is synchronous (includes its
+older heightmap priming). Target26.3 original bodies remain untouched rather
+than copying26.2 behavior. Lifecycle source verification: Fabric lifecycle
+4.1.9 MinecraftServerMixin72/74 invokes SERVER_STOPPED at stopServer TAIL;
+Forge MinecraftServer796 and NeoForge793 call handleServerStopped after
+stopServer in finally. Those paths can also run after a shutdown failure,
+so the fixture must separately prove clean exit and saved completion/coverage.
+
+## Pre-AH hypothesis: serial FEATURES dispatcher (2026-10-05; originally unimplemented)
 
 Generated26.3 Fabric/Forge/NeoForge ChunkMap.java189/192 create one
 ConsecutiveExecutor(executor,"worldgen") and use it for ChunkTaskDispatcher.

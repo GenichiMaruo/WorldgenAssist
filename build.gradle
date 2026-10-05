@@ -102,6 +102,15 @@ test {
 	useJUnitPlatform()
 }
 
+// Read-only diagnosis of already completed fixtures; not another test/worldgen run.
+tasks.register('inspectSavedDecoration', JavaExec) {
+	dependsOn testClasses
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'io.github.genichimaruo.worldgenassist.server.SavedDecorationInspector263'
+	maxHeapSize = '2G'
+	args providers.gradleProperty('savedDecorationDescriptor').map { [it] }.getOrElse([])
+}
+
 publishing {
 	publications {
 		create("mavenJava", MavenPublication) {

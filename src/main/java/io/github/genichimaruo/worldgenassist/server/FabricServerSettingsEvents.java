@@ -15,6 +15,10 @@ public final class FabricServerSettingsEvents {
 				response -> ServerPlayNetworking.send(context.player(), response)));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
 			server.execute(() -> ServerSettingsMenu.onDisconnect(handler.player.getUUID())));
-		ServerLifecycleEvents.SERVER_STOPPED.register(server -> ServerSettingsMenu.onServerStopped());
+		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+			ServerSettingsMenu.onServerStopped();
+			SavedStructureDigestLogger.log(server);
+			FeatureFixture263.stopped(server);
+		});
 	}
 }
