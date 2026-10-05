@@ -71,13 +71,10 @@ public final class CompleteTerrainApplicator {
 		for (var offsets : oldOffsets) if (offsets != null && !offsets.isEmpty()) {
 			throw new IllegalArgumentException("Complete terrain target already has postprocessing");
 		}
-		byte[] expectedBiomes = TerrainBiomeWindow.digest(chunk.getPos().x(), chunk.getPos().z(),
+		var biomeInputs = TerrainBiomeWindow.inspect(chunk.getPos().x(), chunk.getPos().z(),
 			job.minY(), job.height(), (x, z) -> region.getChunk(x, z));
-		Set<Holder<Biome>> actualPossibleBiomes = new java.util.HashSet<>();
-		for (int z = chunk.getPos().z() - 1; z <= chunk.getPos().z() + 1; z++) {
-			for (int x = chunk.getPos().x() - 1; x <= chunk.getPos().x() + 1; x++) region.getChunk(x, z).collectBiomesInPalette(actualPossibleBiomes);
-		}
-		if (!actualPossibleBiomes.equals(possibleBiomes)) throw new IllegalArgumentException("Surface biome optimization inputs differ");
+		byte[] expectedBiomes = biomeInputs.digest();
+		if (!biomeInputs.possibleBiomes().equals(possibleBiomes)) throw new IllegalArgumentException("Surface biome optimization inputs differ");
 		data=result.selectCompleteTerrainForBiomes(expectedBiomes);
 		CompleteTerrainPalette palette = new CompleteTerrainPalette();
 		BlockState[] states = new BlockState[palette.size()];
@@ -88,25 +85,51 @@ public final class CompleteTerrainApplicator {
 			floorStates[i] = states[i].is(BlockTags.BLOCKS_MOTION_IN_HEIGHTMAP);
 		}
 		short[] surface = data.surfaceHeights(), floor = data.floorHeights();
-		for (int column = 0; column < 256; column++) {
-			int expectedSurface = 0, expectedFloor = 0;
-			for (int y = job.height() - 1; y >= 0; y--) {
-				int code = data.choice(column * job.height() + y);
-				if (expectedSurface == 0 && surfaceStates[code]) expectedSurface = y + 1;
-				if (expectedFloor == 0 && floorStates[code]) expectedFloor = y + 1;
-			}
-			if (surface[column] != expectedSurface || floor[column] != expectedFloor) {
-				throw new IllegalArgumentException("Complete terrain heightmap differs from final choices");
-			}
-		}
+		short[] highestWrites = prepareColumns(data, surfaceStates, floorStates);
 		ShortArrayList[] offsets = new ShortArrayList[job.height() / 16];
 		for (int i = 0; i < offsets.length; i++) offsets[i] = new ShortArrayList(data.postProcessing(i));
-		var prepared = new Prepared(chunk, data, states, packHeights(surface, job.height()), packHeights(floor, job.height()), offsets,
+		var prepared = new Prepared(chunk, data, states, highestWrites, packHeights(surface, job.height()), packHeights(floor, job.height()), offsets,
 			result.hasPeerBiomeAlternative() ? () -> io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
 				"[CAWG] job.peer_biome_choice_applied id={} side={}",job.identity().jobId(),
 				java.security.MessageDigest.isEqual(expectedBiomes,result.completeTerrain().biomeWindowDigest()) ? "primary" : "peer") : () -> {});
 		requireAuthority.run();
 		return prepared;
+	}
+
+	/** Both WG predicates use their first match; lower voxels cannot change that height. */
+	static short[] prepareColumns(CompleteTerrainData data, boolean[] surfaceStates, boolean[] floorStates) {
+		short[] surface = data.surfaceHeights(), floor = data.floorHeights();
+		short[] highestWrites = new short[256];
+		int height = data.height();
+		for (int column = 0; column < 256; column++) {
+			int expectedSurface = 0, expectedFloor = 0, highest = -1;
+			for (int y = height - 1; y >= 0; y--) {
+				int code = data.choice(column * height + y);
+				// CAVE_AIR is still a real write even above both WG heightmaps.
+				if (highest < 0 && code != 0) highest = y;
+				if (expectedSurface == 0 && surfaceStates[code]) expectedSurface = y + 1;
+				if (expectedFloor == 0 && floorStates[code]) expectedFloor = y + 1;
+				if (expectedSurface != 0 && expectedFloor != 0) break;
+			}
+			if (surface[column] != expectedSurface || floor[column] != expectedFloor) {
+				throw new IllegalArgumentException("Complete terrain heightmap differs from final choices");
+			}
+			highestWrites[column] = (short)highest;
+		}
+		return highestWrites;
+	}
+
+	/** Caller owns all section locks. Preserves z/x/descending-y write order and counts. */
+	static void writeBlocks(CompleteTerrainData data, BlockState[] states, short[] highestWrites,
+		net.minecraft.world.level.chunk.LevelChunkSection[] sections) {
+		int height = data.height();
+		for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
+			int column = z * 16 + x, base = column * height;
+			for (int y = highestWrites[column]; y >= 0; y--) {
+				int code = data.choice(base + y);
+				if (code != 0) sections[y >> 4].setBlockState(x, y & 15, z, states[code], false);
+			}
+		}
 	}
 
 	private static long[] packHeights(short[] heights, int height) {
@@ -119,13 +142,15 @@ public final class CompleteTerrainApplicator {
 		private final ChunkAccess chunk;
 		private final CompleteTerrainData data;
 		private final BlockState[] states;
+		private final short[] highestWrites;
 		private final long[] surface, floor;
 		private final ShortArrayList[] offsets;
 		private final Runnable selected;
 		private boolean used;
-		private Prepared(ChunkAccess chunk, CompleteTerrainData data, BlockState[] states,
+		private Prepared(ChunkAccess chunk, CompleteTerrainData data, BlockState[] states, short[] highestWrites,
 			long[] surface, long[] floor, ShortArrayList[] offsets, Runnable selected) {
 			this.chunk = chunk; this.data = data; this.states = states;
+			this.highestWrites = highestWrites;
 			this.surface = surface; this.floor = floor; this.offsets = offsets;
 			this.selected=selected;
 		}
@@ -136,15 +161,7 @@ public final class CompleteTerrainApplicator {
 			int acquired = 0;
 			try {
 				for (var section : chunk.getSections()) { section.acquire(); acquired++; }
-				for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
-					int column = z * 16 + x;
-					for (int y = data.height() - 1; y >= 0; y--) {
-						BlockState block = states[data.choice(column * data.height() + y)];
-						if (block != Blocks.AIR.defaultBlockState()) {
-							chunk.getSection(y / 16).setBlockState(x, y & 15, z, block, false);
-						}
-					}
-				}
+				writeBlocks(data, states, highestWrites, chunk.getSections());
 			} finally {
 				for (int i = acquired - 1; i >= 0; i--) chunk.getSection(i).release();
 			}

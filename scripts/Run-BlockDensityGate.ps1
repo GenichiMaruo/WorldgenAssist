@@ -5,7 +5,7 @@ param([switch]$Execute,[switch]$LocalOnly,[ValidateRange(2,32)][int]$ViewDistanc
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
     [ValidateSet('wide','deep')][string]$WindowProfile='wide',
     [ValidateSet('vanilla-first','assisted-first')][string]$ConditionOrder='vanilla-first',
-    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation','complete-peer','complete-shaping','complete-biome-choice')][string]$TestProfile='transport',
+    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation','complete-peer','complete-shaping','complete-biome-choice','complete-application')][string]$TestProfile='transport',
     [string]$ReuseBuildEvidence,[string]$ReuseCorrectnessEvidence)
 # Finish all implementation first; affected units/builds/runtime/performance are sequential.
 Set-StrictMode -Version Latest
@@ -56,7 +56,12 @@ if($TestProfile -eq 'complete-preparation'){
         'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedReplyBypassesBlockedPreparationWithoutReleasingItsRemoteSlot',
         'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedCancellationAndFailuresReleaseOnceAndIgnoreLateReplies');$expectedTests=4
 }
-$verification=if($TestProfile -in @('complete-peer','complete-shaping','complete-biome-choice')){'peer'}else{'server'}
+$verification=if($TestProfile -in @('complete-peer','complete-shaping','complete-biome-choice','complete-application')){'peer'}else{'server'}
+if($TestProfile -eq 'complete-application'){
+    if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Lean application requires fresh affected build and overlap correctness evidence'}
+    $selections=@('io.github.genichimaruo.worldgenassist.common.TerrainBiomeWindow263Test',
+        'io.github.genichimaruo.worldgenassist.server.CompleteTerrainApply263Test');$expectedTests=3
+}
 if($TestProfile -eq 'complete-biome-choice'){
     if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Peer biome choice requires fresh affected build and overlap correctness evidence'}
     $selections=@('io.github.genichimaruo.worldgenassist.server.CompleteTerrainPeer263Test.agreementRequiresDistinctAssignmentsAndEveryTerrainComponentAndFailsPromptly',

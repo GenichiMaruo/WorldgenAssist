@@ -1,5 +1,99 @@
 # Validation matrix
 
+## Dev.14 gate205235-246 completed (modest gain; not beta)
+
+After all repairs, single sequential gate205235-246/session47792 exited0:
+exactly3 affected methods,0 failures/errors/skips,all3 builds,physical two-owner
+Fabric1803 shared format2 digests/0 mismatch. Complete applications740/770;
+distinct peer applications693/703,both owners. Source26.2/Fabric26.3 plus exact
+Forge/Neo sources confirm ProtoChunk's highest-generated-status BIOMES guard;
+fast path retains it. Native fresh runtime remains UNRUN.
+
+FabricSHA C337FA3EA449B94B964401F1F22DA5C16DED59B03B397D6B4EEF7BB25E46A010;
+Forge577C1F1814FEF762B09DDF762B0AB9AFB83179601068D71D8642B1761D2FF123;
+Neo71BDC1AF5D6F3EFC2323468BCAFE809EAF412B65FE3997EFCE7218675C27A1AB.
+Ordinary physical view32 csb-20261005-205555-565/u is COMPLETE,vanilla-first,
+original FEATURES off in BOTH,capture off,4 workers/client,two clients on the
+same strong PC,naturally weak unrestricted E-server,1warm/3same relocations.
+10658 tasks and3461 receipts/owner/repeat;0 failures/job timeouts/quarantines/
+terrain differences/apply rejects,clean stops/frozen source and artifacts.
+FULL off97.450917/108.225745/108.635665s,on92.448257/103.972431/106.412671s.
+Same-repeat medians FULL-3.93%,receipt-3.75%,CPU-22.01%,all3 improved;
+tick p95+2.16%(2 higher). FULL gains2.05..5.13%. This is modest acceleration
+and CPU distribution,not substantial/beta. Dev.13 used a different artifact
+and opposite order; do NOT attribute the lower3.93% versus7.08% to this edit.
+Actual application means5.729/4.945/6.312ms; prior7.079/5.077/7.568ms are
+descriptive different-run values,not a controlled causal edit comparison.
+Rare peer-biome choice pending/applied events0; prior discrepancy not reproduced.
+
+Offline exact-window JFR reports (6) and actual-application coverage reports
+read EXISTING stopped recordings/logs only; no additional JUnit/build/world run.
+Full original application log events with98304 served samples,all sources,
+joined via actual server-issued UUID/coordinates to measured NOISE completions:
+dev.14 8531/9864/8775 of10658 (80.04/92.55/82.33%); dev.13 8607/9796/8834
+(80.76/91.91/82.89%). Prefetch+cache alone omits direct demand applications:
+dev.14 direct4838/6046/5234. Do not claim only35% total assistance coverage.
+Accepted server-full audits498/178/287 per interval; these are not exactly the
+same population as applied jobs. Inclusive feature samples18.53/29.67/24.29%,
+prefetch dispatch~3.54/4.01%(where top150). Samples overlap,not CPU durations
+or critical-path proof; missing methods beyond top150 are NOT zero cost.
+
+Next hypothesis (NOT IMPLEMENTED): most real assistance is still direct demand,
+so remote latency is exposed despite already80..93% offload. Existing hint
+reservoir is maxInFlight*16=1024 at this profile,while10658 existing terrain
+tasks are needed; hints expire after the30s job timeout although generation
+lasts~100s. A larger bounded metadata-only reservoir with efficient maintained
+spatial/expiry indexes and separate bounded hint lifetime may preserve earlier
+actual requests and turn direct waits into ready results. Do not just enlarge
+the current full scans/sorts or invent coordinates/tickets. Keep owner/view/
+epochs/persisted-eligibility/shaping/authority/job quotas and original fallback.
+Measure original/off versus candidate/on with identical candidate artifact and
+record actual early/ready versus direct applications; no speed claim until run.
+Beta also needs native affected runtime,actual rare-branch verification and
+further reproducibility/stability. Publicalpha7 unchanged; historical failed
+204952-833 and implementation-time UNRUN paragraphs below remain HISTORY.
+
+## Dev.14 reduced application scans (implemented, verification UNRUN)
+
+Dev.13 checkpoint f543a5d retains gate200326-361 and exact original evidence.
+Offline reads of existing JFR only (no runtime/tests) produced exact per-repeat
+measured-window reports under csb-20261005-200714-410/u/analysis. Dev.13 complete
+application prepare+write appears in ~7.4..9.4% of computational samples
+(where listed in top150); features18.8..29.0%,prefetch dispatch~3.7..3.9%.
+Inclusive categories overlap and are NOT CPU durations or predicted wall gains.
+The aggregate JFR reports also include short between-repeat gaps; prefer the
+six exact-window reports. Terrain/surface work still remains locally.
+
+Dev.14/protocol12 keeps the exact digestv2 framing/all quart voxels/unused
+palette names. One invocation obtains and geometry-checks each of9 chunks once,
+captures the palette union,then scans original sections directly ONLY for exact
+ProtoChunk class. Source26.2/26.3 ChunkAccess.getNoiseBiome clamps quartY,chooses
+(y-minQuartY)>>2 and section.getNoiseBiome(x&3,y&3,z&3); aligned complete geometry
+puts every scanned Y inside that range. Other chunk classes retain original
+overridden getter. No persistent live-window cache. Applicator reuses this same
+palette union instead of rereading all9 chunks/palettes.
+
+Height consistency checks stop only after BOTH original WG predicates found
+their first match. Record highest code!=canonical AIR0 during that scan; all
+CAVE_AIR and other states above WG heights remain real writes. Application
+starts at that bound,keeps original z/x/descending-y write order,all section
+locks/original setBlockState counters/heights/ordered offsets and authority
+checks. Constructor/decode still checks EVERY choice/domain; no reduced biome,
+peer or full audit verification,game target/thread/pipeline change.
+
+Minimal affected batch: two existing TerrainBiomeWindow methods now compare
+against independently framed original getter across full negative384-height
+geometry,unused names,immutable summary,nine reads and overridden getter.
+One new application method compares all98304 voxels and four original section
+counts against exhaustive writes,plus empty/cave-air/water/no-floor/max-height
+and both malformed heights. No unchanged peer/transport/lifecycle/fragment
+suite. Run-CompleteTerrainGate -Execute -LeanApplication -ViewDistance32
+-ConditionOrder vanilla-first:3methods,3builds,small physical two-owner parity,
+then naturally weak E-server ordinary view32 off/on (original FEATURES off,
+capture off,warm1/repeats3). Finish all edits before this one sequential batch.
+All dev.14 verification UNRUN; no beta,causal speed claim,native fresh runtime
+or demonstrated recovery of the old rare biome disagreement.
+
 ## Dev.13 completed gate200326-361 (not beta)
 
 Single sequential gate `test-artifacts/block-density-gate-20261005-200326-361`
