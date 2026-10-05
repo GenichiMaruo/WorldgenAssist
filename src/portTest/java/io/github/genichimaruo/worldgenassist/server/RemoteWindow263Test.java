@@ -62,6 +62,26 @@ class RemoteWindow263Test {
 		return coordinator.trySubmitForOwner(owner,Identifier.parse("minecraft:overworld"),x,0,WorldgenContextFingerprint.fromBytes(new byte[32]),
 			id->new TerrainDensityJob(id,8675309,true,Identifier.parse("minecraft:overworld"),0,8,1,1));
 	}
+	@Test void completeHintPolicyKeepsJobDeadlinesSeparateAndRequiresExplicitCompleteChoice() {
+		String kind="worldgen_assist.remote.work_kind", allowed="worldgen_assist.remote.allow_complete_terrain";
+		String oldKind=System.getProperty(kind),oldAllowed=System.getProperty(allowed);
+		var deadline=Duration.ofSeconds(30);
+		try {
+			System.setProperty(kind,"density");System.setProperty(allowed,"true");
+			assertEquals(1024,RemotePipelineOptions.prefetchCapacity(64));
+			assertEquals(deadline.toNanos(),RemotePipelineOptions.prefetchHintNanos(deadline));
+			System.setProperty(kind,"complete");System.setProperty(allowed,"false");
+			assertEquals(1024,RemotePipelineOptions.prefetchCapacity(64));
+			System.setProperty(allowed,"true");
+			assertEquals(16_384,RemotePipelineOptions.prefetchCapacity(64));
+			assertEquals(2048,RemotePipelineOptions.prefetchCapacity(8));
+			assertEquals(Duration.ofSeconds(180).toNanos(),RemotePipelineOptions.prefetchHintNanos(deadline));
+			assertEquals(Duration.ofSeconds(30),new RemoteWorldgenConfig(true,64,deadline).jobTimeout());
+		} finally {
+			if(oldKind==null)System.clearProperty(kind);else System.setProperty(kind,oldKind);
+			if(oldAllowed==null)System.clearProperty(allowed);else System.setProperty(allowed,oldAllowed);
+		}
+	}
 	private static class Sender implements RemoteJobSender {
 		public boolean canSend(UUID owner){return true;}
 		public void sendJob(UUID owner,TerrainJobRequestPayload payload){}

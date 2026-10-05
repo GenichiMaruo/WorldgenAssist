@@ -61,6 +61,7 @@ public final class RemoteWorldgenManager {
 	private final int prefetchLookahead = RemotePipelineOptions.prefetchLookahead();
 	private final int ownerWindow = RemotePipelineOptions.ownerWindow();
 	private final GenerationPrefetchQueue generationCandidates;
+	private final long prefetchHintRetentionNanos;
 	private final QueuedTerrainAdmission<RemoteDensityResultCache.Key, RemoteWorldgenEligibility.SpeculativeContext> queuedTerrain;
 	private final Set<RemoteDensityResultCache.Key> dispatching = ConcurrentHashMap.newKeySet();
 	private final RemoteDensityResultCache resultCache;
@@ -106,9 +107,12 @@ public final class RemoteWorldgenManager {
 		this.coordinator = new RemoteJobCoordinator(config, sender);
 		this.resultCache = new RemoteDensityResultCache(config.cacheEntries(), config.jobTimeout().toNanos());
 		this.startedTerrain = new StartedTerrain<>(16_384, config.jobTimeout().toNanos());
-		this.generationCandidates = new GenerationPrefetchQueue(config.maxInFlightJobs() * 16);
+		this.generationCandidates = new GenerationPrefetchQueue(RemotePipelineOptions.prefetchCapacity(config.maxInFlightJobs()));
+		this.prefetchHintRetentionNanos = RemotePipelineOptions.prefetchHintNanos(config.jobTimeout());
 		this.queuedTerrain = new QueuedTerrainAdmission<>(config.maxInFlightJobs());
-		WorldgenAssist.LOGGER.info("[CAWG] prefetch.policy lookahead={} capacity={}", prefetchLookahead, config.maxInFlightJobs() * 16);
+		WorldgenAssist.LOGGER.info("[CAWG] prefetch.policy lookahead={} capacity={} hint_retention_ms={} dispatch_limit={}", prefetchLookahead,
+			RemotePipelineOptions.prefetchCapacity(config.maxInFlightJobs()), prefetchHintRetentionNanos / 1_000_000L,
+			config.maxInFlightJobs() * 4);
 		WorldgenAssist.LOGGER.info("[CAWG] pipeline.window owner={} total={} refill_watermark={}", ownerWindow, config.maxInFlightJobs(), RemotePipelineOptions.refillWatermark(config.maxInFlightJobs(), ownerWindow));
 		this.validationExecutor = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
 			new ArrayBlockingQueue<>(config.maxInFlightJobs()), task -> {
@@ -197,7 +201,7 @@ public final class RemoteWorldgenManager {
 					if (!pos.equals(center)) manager.dependencyHints.increment();
 					added[0] |= manager.generationCandidates.offer(demand, pos.x(), pos.z(), manager.cacheGeneration.get(),
 						manager.ownerGenerations.getOrDefault(demand.ownerId(), -1L),
-						System.nanoTime() + manager.config.jobTimeout().toNanos(), true, !pos.equals(center));
+						System.nanoTime() + manager.prefetchHintRetentionNanos, true, !pos.equals(center));
 				});
 		};
 		if (task instanceof TerrainTaskHintSource source) source.worldgenAssist$visitTerrainCandidates(observe);
@@ -216,7 +220,7 @@ public final class RemoteWorldgenManager {
 				if(fromLoad)manager.loadHints.increment();
 				manager.generationCandidates.offer(demand, pos.x(), pos.z(),
 					manager.cacheGeneration.get(), manager.ownerGenerations.getOrDefault(demand.ownerId(), -1L),
-					System.nanoTime() + manager.config.jobTimeout().toNanos());
+					System.nanoTime() + manager.prefetchHintRetentionNanos);
 				manager.requestPrefetchDispatch();
 			});
 	}
@@ -504,7 +508,7 @@ public final class RemoteWorldgenManager {
 
 	private void dispatchCandidateBatch(MinecraftServer currentServer, int refillWatermark) {
 		Set<UUID> fullOwners = new java.util.HashSet<>();
-		for (var candidate : generationCandidates.ordered(demands, System.nanoTime(), prefetchLookahead)) {
+		for (var candidate : generationCandidates.ordered(demands, System.nanoTime(), prefetchLookahead, config.maxInFlightJobs() * 4)) {
 			if (validationExecutor.getQueue().size() >= refillWatermark) break;
 			if (fullOwners.contains(candidate.owner()) || !generationCandidates.contains(candidate)) continue;
 			var pos = candidate.position();

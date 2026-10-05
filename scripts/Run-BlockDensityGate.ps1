@@ -5,7 +5,7 @@ param([switch]$Execute,[switch]$LocalOnly,[ValidateRange(2,32)][int]$ViewDistanc
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
     [ValidateSet('wide','deep')][string]$WindowProfile='wide',
     [ValidateSet('vanilla-first','assisted-first')][string]$ConditionOrder='vanilla-first',
-    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation','complete-peer','complete-shaping','complete-biome-choice','complete-application')][string]$TestProfile='transport',
+    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation','complete-peer','complete-shaping','complete-biome-choice','complete-application','complete-prefetch-index')][string]$TestProfile='transport',
     [string]$ReuseBuildEvidence,[string]$ReuseCorrectnessEvidence)
 # Finish all implementation first; affected units/builds/runtime/performance are sequential.
 Set-StrictMode -Version Latest
@@ -56,7 +56,15 @@ if($TestProfile -eq 'complete-preparation'){
         'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedReplyBypassesBlockedPreparationWithoutReleasingItsRemoteSlot',
         'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedCancellationAndFailuresReleaseOnceAndIgnoreLateReplies');$expectedTests=4
 }
-$verification=if($TestProfile -in @('complete-peer','complete-shaping','complete-biome-choice','complete-application')){'peer'}else{'server'}
+$verification=if($TestProfile -in @('complete-peer','complete-shaping','complete-biome-choice','complete-application','complete-prefetch-index')){'peer'}else{'server'}
+if($TestProfile -eq 'complete-prefetch-index'){
+    if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $WindowProfile -ne 'deep' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Indexed complete prefetch requires fresh affected build and overlap correctness evidence'}
+    $selections=@('io.github.genichimaruo.worldgenassist.server.GenerationPrefetch263Test.cachedOrderingStillExpiresReassignsAndBalancesAfterEveryRemoval',
+        'io.github.genichimaruo.worldgenassist.server.GenerationPrefetch263Test.nearerHintReplacesOnlyItsOwnersFartherHintAtBalancedCapacity',
+        'io.github.genichimaruo.worldgenassist.server.GenerationPrefetch263Test.boundedCandidatesDeduplicateAndInterleaveOwnersAndDiscardObsoleteDemand',
+        'io.github.genichimaruo.worldgenassist.server.GenerationPrefetch263Test.largeReservoirKeepsBoundedPrefixesStableAcrossExpiryMovementAndOwnerCleanup',
+        'io.github.genichimaruo.worldgenassist.server.RemoteWindow263Test.completeHintPolicyKeepsJobDeadlinesSeparateAndRequiresExplicitCompleteChoice');$expectedTests=5
+}
 if($TestProfile -eq 'complete-application'){
     if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Lean application requires fresh affected build and overlap correctness evidence'}
     $selections=@('io.github.genichimaruo.worldgenassist.common.TerrainBiomeWindow263Test',
@@ -249,16 +257,19 @@ try{
         if($comparison.status -ne 'COMPLETE' -or $comparison.issues.Count -ne 0 -or
             $comparison.correctness_pairs.Count -ne 1 -or $comparison.correctness_pairs[0].status -ne 'PASS'){throw 'Correctness comparison incomplete'}
         $log=Get-Content -LiteralPath (Join-Path $correct 'assisted/remote-evidence/latest.log') -Raw
-        if($TestProfile -eq 'prefetch' -and $log -notmatch 'scheduler\.summary .*task_hints=[1-9][0-9]*'){
+        if($TestProfile -in @('prefetch','complete-prefetch-index') -and $log -notmatch 'scheduler\.summary .*task_hints=[1-9][0-9]*'){
             throw 'Runtime did not exercise early Minecraft terrain-task observation'
         }
         # Fresh prefetch implementation must exercise its new dispatch route.
         # Configuration-only reuse already proved that route with the exact JAR;
         # a different ordering may legitimately prefer loaded/stage hints instead.
-        if($TestProfile -eq 'prefetch' -and -not $ReuseBuildEvidence -and
+        if($TestProfile -in @('prefetch','complete-prefetch-index') -and -not $ReuseBuildEvidence -and
             ($log -notmatch 'scheduler\.summary .*dependency_hints=[1-9][0-9]*' -or
             $log -notmatch 'job\.sent .*source=prefetch hint=task_dependency candidate_age_ms=')){
             throw 'Runtime did not observe and actually dispatch an existing task terrain dependency'
+        }
+        if($TestProfile -eq 'complete-prefetch-index' -and $log -notmatch 'prefetch\.policy lookahead=0 capacity=16384 hint_retention_ms=180000 dispatch_limit=256'){
+            throw 'Runtime did not use the indexed complete hint policy'
         }
         if($TestProfile -eq 'scheduling' -and $log -notmatch 'backend\.cooperative_summary scheduler=fork_join_remote_ready reordered=[1-9][0-9]*'){
             throw 'Runtime did not exercise remote-aware cooperative queue reordering'

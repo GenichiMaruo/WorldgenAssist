@@ -144,4 +144,52 @@ class GenerationPrefetch263Test {
 		assertEquals(List.of(a.ownerId(), b.ownerId(), a.ownerId(), b.ownerId()),
 			saturated.ordered(List.of(a, b), 1).stream().map(GenerationPrefetchQueue.Candidate::owner).toList());
 	}
+	@Test void largeReservoirKeepsBoundedPrefixesStableAcrossExpiryMovementAndOwnerCleanup() {
+		var dimension = Identifier.parse("minecraft:overworld");
+		var demands = java.util.stream.IntStream.range(0,4).mapToObj(i ->
+			new PlayerChunkDemand(new UUID(0,i+1),dimension,i*1000,0,32)).toList();
+		var queue = new GenerationPrefetchQueue(16_384);
+		// Independently enumerate the observed positions; use an exhaustive stable
+		// distance sort as the oracle, rather than the production indexes.
+		var expected = new java.util.ArrayList<List<GenerationPrefetchQueue.Position>>();
+		for (var demand : demands) {
+			var positions = new java.util.ArrayList<GenerationPrefetchQueue.Position>();
+			for (int z=-32;z<32;z++) for (int x=-32;x<32;x++) {
+				positions.add(new GenerationPrefetchQueue.Position(dimension,demand.chunkX()+x,z));
+				assertTrue(queue.offer(demand,demand.chunkX()+x,z,7,11,100,true,true));
+			}
+			positions.sort(java.util.Comparator.comparingLong(p -> {
+				long dx=(long)p.x()-demand.chunkX();return dx*dx+(long)p.z()*p.z();
+			}));
+			expected.add(positions);
+		}
+		assertEquals(16_384,queue.size());
+		for (int lookahead : new int[]{0,64}) {
+			var actual=queue.ordered(demands,1,lookahead,256);
+			var oracle=new java.util.ArrayList<GenerationPrefetchQueue.Position>();
+			for (int i=0;i<64;i++) for (var positions:expected) oracle.add(positions.get(i+lookahead));
+			assertEquals(oracle,actual.stream().map(GenerationPrefetchQueue.Candidate::position).toList());
+			assertSame(actual,queue.ordered(demands,2,lookahead,256));
+			assertTrue(actual.stream().allMatch(c -> c.generation()==7 && c.ownerGeneration()==11 && c.earlyTask() && c.dependencyTask()));
+		}
+		var before=queue.ordered(demands,3,0,256);
+		var head=before.getFirst();queue.remove(head.position());assertFalse(queue.contains(head));
+		assertTrue(queue.offer(demands.getFirst(),head.position().x(),head.position().z(),7,11,20,true));
+		var replacement=queue.ordered(demands,4,0,256).getFirst();
+		assertNotSame(head,replacement);assertFalse(queue.offer(demands.getFirst(),head.position().x(),head.position().z(),7,11,200,true));
+		assertTrue(queue.contains(replacement));
+		queue.ordered(demands,20,0,256);assertFalse(queue.contains(replacement));assertEquals(16_383,queue.size());
+		queue.removeOwner(demands.get(1).ownerId());assertEquals(12_287,queue.size());
+		var moved=new PlayerChunkDemand(demands.getFirst().ownerId(),dimension,30,0,32);
+		var movedDemands=List.of(moved,demands.get(2),demands.get(3));
+		var movedOrder=queue.ordered(movedDemands,21,0,256);
+		assertEquals(30,movedOrder.getFirst().position().x());assertEquals(0,movedOrder.getFirst().position().z());
+		assertTrue(queue.ordered(movedDemands,100).isEmpty());assertEquals(0,queue.size());
+		assertTrue(queue.offer(moved,30,0,8,12,200,true));
+		assertEquals(1,queue.ordered(List.of(moved),101,64,256).size());
+		queue.clear();assertTrue(queue.ordered(List.of(moved),102).isEmpty());
+		assertThrows(IllegalArgumentException.class,()->new GenerationPrefetchQueue(-1));
+		assertThrows(IllegalArgumentException.class,()->new GenerationPrefetchQueue(16_385));
+		assertThrows(IllegalArgumentException.class,()->queue.ordered(demands,103,0,0));
+	}
 }

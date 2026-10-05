@@ -28,6 +28,15 @@ record RemotePipelineOptions(boolean prefetch, boolean prepareValidation, long d
 	static int refillWatermark(int total, int ownerWindow) {
 		return Math.min(total, ownerWindow <= 4 ? 2 : ownerWindow);
 	}
+	static int prefetchCapacity(int total) {
+		int multiplier = io.github.genichimaruo.worldgenassist.common.CompleteTerrainMode.requested() ? 256 : 16;
+		return Math.min(GenerationPrefetchQueue.MAX_CAPACITY, Math.multiplyExact(total, multiplier));
+	}
+	static long prefetchHintNanos(java.time.Duration jobTimeout) {
+		// Metadata retention is separate from the deadline of an actual remote job.
+		return io.github.genichimaruo.worldgenassist.common.CompleteTerrainMode.requested()
+			? Math.max(jobTimeout.toNanos(), java.time.Duration.ofSeconds(180).toNanos()) : jobTimeout.toNanos();
+	}
 	private static boolean flag(String name, boolean fallback) {
 		String value = value(name);
 		return value == null ? fallback : Boolean.parseBoolean(value);

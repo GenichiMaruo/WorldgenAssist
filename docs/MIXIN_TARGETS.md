@@ -1,5 +1,94 @@
 # Mixin Targets
 
+## Dev.15 gate214617-776 completed (promising acceleration; not beta)
+
+Single sequential batch/session38614 exits0:exactly5 affected methods,0 failures/
+errors/skips,all3 builds,physical two-owner Fabric1813 shared format2 noise digests/
+0 mismatch. Actual complete applications ownerA689/ownerB753;distinct peer use
+652/680,both owners. Required applied coordinates-1000,1995 and994,-2001 match.
+Actual indexed policy16384/180000ms/dispatch256 and task-dependency dispatch
+were exercised. Native fresh runtime remains UNRUN; builds are not runtime proof.
+
+FabricSHA953C146A3D264C4316095683B68F322A4154B2AF42CBC7A9F7C504EDD0523D64;
+Forge529C613E8E80FCD2BCD24E6BC6952A841C1296758BF5531461A8B3575CBF39B5;
+Neo0ADFA3E92FE9F0A5D703DABB20DE5135936A1840AE74927C9572EB1E2A2BA80A.
+Ordinary csb-20261005-214937-964/u is COMPLETE,assisted-first,same candidate JAR
+for both conditions,original FEATURES off,capture off,4 workers/client,two clients
+on one strong PC,naturally weak unrestricted E-server,view32,warm1/3same repeats.
+10658 tasks and3461 receipts/owner/repeat,0failed tasks/job timeouts/quarantines/
+terrain differences/apply rejects,clean stops/frozen source and artifacts.
+FULL off98.062992/110.959155/108.895041s,on82.389949/98.331352/96.545223s.
+Receipt off103.612664/117.036211/114.871167s,on87.242001/103.528191/101.163937s.
+CPU off397890.625/446218.750/419468.750ms,on322031.250/315906.250/304640.625ms.
+Same-repeat median ratios FULL-11.38%,receipt-11.93%,CPU-27.37%,3/3 improved.
+FULL gains11.34..15.98%;tickp95+1.25%,all3 slightly higher (12.6085/12.3149/
+11.4882ms off;13.0910/12.4691/11.5630ms on). Useful consistent acceleration in
+this batch,not reproducibility/beta. Dev.14 used a different JAR/opposite order;
+do NOT claim the difference from its3.93% proves this edit's causal effect.
+
+Offline stopped-log helper joins actual original assignments/all98304-sample
+applications to same-window NOISE completions:8173/9581/9054 of10658
+(76.68/89.89/84.95%). Direct4818/6057/5479,ready cache3308/3489/3512,
+prefetch joins47/35/63. Ready cache is31.04/32.74/32.95% of tasks,versus
+descriptive dev.14 22.63/21.51/20.90%;total early application share41.05/36.78/
+39.49% did NOT increase over dev.14. Separate already-ready results from pending
+prefetch joins; do not equate the two or omit direct applications. Accepted full
+audit events493/173/306 are a different population from actual applications.
+Sampled200-tick maximum reservoir4545;actual dispatched hints older than30s
+816/1384/1438,max ages40.93/47.98/49.80s. Thus the enlarged reservoir/retention
+were actually used,not just configuration. No extra tickets/generation work.
+
+Three exact measured-window EXISTING JFR analyses (no extra tests/build/worlds):
+computational samples18820/17784/18498,truncated161/1172/923. Queue inclusive
+0.133/0.180/0.184%,features19.10/30.10/25.74%,biome selection13.19/11.79/13.04%,
+remote management11.99/8.58/10.90%. Categories overlap; not CPU durations or
+critical-path proof. Methods missing beyond top150 are NOT zero cost. Initial
+offline invocation auto-converted JSON dates to local display strings and stopped
+before output; corrected invocation preserves ISO strings (-DateKind String).
+Original runtime/JUnit gates did not fail or rerun. Prior queue2.11..2.30% is a
+different-artifact/order descriptive comparison,not a controlled edit attribution.
+Peer biome-choice pending/applied0;old rare private discrepancy not reproduced.
+
+Next: same-artifact opposite-order ordinary view32 comparison without rerunning
+unchanged units/builds;fresh targeted native runtime for this changed common
+queue;then remaining measured server biome/application/feature cost hypotheses.
+Do not broaden tests or claim beta before concrete speed/stability gaps close.
+Publicalpha7 unchanged. Following implementation-time UNRUN and prior failed
+checkpoints remain HISTORY; dev.15 production is now verified in the above scope.
+
+## Dev.15 indexed early-demand reservoir (implemented; verification UNRUN)
+
+Hypothesis: actual dev.14 complete coverage is80..93%, but most applications
+are direct demand. Preserve already observed earlier work to hide reply latency.
+GenerationPrefetchQueue now maintains bounded distance/FIFO indexes per owner,
+an exact expiry index and pending-owner validation. Mutations remove entries
+from every index; unchanged demand validates only newly offered hints; movement
+rechecks the reservoir with original nearest-owner/view logic. Donor eviction
+retains nearer hints. Immutable round-robin snapshots retain stable equal-distance
+order/lookahead rotation; dispatch reads at most4*max_in_flight (256 here),
+without sorting/materializing all16,384 candidates after each removal.
+
+Only explicit complete+allow_complete_terrain opts into max_in_flight*256 hints
+(capped16,384) and180s metadata retention. Other kinds retain*16/job timeout.
+Actual job deadline30s,cache128,owner32/global64,epochs,current task eligibility,
+persisted status,shape guards,audits/peer comparisons and final application stay.
+Hints contain only existing observed tasks/positions; no tickets or invented
+coordinates. Source-verified original TERRAIN dependencies/view halo and existing
+Mixins are unchanged. A retained hint never authorizes world writes.
+
+All implementation finishes before one sequential batch:
+Run-CompleteTerrainGate -Execute -IndexedPrefetch -ViewDistance32
+-ConditionOrder assisted-first. Exactly5 affected methods:3 existing queue
+mutation/order/fairness methods,1 bounded16,384-entry oracle covering prefixes/
+expiry/movement/owner cleanup,and1 explicit-mode/deadline policy method. Three
+builds,small physical two-owner original/assisted parity,then same-artifact weak
+E-server ordinaryview32 off/on,warm1/3repeats,original FEATURES off,capture off.
+No unchanged transport/peer/light/fragment suites. Fresh native runtime remains
+UNRUN. Offline Measure-CompleteTerrainCoverage reads stopped logs to join every
+actual application source to measured NOISE coordinates; direct demand must be
+included. All dev.15 tests/builds/runtime/performance UNRUN; no speed/beta claim.
+Publicalpha7 and prior failed evidence remain unchanged.
+
 ## Dev.14 gate205235-246 completed (modest gain; not beta)
 
 After all repairs, single sequential gate205235-246/session47792 exited0:
