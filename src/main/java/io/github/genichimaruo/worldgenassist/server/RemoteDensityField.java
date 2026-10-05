@@ -119,7 +119,7 @@ public final class RemoteDensityField {
 			throw new IllegalArgumentException("Complete terrain state identity differs");
 		}
 		result.requireCurrentAuthority();
-		return CompleteTerrainApplicator.prepare(job, completeTerrain, chunk, generator, actualState, structures, blender,
+		return CompleteTerrainApplicator.prepare(job, result, chunk, generator, actualState, structures, blender,
 			region, possibleBiomes, result::requireCurrentAuthority);
 	}
 	public void recordCompleteTerrainApplication() {

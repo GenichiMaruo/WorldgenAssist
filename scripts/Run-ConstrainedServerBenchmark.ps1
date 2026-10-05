@@ -131,6 +131,8 @@ try {
                 try {
                     $scenario = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
                     $runtimeSafe = [bool]$scenario.cleanup_safe
+					$generationLog=Get-Content -LiteralPath (Join-Path $caseRoot 'remote-evidence/latest.log') -Raw
+					if($generationLog -match 'worker\.quarantined|job\.peer_terrain_difference|job\.full_terrain_apply_rejected|Independent whole-terrain audit mismatch|Independent peer whole-terrain mismatch') { throw 'Generation verification failed; clean completion cannot establish valid performance' }
                     $configuration=Get-Content -LiteralPath (Join-Path $caseRoot 'remote-evidence/scenario-config.json') -Raw|ConvertFrom-Json
                     $verification=Get-Content -LiteralPath (Join-Path $caseRoot 'remote-evidence/remote-work-kind-config.json') -Raw|ConvertFrom-Json
                     if($verification.complete_verification -ne $CompleteVerification -or $scenario.complete_verification -ne $CompleteVerification){throw 'Complete verification differs from requested mode'}

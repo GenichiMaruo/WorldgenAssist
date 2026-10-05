@@ -1,5 +1,42 @@
 # Remote Protocol
 
+## Dev.13 completed gate200326-361 (not beta)
+
+Single sequential gate `test-artifacts/block-density-gate-20261005-200326-361`
+passed: exactly2 affected peer methods (0 failures/errors/skips), all3 loader
+builds, physical two-owner Fabric correctness with1792 shared format2 noise
+digests/0 mismatch; actual complete applications ownerA760/ownerB781 and
+distinct peer use for both. Fresh native runtime remains UNRUN.
+
+Same-artifact ordinary physical view32 comparison `csb-20261005-200714-410/u`:
+naturally weak E-drive server, two clients on the same strong PC (4 workers
+each), original FEATURES off in BOTH, diagnostic capture off, assisted-first,
+1 excluded warmup/3 same relocations,10658 tasks and3461 receipts/owner/repeat.
+Same-repeat median ratios: FULL-7.08%,receipt-7.42%,CPU-22.15%;3/3 improved.
+FULL improvement ranges0.31..9.68%; tick p95+2.62%,all3 higher. Failures/job
+timeouts/quarantines/terrain differences/apply rejects0; clean stops. This is
+modest descriptive acceleration and useful CPU distribution,not substantial
+speedup/reproducibility/beta. Opposite order/native stability still pending.
+Biome-choice pending/applied events0: branch unit checks passed,but this run
+does NOT reproduce or prove recovery of the prior private biome disagreement.
+
+Exact SHA256 Fabric E59A89AF5EB80CB0936E102FC22B48C0E108BA07E790A552F993E7A6C2A8E4A2;
+Forge BDA16E9E858967BF6A72F9109E84B0DC5D4F8EB5C748880DB77C3AB3A96DF7FB;
+NeoForge0924D4503C8240D077540B9D642DF91672E87ABE2E7A6D1DE954864316B22FE9.
+No release/tag changed. The following implementation-time UNRUN paragraphs
+are retained as HISTORY,not the current verification status.
+
+## Dev.13 process-local peer-biome choice (unchanged protocol12; UNRUN)
+
+Requests/result envelope/body/digestv2/domain limits unchanged. Packet decode
+never imports a local alternate output or approval. Only server-validated
+distinct matching assignments with exact agreeing whole terrain may retain
+both original immutable payloads when biome hashes differ. Existing prewrite
+authoritative3x3 server digest selects only an exact original matching payload;
+neither match rejects/falls back. No normalized hash/client-supplied authority,
+new network turn,audit reduction or changed terrain tolerance. Both owner epochs
+remain required. Two affected tests/3builds/Fabric correctness/view32 UNRUN.
+
 ## AG shaping request verified (dev.16/protocol12)
 
 Seven affected methods/three builds/Fabric and fresh Forge/NeoForge runtimes

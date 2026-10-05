@@ -1,6 +1,5 @@
 package io.github.genichimaruo.worldgenassist.server;
 
-import java.security.MessageDigest;
 import java.util.Objects;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 import io.github.genichimaruo.worldgenassist.common.CompleteTerrainData;
@@ -35,10 +34,12 @@ public final class CompleteTerrainApplicator {
 	private CompleteTerrainApplicator() { }
 
 	/** All rejectable checks and allocations finish before the first section write. */
-	public static Prepared prepare(TerrainDensityJob job, CompleteTerrainData data, ChunkAccess chunk,
+	public static Prepared prepare(TerrainDensityJob job, io.github.genichimaruo.worldgenassist.common.TerrainDensityResult result, ChunkAccess chunk,
 		NoiseBasedChunkGenerator generator, RandomState state, StructureManager structures, Blender blender,
 		WorldGenRegion region, Set<Holder<Biome>> possibleBiomes, Runnable requireAuthority) {
-		Objects.requireNonNull(job); Objects.requireNonNull(data); Objects.requireNonNull(chunk);
+		Objects.requireNonNull(job); Objects.requireNonNull(result); Objects.requireNonNull(chunk);
+		if (!job.identity().equals(result.identity())) throw new IllegalArgumentException("Complete result assignment differs");
+		CompleteTerrainData data=result.completeTerrain();
 		Objects.requireNonNull(generator); Objects.requireNonNull(state); Objects.requireNonNull(structures);
 		Objects.requireNonNull(blender); Objects.requireNonNull(possibleBiomes);
 		var settings = generator.generatorSettings().value();
@@ -77,9 +78,7 @@ public final class CompleteTerrainApplicator {
 			for (int x = chunk.getPos().x() - 1; x <= chunk.getPos().x() + 1; x++) region.getChunk(x, z).collectBiomesInPalette(actualPossibleBiomes);
 		}
 		if (!actualPossibleBiomes.equals(possibleBiomes)) throw new IllegalArgumentException("Surface biome optimization inputs differ");
-		if (!MessageDigest.isEqual(expectedBiomes, data.biomeWindowDigest())) {
-			throw new IllegalArgumentException("Complete terrain biome window differs from authoritative chunks");
-		}
+		data=result.selectCompleteTerrainForBiomes(expectedBiomes);
 		CompleteTerrainPalette palette = new CompleteTerrainPalette();
 		BlockState[] states = new BlockState[palette.size()];
 		boolean[] surfaceStates = new boolean[states.length], floorStates = new boolean[states.length];
@@ -102,7 +101,10 @@ public final class CompleteTerrainApplicator {
 		}
 		ShortArrayList[] offsets = new ShortArrayList[job.height() / 16];
 		for (int i = 0; i < offsets.length; i++) offsets[i] = new ShortArrayList(data.postProcessing(i));
-		var prepared = new Prepared(chunk, data, states, packHeights(surface, job.height()), packHeights(floor, job.height()), offsets);
+		var prepared = new Prepared(chunk, data, states, packHeights(surface, job.height()), packHeights(floor, job.height()), offsets,
+			result.hasPeerBiomeAlternative() ? () -> io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
+				"[CAWG] job.peer_biome_choice_applied id={} side={}",job.identity().jobId(),
+				java.security.MessageDigest.isEqual(expectedBiomes,result.completeTerrain().biomeWindowDigest()) ? "primary" : "peer") : () -> {});
 		requireAuthority.run();
 		return prepared;
 	}
@@ -119,11 +121,13 @@ public final class CompleteTerrainApplicator {
 		private final BlockState[] states;
 		private final long[] surface, floor;
 		private final ShortArrayList[] offsets;
+		private final Runnable selected;
 		private boolean used;
 		private Prepared(ChunkAccess chunk, CompleteTerrainData data, BlockState[] states,
-			long[] surface, long[] floor, ShortArrayList[] offsets) {
+			long[] surface, long[] floor, ShortArrayList[] offsets, Runnable selected) {
 			this.chunk = chunk; this.data = data; this.states = states;
 			this.surface = surface; this.floor = floor; this.offsets = offsets;
+			this.selected=selected;
 		}
 		/** Generation thread only, exactly once. Never invoke vanilla after a failure here. */
 		public ChunkAccess apply() {
@@ -148,6 +152,7 @@ public final class CompleteTerrainApplicator {
 			chunk.setHeightmap(Heightmap.Types.OCEAN_FLOOR_WG, floor);
 			for (int i = 0; i < offsets.length; i++) if (!offsets[i].isEmpty()) chunk.addPackedPostProcess(offsets[i], i);
 			chunk.markUnsaved();
+			selected.run();
 			return chunk;
 		}
 	}

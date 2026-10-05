@@ -1,5 +1,45 @@
 # World Generation Pipeline Notes
 
+## Dev.13 completed gate200326-361 (not beta)
+
+Single sequential gate `test-artifacts/block-density-gate-20261005-200326-361`
+passed: exactly2 affected peer methods (0 failures/errors/skips), all3 loader
+builds, physical two-owner Fabric correctness with1792 shared format2 noise
+digests/0 mismatch; actual complete applications ownerA760/ownerB781 and
+distinct peer use for both. Fresh native runtime remains UNRUN.
+
+Same-artifact ordinary physical view32 comparison `csb-20261005-200714-410/u`:
+naturally weak E-drive server, two clients on the same strong PC (4 workers
+each), original FEATURES off in BOTH, diagnostic capture off, assisted-first,
+1 excluded warmup/3 same relocations,10658 tasks and3461 receipts/owner/repeat.
+Same-repeat median ratios: FULL-7.08%,receipt-7.42%,CPU-22.15%;3/3 improved.
+FULL improvement ranges0.31..9.68%; tick p95+2.62%,all3 higher. Failures/job
+timeouts/quarantines/terrain differences/apply rejects0; clean stops. This is
+modest descriptive acceleration and useful CPU distribution,not substantial
+speedup/reproducibility/beta. Opposite order/native stability still pending.
+Biome-choice pending/applied events0: branch unit checks passed,but this run
+does NOT reproduce or prove recovery of the prior private biome disagreement.
+
+Exact SHA256 Fabric E59A89AF5EB80CB0936E102FC22B48C0E108BA07E790A552F993E7A6C2A8E4A2;
+Forge BDA16E9E858967BF6A72F9109E84B0DC5D4F8EB5C748880DB77C3AB3A96DF7FB;
+NeoForge0924D4503C8240D077540B9D642DF91672E87ABE2E7A6D1DE954864316B22FE9.
+No release/tag changed. The following implementation-time UNRUN paragraphs
+are retained as HISTORY,not the current verification status.
+
+## Dev.13 local peer-biome choice, UNRUN
+
+Peer results bind exact matching requests and every terrain block,WG height and
+ordered fluid offset. Only a biome-digest difference permits retaining both
+immutable original outputs in local dual-current-owner approval. Existing
+CompleteTerrainApplicator prewrite3x3 server digest/palette scan selects an
+original matching output,never substitutes a hash. Neither match rejects before
+writes,then existing original fallback. All generator/geometry/shape/height/
+empty-target/authority checks remain; changed terrain still quarantine.
+Local choice data disappears on packet decode; no protocol/Mixin target change.
+choice_applied records actual selected side after successful application only.
+Default peer opt-ins/audits/quotas remain. Cause unresolved; targeted2methods/
+3builds/Fabric correctness/original-FEATURES view32 pair pending. Not beta.
+
 ## Interleaved probe194623-235 and proposed recovery
 
 All4 private-style cache/carver histories match at actual failed coordinate.

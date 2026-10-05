@@ -39,6 +39,18 @@ class CompleteTerrainPeer263Test {
 			first.complete(TerrainDensityResult.fromCompleteTerrain(a.identity(), data(0), 0)); assertFalse(agreed.isDone());
 			second.complete(TerrainDensityResult.fromCompleteTerrain(b.identity(), data(changed), 0));
 			if (changed == 0) { assertTrue(agreed.join().hasPeerVerification()); assertEquals(0, mismatches.get()); }
+			else if (changed == 5) {
+				var approved=agreed.join(); assertTrue(approved.hasPeerBiomeAlternative()); assertEquals(0,mismatches.get());
+				assertEquals(data(0),approved.selectCompleteTerrainForBiomes(data(0).biomeWindowDigest()));
+				assertEquals(data(5),approved.selectCompleteTerrainForBiomes(data(5).biomeWindowDigest()));
+				assertEquals(data(0),approved.completeTerrain()); // Original payload is never normalized.
+				byte[] neither=new byte[32]; neither[0]=2;
+				assertThrows(IllegalArgumentException.class,()->approved.selectCompleteTerrainForBiomes(neither));
+				assertThrows(IllegalArgumentException.class,()->approved.selectCompleteTerrainForBiomes(new byte[31]));
+				var raw=TerrainDensityResult.fromCompleteTerrain(a.identity(),data(0),0);
+				assertThrows(IllegalArgumentException.class,()->raw.selectCompleteTerrainForBiomes(data(5).biomeWindowDigest()));
+				assertThrows(IllegalArgumentException.class,()->raw.withLocalApproval(()->true,()->{},data(1)));
+			}
 			else {
 				var failure = assertThrows(java.util.concurrent.CompletionException.class, agreed::join);
 				String[] fields = {"equal","blocks=","surface=","floor=","postprocessing_sections=","biome_digest=different"};
@@ -67,11 +79,13 @@ class CompleteTerrainPeer263Test {
 		var a = job(); var b = job(); AtomicBoolean firstCurrent = new AtomicBoolean(true), secondCurrent = new AtomicBoolean(true);
 		AtomicInteger applied = new AtomicInteger();
 		var approved = CompleteTerrainPeerVerifier.agree(submission(UUID.randomUUID(), a, CompletableFuture.completedFuture(TerrainDensityResult.fromCompleteTerrain(a.identity(), data(0), 0))),
-			submission(UUID.randomUUID(), b, CompletableFuture.completedFuture(TerrainDensityResult.fromCompleteTerrain(b.identity(), data(0), 0))),
+			submission(UUID.randomUUID(), b, CompletableFuture.completedFuture(TerrainDensityResult.fromCompleteTerrain(b.identity(), data(5), 0))),
 			() -> firstCurrent.get() && secondCurrent.get(), applied::incrementAndGet, error -> fail(error)).join();
 		assertTrue(approved.hasPeerVerification()); approved.requireCurrentAuthority();
 		var decoded = TerrainDensityResultEnvelope.encode(approved, TerrainWorkKind.COMPLETE_TERRAIN).decode();
-		assertEquals(approved, decoded); assertFalse(decoded.hasPeerVerification());
+		assertEquals(approved, decoded); assertFalse(decoded.hasPeerVerification()); assertTrue(approved.hasPeerBiomeAlternative()); assertFalse(decoded.hasPeerBiomeAlternative());
+		assertEquals(data(5),approved.selectCompleteTerrainForBiomes(data(5).biomeWindowDigest()));
+		assertThrows(IllegalArgumentException.class,()->decoded.selectCompleteTerrainForBiomes(data(5).biomeWindowDigest()));
 		decoded.recordPeerApplication(); assertEquals(0, applied.get());
 		approved.recordPeerApplication(); approved.recordPeerApplication(); assertEquals(1, applied.get());
 		var cache = new RemoteDensityResultCache(2);
@@ -79,7 +93,9 @@ class CompleteTerrainPeer263Test {
 		for (AtomicBoolean current : new AtomicBoolean[]{firstCurrent, secondCurrent}) {
 			cache.put(key, approved); assertTrue(cache.available(key));
 			current.set(false); assertFalse(cache.available(key)); assertTrue(cache.takeResult(key).isEmpty());
-			assertThrows(IllegalArgumentException.class, approved::requireCurrentAuthority); current.set(true);
+			assertThrows(IllegalArgumentException.class, approved::requireCurrentAuthority);
+			assertThrows(IllegalArgumentException.class,()->approved.selectCompleteTerrainForBiomes(data(0).biomeWindowDigest()));
+			assertThrows(IllegalArgumentException.class,()->approved.selectCompleteTerrainForBiomes(data(5).biomeWindowDigest())); current.set(true);
 		}
 		cache.put(key, approved); secondCurrent.set(false); cache.removeStaleAuthority(); assertEquals(0, cache.size());
 		assertThrows(IllegalArgumentException.class, () -> new RemoteDensityField(a, approved));

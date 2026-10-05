@@ -1,5 +1,61 @@
 # Repository agent instructions
 
+## Dev.13 completed gate200326-361 (not beta)
+
+Single sequential gate `test-artifacts/block-density-gate-20261005-200326-361`
+passed: exactly2 affected peer methods (0 failures/errors/skips), all3 loader
+builds, physical two-owner Fabric correctness with1792 shared format2 noise
+digests/0 mismatch; actual complete applications ownerA760/ownerB781 and
+distinct peer use for both. Fresh native runtime remains UNRUN.
+
+Same-artifact ordinary physical view32 comparison `csb-20261005-200714-410/u`:
+naturally weak E-drive server, two clients on the same strong PC (4 workers
+each), original FEATURES off in BOTH, diagnostic capture off, assisted-first,
+1 excluded warmup/3 same relocations,10658 tasks and3461 receipts/owner/repeat.
+Same-repeat median ratios: FULL-7.08%,receipt-7.42%,CPU-22.15%;3/3 improved.
+FULL improvement ranges0.31..9.68%; tick p95+2.62%,all3 higher. Failures/job
+timeouts/quarantines/terrain differences/apply rejects0; clean stops. This is
+modest descriptive acceleration and useful CPU distribution,not substantial
+speedup/reproducibility/beta. Opposite order/native stability still pending.
+Biome-choice pending/applied events0: branch unit checks passed,but this run
+does NOT reproduce or prove recovery of the prior private biome disagreement.
+
+Exact SHA256 Fabric E59A89AF5EB80CB0936E102FC22B48C0E108BA07E790A552F993E7A6C2A8E4A2;
+Forge BDA16E9E858967BF6A72F9109E84B0DC5D4F8EB5C748880DB77C3AB3A96DF7FB;
+NeoForge0924D4503C8240D077540B9D642DF91672E87ABE2E7A6D1DE954864316B22FE9.
+No release/tag changed. The following implementation-time UNRUN paragraphs
+are retained as HISTORY,not the current verification status.
+
+## Current dev.13/protocol12 authoritative peer-biome choice (UNRUN)
+
+Diagnostic checkpoint committed6509540 (not pushed/released); unrelated .vscode
+excluded. Dev.13 implements proposed recovery without changing generator or
+wire/protocol. Exact whole terrain includes geometry/every block/WG heights/
+ordered duplicated offsets. Changed terrain still rejects/quarantines both.
+Biome-only disagreement retains BOTH original immutable data objects in local
+dual-epoch peer approval. At existing prewrite actual3x3 server digest/palette
+validation,select ONLY an original payload with EXACT matching digest; neither
+matches rejects before writes/original fallback. No replacement/normalization
+or removed provenance: one original computed window must match authoritative
+server biomes. Local alternative cannot arrive through packet decode; all
+owner/current/audit/shape/domain/height/target/authority guards remain. Log
+choice_pending distinctly; choice_applied logs selected side only after writes.
+Original full audit policy unchanged; actual private discrepancy cause unproved.
+
+Two existing affected peer methods now cover both/neither/invalid digest choice,
+all changed terrain rejection,original payload preservation,wire exclusion and
+both-epoch/cache invalidation. No extra broad test methods. CompleteTerrainGate
+-PeerBiomeChoice selects only2 methods/3 builds,small original/assisted two-owner
+Fabric correctness pair,then natural weak E-server view32 assisted-first pair
+with original FEATURES off in both,1warm/3same relocations and receipts. This
+finally measures original+remote,not proof of experimental parallel FEATURES.
+Benchmark/functional checks now reject quarantines/mismatch/apply rejects even
+after clean completion. Diagnostic capture disabled. All dev.13 verification
+UNRUN; fresh native runtime/opposite order/stability/beta remain pending. Finish
+ALL edits before the single sequential batch; no concurrent builds/runtimes.
+
+## Historical diagnostic recovery proposal (superseded as implementation)
+
 ## Interleaved hypothesis194623-235 completed; next safe recovery candidate
 
 Offline194623-235 exits0:4 orders x81 centers/121 original BIOMES cache chunks,

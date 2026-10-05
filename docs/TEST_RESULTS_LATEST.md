@@ -1,5 +1,48 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## Dev.13 completed gate200326-361 (not beta)
+
+Single sequential gate `test-artifacts/block-density-gate-20261005-200326-361`
+passed: exactly2 affected peer methods (0 failures/errors/skips), all3 loader
+builds, physical two-owner Fabric correctness with1792 shared format2 noise
+digests/0 mismatch; actual complete applications ownerA760/ownerB781 and
+distinct peer use for both. Fresh native runtime remains UNRUN.
+
+Same-artifact ordinary physical view32 comparison `csb-20261005-200714-410/u`:
+naturally weak E-drive server, two clients on the same strong PC (4 workers
+each), original FEATURES off in BOTH, diagnostic capture off, assisted-first,
+1 excluded warmup/3 same relocations,10658 tasks and3461 receipts/owner/repeat.
+Same-repeat median ratios: FULL-7.08%,receipt-7.42%,CPU-22.15%;3/3 improved.
+FULL improvement ranges0.31..9.68%; tick p95+2.62%,all3 higher. Failures/job
+timeouts/quarantines/terrain differences/apply rejects0; clean stops. This is
+modest descriptive acceleration and useful CPU distribution,not substantial
+speedup/reproducibility/beta. Opposite order/native stability still pending.
+Biome-choice pending/applied events0: branch unit checks passed,but this run
+does NOT reproduce or prove recovery of the prior private biome disagreement.
+
+Exact SHA256 Fabric E59A89AF5EB80CB0936E102FC22B48C0E108BA07E790A552F993E7A6C2A8E4A2;
+Forge BDA16E9E858967BF6A72F9109E84B0DC5D4F8EB5C748880DB77C3AB3A96DF7FB;
+NeoForge0924D4503C8240D077540B9D642DF91672E87ABE2E7A6D1DE954864316B22FE9.
+No release/tag changed. The following implementation-time UNRUN paragraphs
+are retained as HISTORY,not the current verification status.
+
+## Dev.13 biome-choice implementation complete, verification UNRUN
+
+Recovery retains two original immutable outputs ONLY when exact terrain agrees,
+chooses the original digest matching actual authoritative server3x3 biomes at
+prewrite validation; neither matches rejects before writes. Different blocks/
+WG heights/ordered offsets still quarantine. Local alternatives have both
+epochs and never cross wire. No digest normalization/generator/audit change.
+Original discrepancy cause unproved; this mitigates loss of remaining assistance.
+Two affected existing peer methods cover selections/neither/domain/whole terrain,
+wire exclusion,cache and both epoch invalidation. Run-CompleteTerrainGate
+-Execute -PeerBiomeChoice -ViewDistance32 -ConditionOrder assisted-first:2methods,
+3builds,small Fabric original/assisted two-owner correctness,then original/off
+vs original/on natural weak-E view32,warm1/repeats3. Feature experiment and
+diagnostic captures disabled; strict performance rejects generation failures.
+ALL dev.13 tests/builds/parity/performance UNRUN; no fresh native runtime/β.
+6509540 commits completed diagnosis; public release still alpha.7,not replaced.
+
 ## Interleaved hypothesis194623-235 negative
 
 Original-code-only probe at-2051,3027,4 orders x81 centers/121 cached BIOMES

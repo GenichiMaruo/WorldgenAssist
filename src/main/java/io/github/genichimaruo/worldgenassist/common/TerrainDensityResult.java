@@ -102,9 +102,23 @@ public final class TerrainDensityResult {
 	public boolean hasCompleteTerrain() { return completeTerrain != null; }
 	/** The server attaches this only after independent-owner agreement; immutable data is shared. */
 	public TerrainDensityResult withLocalApproval(java.util.function.BooleanSupplier current, Runnable applied) {
+		return withLocalApproval(current,applied,null);
+	}
+	/** The alternative is process-local, exact original data, and must agree on ALL terrain. */
+	public TerrainDensityResult withLocalApproval(java.util.function.BooleanSupplier current, Runnable applied, CompleteTerrainData alternative) {
 		if (completeTerrain == null || localApproval != null) throw new IllegalStateException("Invalid local approval");
+		if (alternative != null && !completeTerrain.sameTerrainAs(alternative)) throw new IllegalArgumentException("Peer terrain differs");
 		return new TerrainDensityResult(identity, completeTerrain, clientComputeNanos,
-			new LocalApproval(Objects.requireNonNull(current), Objects.requireNonNull(applied)));
+			new LocalApproval(Objects.requireNonNull(current), Objects.requireNonNull(applied),alternative));
+	}
+	public boolean hasPeerBiomeAlternative() { return localApproval != null && localApproval.alternative != null; }
+	/** Server prewrite input check only. Never manufactures or replaces a digest. */
+	public CompleteTerrainData selectCompleteTerrainForBiomes(byte[] authoritativeDigest) {
+		requireCurrentAuthority();
+		if (authoritativeDigest == null || authoritativeDigest.length != 32 || completeTerrain == null) throw new IllegalArgumentException("Invalid authoritative biome digest");
+		if (java.security.MessageDigest.isEqual(authoritativeDigest,completeTerrain.biomeWindowDigest())) return completeTerrain;
+		if (hasPeerBiomeAlternative() && java.security.MessageDigest.isEqual(authoritativeDigest,localApproval.alternative.biomeWindowDigest())) return localApproval.alternative;
+		throw new IllegalArgumentException("Complete terrain biome window differs from authoritative chunks");
 	}
 	public boolean hasPeerVerification() { return localApproval != null; }
 	public boolean authorityCurrent() { return localApproval == null || localApproval.current.getAsBoolean(); }
@@ -117,8 +131,9 @@ public final class TerrainDensityResult {
 	private static final class LocalApproval {
 		final java.util.function.BooleanSupplier current;
 		final Runnable applied;
+		final CompleteTerrainData alternative;
 		final java.util.concurrent.atomic.AtomicBoolean reported = new java.util.concurrent.atomic.AtomicBoolean();
-		LocalApproval(java.util.function.BooleanSupplier current, Runnable applied) { this.current = current; this.applied = applied; }
+		LocalApproval(java.util.function.BooleanSupplier current, Runnable applied, CompleteTerrainData alternative) { this.current = current; this.applied = applied; this.alternative=alternative; }
 	}
 	public CompleteTerrainData completeTerrain() {
 		if (completeTerrain == null) throw new IllegalStateException("Not a complete terrain result");

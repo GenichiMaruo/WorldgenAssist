@@ -5,7 +5,7 @@ param([switch]$Execute,[switch]$LocalOnly,[ValidateRange(2,32)][int]$ViewDistanc
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
     [ValidateSet('wide','deep')][string]$WindowProfile='wide',
     [ValidateSet('vanilla-first','assisted-first')][string]$ConditionOrder='vanilla-first',
-    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation','complete-peer','complete-shaping')][string]$TestProfile='transport',
+    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation','complete-peer','complete-shaping','complete-biome-choice')][string]$TestProfile='transport',
     [string]$ReuseBuildEvidence,[string]$ReuseCorrectnessEvidence)
 # Finish all implementation first; affected units/builds/runtime/performance are sequential.
 Set-StrictMode -Version Latest
@@ -56,7 +56,12 @@ if($TestProfile -eq 'complete-preparation'){
         'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedReplyBypassesBlockedPreparationWithoutReleasingItsRemoteSlot',
         'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedCancellationAndFailuresReleaseOnceAndIgnoreLateReplies');$expectedTests=4
 }
-$verification=if($TestProfile -in @('complete-peer','complete-shaping')){'peer'}else{'server'}
+$verification=if($TestProfile -in @('complete-peer','complete-shaping','complete-biome-choice')){'peer'}else{'server'}
+if($TestProfile -eq 'complete-biome-choice'){
+    if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Peer biome choice requires fresh affected build and overlap correctness evidence'}
+    $selections=@('io.github.genichimaruo.worldgenassist.server.CompleteTerrainPeer263Test.agreementRequiresDistinctAssignmentsAndEveryTerrainComponentAndFailsPromptly',
+        'io.github.genichimaruo.worldgenassist.server.CompleteTerrainPeer263Test.localApprovalCannotCrossWireAndBothEpochsMustRemainCurrentForCacheOrApplication');$expectedTests=2
+}
 if($TestProfile -eq 'complete-peer'){
     if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Peer terrain verification requires fresh affected build and overlap correctness evidence'}
     $selections=@('io.github.genichimaruo.worldgenassist.server.CompleteTerrainPeer263Test',
@@ -259,7 +264,7 @@ try{
         $applied=[Collections.Generic.HashSet[string]]::new()
         $usePattern=if($RemoteWorkKind -eq 'complete'){'job\.complete id=(\S+) .*work_kind=COMPLETE_TERRAIN .*decision_samples=(\d+)'}elseif($RemoteWorkKind -eq 'decisions'){'job\.complete id=(\S+) .*work_kind=TERRAIN_DECISIONS_AND_SURFACE .*decision_samples=(\d+)'}else{'job\.complete id=(\S+) .*work_kind=BLOCK_DENSITY_AND_SURFACE remote_samples=(\d+)'}
         if($RemoteWorkKind -eq 'complete' -and ($log -notmatch 'job\.full_terrain_accepted .*audited=true' -or $log -notmatch 'job\.full_terrain_accepted .*audited=false')){throw 'Complete terrain must exercise independent full audits and subsequent accepted unaudited chunks'}
-        if($RemoteWorkKind -eq 'complete' -and $log -match 'job\.full_terrain_apply_rejected|Independent whole-terrain audit mismatch'){throw 'Complete terrain acceptance or application failed'}
+        if($RemoteWorkKind -eq 'complete' -and $log -match 'job\.full_terrain_apply_rejected|Independent whole-terrain audit mismatch|worker\.quarantined|job\.peer_terrain_difference'){throw 'Complete terrain acceptance or application failed'}
         foreach($entry in [regex]::Matches($log,$usePattern)){if([long]$entry.Groups[2].Value -ge 98304){[void]$applied.Add($entry.Groups[1].Value)}}
         if($TestProfile -in @('admission','capacity')){
             $stageJobs=@([regex]::Matches($log,'job\.sent id=(\S+) .*source=prefetch hint=terrain_stage candidate_age_ms=')|ForEach-Object {$_.Groups[1].Value})

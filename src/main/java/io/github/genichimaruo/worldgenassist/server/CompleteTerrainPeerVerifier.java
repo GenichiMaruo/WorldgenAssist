@@ -34,11 +34,17 @@ final class CompleteTerrainPeerVerifier {
 			try {
 				RemoteDensityValidator.Prepared.completeTerrain(a, null, 0).compare(first);
 				RemoteDensityValidator.Prepared.completeTerrain(b, null, 0).compare(second);
-				if (!first.completeTerrain().equals(second.completeTerrain())) {
+				if (!first.completeTerrain().sameTerrainAs(second.completeTerrain())) {
 					throw new RemoteDensityValidator.RemoteDensityValidationException("Independent peer whole-terrain mismatch: "
 						+ CompleteTerrainDifference.describe(first.completeTerrain(),second.completeTerrain()));
 				}
-				return first.withLocalApproval(current, applied);
+				if (!java.util.Arrays.equals(first.completeTerrain().biomeWindowDigest(),second.completeTerrain().biomeWindowDigest())) {
+					io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
+						"[CAWG] job.peer_biome_choice_pending primary={} peer={} chunk={},{}",
+						a.identity().jobId(),b.identity().jobId(),a.identity().chunkX(),a.identity().chunkZ());
+					return first.withLocalApproval(current,applied,second.completeTerrain());
+				}
+				return first.withLocalApproval(current,applied);
 			} catch (RemoteDensityValidator.RemoteDensityValidationException error) {
 				io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.warn(
 					"[CAWG] job.peer_terrain_difference primary={} peer={} chunk={},{} reason={}",

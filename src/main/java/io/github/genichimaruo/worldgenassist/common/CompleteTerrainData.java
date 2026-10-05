@@ -111,11 +111,14 @@ public final class CompleteTerrainData {
 		return new CompleteTerrainData(minY, height, choices, surface, floor, offsets, biomeDigest);
 	}
 
-	@Override public boolean equals(Object other) {
-		return other instanceof CompleteTerrainData data && minY == data.minY && height == data.height
+	/** Exact terrain agreement; provenance is selected against server inputs separately. */
+	public boolean sameTerrainAs(CompleteTerrainData data) {
+		return data != null && minY == data.minY && height == data.height
 			&& Arrays.equals(choices, data.choices) && Arrays.equals(surfaceHeights, data.surfaceHeights)
-			&& Arrays.equals(floorHeights, data.floorHeights) && Arrays.deepEquals(postProcessing, data.postProcessing)
-			&& Arrays.equals(biomeWindowDigest, data.biomeWindowDigest);
+			&& Arrays.equals(floorHeights, data.floorHeights) && Arrays.deepEquals(postProcessing, data.postProcessing);
+	}
+	@Override public boolean equals(Object other) {
+		return other instanceof CompleteTerrainData data && sameTerrainAs(data) && Arrays.equals(biomeWindowDigest,data.biomeWindowDigest);
 	}
 	@Override public int hashCode() {
 		int hash = Objects.hash(minY, height);
