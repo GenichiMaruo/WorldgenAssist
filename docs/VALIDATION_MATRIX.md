@@ -1,5 +1,61 @@
 # Validation matrix
 
+## Dev22 runtime followup closed: player correction passes; overall gate fails
+
+Batch184431-462/session12222 exits1. Exact unchanged2 publication methods and
+3 completed22 build artifacts were identity-checked/reused;0freshJUnit/builds.
+Fresh physical/Forge/Neo original+parallel-assisted fixtures pass ALL882 each
+NOISE/decoration/savedstructures/savedlight comparisons. Actual applications/
+distinct-peer/nonempty-shaping:physical637/440/2,Forge448/268/14,Neo428/230/6;
+both owners exercised. Every fixture's two actual post-fullphase players log
+xyzY150/health20/alive/flying. Read-only stopped native gzip NBT separately
+confirms ALL8 saved players Y150/health20/DeathTime0/flying1; hashes retained in
+test-artifacts/feature-pipeline-gate-20261006-184431-462/saved-player-safety.json.
+This resolves the observed fixture fall in these cases,not ordinary gameplay
+or every void-fall mechanism. Source still unchanged after22builds.
+
+Both same22JAR remoteON performance conditions finish/cleanstop,weakE/view32/
+warm1/3same repeats/JFR. Parent correctly FAILS on one parallel prewrite
+job.full_terrain_apply_rejected:authoritative3x3 biome-window differs,job
+56864f6f-44e6-4008-aeab-cca3ec21050b,chunk-2013,3043 at19:12:36.
+The rejection occurs before section writes;original fallback remains.
+No speed/beta/full-safety pass claimed,do not waive/normalize the digest.
+Exact historical partial21/shaping0 and first22premature-player-check failures
+remain below. Next diagnose retained mismatch evidence before new performance
+claims;goal active/publicalpha7 unchanged.
+
+
+## Dev22 runtime-only followup UNRUN
+
+183616-904 passed3builds/exact2test reuse but stops at premature playercommand.
+Remote command now AFTER fullfixture/SPAWN Complete-CorrectnessRegion. ONE
+-PublicationFence -ReusePublicationTestRoot181055-178 -ReuseBuildRoot183616-904
+validates ALLproduction input inventory/hashes and current+retained3JARs plus
+successfulbuildsteps.0unchangedbuild/JUnit reruns;fresh physical/bothnative
+original/assisted strict882+bothplayerproof,then same22JAR off/parallel weakE/
+view32/warm1/3repeats. Oldfailedruntime NOTreused;ALLfollowup UNRUN.
+
+## Dev22 fixture flight/player proof (verification UNRUN)
+
+21gate181055-178 failedForge nonemptyshaping0 after2methods/3builds/physical and
+Forge ALL882 parity;Neo/performanceNOTRUN. Bothoriginal/assisted saved playerfall
+confirmed,separatefromchunkparity. Next ONE publication-fence with exact21test
+XML/inputreuse (0freshJUnit),3freshbuilds/freshall3loader strict882+bothplayer
+xyzY150/fullhealth/flying proof;nativeexplicit2server/4clientworkers/view4
+functionalonly;then assistedON BOTH off/parallel weakE/view32/warm1/3repeats.
+Allcode/harness/docs BEFOREbatch;do notwaive shaping/reuseoldfallingplayer proof.
+See FIXTURE_PLAYER_FALL_DIAGNOSIS.md;ALLnewverificationUNRUN/no beta.
+
+## Dev.21 publication-fence profile (verification UNRUN)
+
+ONE Run-FeaturePipelineGate -Execute -PublicationFence AFTER ALL edits selects
+exact2existingmethods (originalstagepublication and cancellation/failure/drain),
+3freshbuilds,physical/bothnative fresh original/parallel-assisted strict882 four
+stage pairs,then SAME-JAR remoteON BOTH FEATURESoff/parallel ordinary weakE/view32/
+warm1/3same repeats/JFR. No config/digest/fragment/wire tests or oldbaseline reuse.
+Scopespeed=schedulerincrement within assistance;not total remote-OFF gain.
+See STAGE_PUBLICATION_GUARD.md;ALLverification UNRUN/publicalpha7 unchanged.
+
 ## Dev.20 selected batch complete,one-worker speed hypothesis rejected
 
 171927-610/session42610 completes success/issues[],exactly2affected methods,

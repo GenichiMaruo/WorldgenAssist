@@ -510,6 +510,10 @@ try {
             if (-not $concurrentOwners) { throw 'Selected assistance jobs did not overlap' }
         }
         Complete-CorrectnessRegion
+        if($FeatureFixture){
+            Send-Command 'worldgenassist_feature_fixture_players'
+            foreach($name in $ownerNames){Wait-Log ('fixture.player_safe owner='+[regex]::Escape($name)+' .*alive=true flying=true complete=true') 15|Out-Null}
+        }
         $text=Log-Text
         $digestMap=@{}
         foreach($match in [regex]::Matches($text,'(?m)^.*\[CAWG\] stage\.digest stage=noise chunk=(?<chunk>-?\d+,-?\d+) .* digest=(?<digest>[0-9a-fA-F]+).* dimension='+([regex]::Escape($dimensionId))+'\b')) {

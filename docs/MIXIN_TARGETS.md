@@ -1,5 +1,63 @@
 # Mixin Targets
 
+## Dev22 runtime followup closed: player correction passes; overall gate fails
+
+Batch184431-462/session12222 exits1. Exact unchanged2 publication methods and
+3 completed22 build artifacts were identity-checked/reused;0freshJUnit/builds.
+Fresh physical/Forge/Neo original+parallel-assisted fixtures pass ALL882 each
+NOISE/decoration/savedstructures/savedlight comparisons. Actual applications/
+distinct-peer/nonempty-shaping:physical637/440/2,Forge448/268/14,Neo428/230/6;
+both owners exercised. Every fixture's two actual post-fullphase players log
+xyzY150/health20/alive/flying. Read-only stopped native gzip NBT separately
+confirms ALL8 saved players Y150/health20/DeathTime0/flying1; hashes retained in
+test-artifacts/feature-pipeline-gate-20261006-184431-462/saved-player-safety.json.
+This resolves the observed fixture fall in these cases,not ordinary gameplay
+or every void-fall mechanism. Source still unchanged after22builds.
+
+Both same22JAR remoteON performance conditions finish/cleanstop,weakE/view32/
+warm1/3same repeats/JFR. Parent correctly FAILS on one parallel prewrite
+job.full_terrain_apply_rejected:authoritative3x3 biome-window differs,job
+56864f6f-44e6-4008-aeab-cca3ec21050b,chunk-2013,3043 at19:12:36.
+The rejection occurs before section writes;original fallback remains.
+No speed/beta/full-safety pass claimed,do not waive/normalize the digest.
+Exact historical partial21/shaping0 and first22premature-player-check failures
+remain below. Next diagnose retained mismatch evidence before new performance
+claims;goal active/publicalpha7 unchanged.
+
+
+## Dev22 harness timing correction (followup UNRUN)
+
+No production/Mixin change after183616-904:3builds pass,2publication tests exact
+reuse;physical original premature safetycommand refuses before fixturecompletion.
+Move command AFTER full Complete-CorrectnessRegion,not quiet NOISE prefix.
+Next exact22source/current+retainedJAR/buildstep reuse,0build/JUnit reruns,
+freshall3loader strict882/player checks and weakE/view32 comparison UNRUN.
+See FIXTURE_PLAYER_FALL_DIAGNOSIS.md. Do not call timing failure a flight pass.
+
+## Dev22 fixture player flight correction (verification UNRUN)
+
+No additional Mixin target. Original26.2/26.3 ServerPlayer.onUpdateAbilities
+sends original flying packet;Entity.setDeltaMovement public. Existing fixture
+tick/movement suspension is server-only while clientphysics runs,likely cause
+of saved deepY in BOTH original/assisted21worlds. Flying=true before original
+teleport plus console-only postphase xyz/fullhealth/flying proof. Publication
+Mixin/queue/dispatcher/test inputs unchanged,exact2test XML/hashreuse only;
+fresh3builds/all3loader strict882+player checks UNRUN. See
+FIXTURE_PLAYER_FALL_DIAGNOSIS.md;no ordinaryphysics/terrain change/newbeta claim.
+
+## Dev.21 new original publication target (verification UNRUN)
+
+ChunkStepPublicationMixin263 wraps exact descriptor
+apply(Lnet/minecraft/world/level/chunk/status/WorldGenContext;Lnet/minecraft/util/StaticCache2D;Lnet/minecraft/world/level/chunk/ChunkAccess;)Ljava/util/concurrent/CompletableFuture;
+Primary26.2 and exact Fabric/Forge/Neo26.3 sources all verify task.doWork before
+status/profiler thenApply;26.3 Zone retained. Shared required defaultRequire1.
+Only nonOFF exactNoiseBased Overworld FEATURES/INITIALIZE_LIGHT bind local
+identity token/capture footprint;full ORIGINAL applied future signals release
+after body completed. Cancellation-protected observercopy,nested/error restoration,
+no duplicatedstatus/profiler. Otherstages/worlds/OFF original. See
+STAGE_PUBLICATION_GUARD.md for source hashes,affected2methods/3builds/fresh3loader
+strict882 pairs and SAME-JAR assistedoff/parallel speed comparison. ALL UNRUN.
+
 ## Dev.20 verification complete; next publication gap verified
 
 Batch171927-610 succeeds:2methods,3builds,physical/both native ALL882 four-stage

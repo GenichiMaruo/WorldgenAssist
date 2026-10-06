@@ -66,6 +66,20 @@ public final class FeatureStageDispatcher implements TaskScheduler<Runnable> {
 		return submitFixture(footprint(context,step,chunk,FeatureStageConfig.current()),
 			() -> runBody(context,chunk,original,admitted));
 	}
+	public static CompletableFuture<ChunkAccess> publish(WorldGenContext context, ChunkStep step, ChunkAccess chunk,
+		Supplier<CompletableFuture<ChunkAccess>> original) {
+		return ownsStage(context, step) ? FeatureStagePublication.around(context, step, chunk, original) : original.get();
+	}
+	private static boolean ownsStage(WorldGenContext context, ChunkStep step) {
+		return FeatureStageConfig.current() != FeatureStageConfig.OFF
+			&& (step.targetStatus() == ChunkStatus.FEATURES || step.targetStatus() == ChunkStatus.INITIALIZE_LIGHT)
+			&& context.generator().getClass() == NoiseBasedChunkGenerator.class
+			&& context.level().dimension().equals(net.minecraft.world.level.Level.OVERWORLD);
+	}
+	private static FeatureStageQueue.Footprint publishedFootprint(WorldGenContext context, ChunkStep step, ChunkAccess chunk,
+		FeatureStageQueue.Footprint footprint) {
+		return ownsStage(context, step) ? footprint.withPublication(FeatureStagePublication.require(context, step, chunk)) : footprint;
+	}
 	static CompletableFuture<ChunkAccess> submitFixture(FeatureStageQueue.Footprint footprint, Supplier<CompletableFuture<ChunkAccess>> body) {
 		if (FeatureStageConfig.current() == FeatureStageConfig.OFF) return body.get();
 		FeatureStageDispatcher dispatcher = CURRENT.get();
@@ -93,10 +107,10 @@ public final class FeatureStageDispatcher implements TaskScheduler<Runnable> {
 			});
 		};
 		FeatureStageConfig config = FeatureStageConfig.current();
-		var footprint = config.usesRegionalOwnership() && step.targetStatus() == ChunkStatus.INITIALIZE_LIGHT
+		var footprint = publishedFootprint(context, step, chunk, config.usesRegionalOwnership() && step.targetStatus() == ChunkStatus.INITIALIZE_LIGHT
 			&& step.directDependencies().getRadius() == 0 && step.blockStateWriteRadius() == -1
 			? FeatureStageQueue.Footprint.region(chunk.getPos().x(), chunk.getPos().z(), 0)
-			: FeatureStageQueue.Footprint.serial();
+			: FeatureStageQueue.Footprint.serial());
 		if (FeatureFixture263.enabled()) {
 			var fixture = FeatureFixture263.initialization(context,chunk,footprint,body);
 			if (fixture != null) return fixture;
@@ -115,9 +129,9 @@ public final class FeatureStageDispatcher implements TaskScheduler<Runnable> {
 			&& step.targetStatus() == ChunkStatus.FEATURES && step.blockStateWriteRadius() == 1
 			&& step.directDependencies().getRadius() == 8) {
 			// Reserve every region-readable holder, including shared starts/pieces, not just block writes.
-			return FeatureStageQueue.Footprint.region(chunk.getPos().x(), chunk.getPos().z(), 8);
+			return publishedFootprint(context, step, chunk, FeatureStageQueue.Footprint.region(chunk.getPos().x(), chunk.getPos().z(), 8));
 		}
-		return FeatureStageQueue.Footprint.serial();
+		return publishedFootprint(context, step, chunk, FeatureStageQueue.Footprint.serial());
 	}
 
 	private static CompletableFuture<ChunkAccess> runBody(WorldGenContext context, ChunkAccess chunk,

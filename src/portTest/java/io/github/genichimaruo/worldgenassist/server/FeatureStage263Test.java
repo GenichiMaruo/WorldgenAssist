@@ -109,6 +109,39 @@ class FeatureStage263Test {
 			assertEquals(1, invocations.get()); assertEquals(1, queue.snapshot().failed());
 			assertEquals(3, queue.snapshot().peakAdmitted()); assertTrue(observer.isCancelled());
 		} finally { a.complete(1); c.complete(3); queue.close(); }
+		for (int failure : List.of(0, 1, 2, 3)) checkPublicationFailureAndCancellation(failure);
+	}
+	private void checkPublicationFailureAndCancellation(int failure) throws Exception {
+		var queue = new FeatureStageQueue(1, 4, "CAWG-Test-PublicationFailure-");
+		var body = new CompletableFuture<Integer>(); var entered = new CountDownLatch(1);
+		var drained = new CountDownLatch(2); queue.onCapacityChanged(drained::countDown);
+		var status = new AtomicInteger(); var observer = new ArrayList<CompletableFuture<Integer>>();
+		var next = new ArrayList<CompletableFuture<Integer>>();
+		var context = new Object(); var step = new Object(); var chunk = new Object();
+		java.util.function.Supplier<CompletableFuture<Integer>> original = () -> {
+			var owned = region(0).withPublication(FeatureStagePublication.require(context, step, chunk));
+			var first = queue.submitAsync(owned, () -> { entered.countDown(); return body; }); observer.add(first);
+			next.add(queue.submit(region(1), status::get));
+			if (failure == 2) throw new IllegalArgumentException("apply failed after admission");
+			return first.thenApply(value -> {
+				status.set(value);
+				if (failure == 1) throw new IllegalArgumentException("publication callback failed");
+				return value;
+			});
+		};
+		try {
+			if (failure == 2) assertThrows(IllegalArgumentException.class,
+				() -> FeatureStagePublication.around(context, step, chunk, original));
+			else assertTrue(FeatureStagePublication.around(context, step, chunk, original).cancel(true));
+			await(entered); queue.close();
+			assertEquals(1, queue.snapshot().active()); assertEquals(1, queue.snapshot().queued());
+			assertThrows(IllegalStateException.class, () -> FeatureStagePublication.require(context, step, chunk));
+			if (failure == 3) body.completeExceptionally(new IllegalArgumentException("body failed")); else body.complete(7);
+			assertEquals(failure >= 2 ? 0 : 7, next.get(0).get(5, TimeUnit.SECONDS)); await(drained);
+			assertEquals(0, queue.snapshot().active()); assertEquals(0, queue.snapshot().queued());
+			assertEquals(failure == 0 ? 0 : 1, queue.snapshot().failed());
+			assertFalse(observer.get(0).isCancelled());
+		} finally { body.complete(7); queue.close(); }
 	}
 
 	@Test void messagePumpPausesWithoutBlockingAndResumesOriginalFifo() throws Exception {
@@ -155,17 +188,52 @@ class FeatureStage263Test {
 	}
 
 	@Test void originalStageCompletionRunsBeforeAConflictingBodyCanObserveStatus() throws Exception {
-		var queue=new FeatureStageQueue(2,4,"CAWG-Test-StageCommit-");var body=new CompletableFuture<Integer>();
+		for (int workers : List.of(1, 2)) {
+			checkAttachedPublication(workers);
+			checkLatePublication(workers);
+		}
+	}
+	private void checkAttachedPublication(int workers) throws Exception {
+		var queue=new FeatureStageQueue(workers,4,"CAWG-Test-StageCommit-");var body=new CompletableFuture<Integer>();
 		var entered=new CountDownLatch(1);var committing=new CountDownLatch(1);var release=new CountDownLatch(1);var next=new CountDownLatch(1);
 		var status=new AtomicInteger();Thread completion=null;
+		var context=new Object();var step=new Object();var chunk=new Object();
 		try {
-			var first=queue.submitAsync(region(0),()->{entered.countDown();return body;});await(entered);
-			var originalStep=first.thenApply(value->{committing.countDown();try{await(release);}catch(InterruptedException error){throw new IllegalStateException(error);}status.set(value);return value;});
+			var originalStep=FeatureStagePublication.around(context,step,chunk,()-> {
+				var first=queue.submitAsync(region(0).withPublication(FeatureStagePublication.require(context,step,chunk)),()->{entered.countDown();return body;});
+				return first.thenApply(value->{committing.countDown();try{await(release);}catch(InterruptedException error){throw new IllegalStateException(error);}status.set(value);return value;});
+			});await(entered);
 			var second=queue.submit(region(1),()->{next.countDown();return status.get();});
 			completion=new Thread(()->body.complete(7));completion.start();await(committing);
 			assertEquals(1,next.getCount());assertEquals(1,queue.snapshot().active());assertEquals(1,queue.snapshot().queued());
 			release.countDown();assertEquals(7,originalStep.get(5,TimeUnit.SECONDS));assertEquals(7,second.get(5,TimeUnit.SECONDS));await(next);
 		} finally {release.countDown();body.complete(7);if(completion!=null)completion.join(5000);queue.close();}
+	}
+	private void checkLatePublication(int workers) throws Exception {
+		var queue=new FeatureStageQueue(workers,4,"CAWG-Test-LateCommit-");
+		var context=new Object();var step=new Object();var chunk=new Object();var status=new AtomicInteger();
+		var next=new ArrayList<CompletableFuture<Integer>>();var drained=new CountDownLatch(2);queue.onCapacityChanged(drained::countDown);
+		try {
+			var applied=FeatureStagePublication.around(context,step,chunk,()-> {
+				var token=FeatureStagePublication.require(context,step,chunk);
+				var first=queue.submit(region(0).withPublication(token),()->7);
+				assertEquals(7,first.orTimeout(5,TimeUnit.SECONDS).join()); // Body completed BEFORE original callback installation.
+				next.add(queue.submit(region(1),status::get));
+				assertFalse(next.get(0).isDone());assertEquals(1,queue.snapshot().active());assertEquals(1,queue.snapshot().queued());
+				// Nested synchronous application restores the outer scope; identities cannot be borrowed.
+				var nested=new Object();
+				FeatureStagePublication.around(context,nested,chunk,()-> {
+					assertThrows(IllegalStateException.class,()->FeatureStagePublication.require(context,step,chunk));
+					return CompletableFuture.completedFuture(0);
+				}).join();
+				assertSame(token,FeatureStagePublication.require(context,step,chunk));
+				queue.close(); // Drains ownership even when close precedes late callback installation.
+				return first.thenApply(value->{status.set(value);return value;});
+			});
+			assertEquals(7,applied.get(5,TimeUnit.SECONDS));assertEquals(7,next.get(0).get(5,TimeUnit.SECONDS));await(drained);
+			assertEquals(0,queue.snapshot().active());assertEquals(0,queue.snapshot().queued());
+			assertThrows(IllegalStateException.class,()->FeatureStagePublication.require(context,step,chunk));
+		} finally {queue.close();}
 	}
 
 	@Test void replayKeepsCanonicalAdmissionAndSnapshotsEveryChunkBeforeAnySpawn() {

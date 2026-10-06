@@ -1,4 +1,13 @@
 # Offline bounded public-seed fixture inputs and actual runtime coverage. No Minecraft execution.
+function Assert-FeatureFixturePlayers([string]$Log) {
+    if($Log -match 'unsafe fixture player'){throw 'Fixture player fell, lost health, or left floating state'}
+    $rows=@([regex]::Matches($Log,'fixture.player_safe owner=((?:ScenarioOwner|Native)[AB]) x=(-?[0-9.]+) y=([0-9.]+) z=(-?[0-9.]+) health=([0-9.]+) alive=true flying=true complete=true'))
+    if($rows.Count -ne 2 -or @($rows|ForEach-Object {$_.Groups[1].Value}|Sort-Object -Unique).Count -ne 2){throw 'Actual completed player safety check missing for both owners'}
+    foreach($row in $rows){
+        $sign=if($row.Groups[1].Value.EndsWith('A')){1}else{-1}
+        if([double]$row.Groups[2].Value -ne $sign*16000 -or [double]$row.Groups[3].Value -ne 150 -or [double]$row.Groups[4].Value -ne $sign*-32000 -or [double]$row.Groups[5].Value -ne 20){throw 'Fixture player position/full health differs'}
+    }
+}
 function Read-FeatureReplay([string]$Path) {
     $file=Get-Item -LiteralPath $Path
     if($file.Length -gt 131072){throw 'Replay input exceeds128KiB'}

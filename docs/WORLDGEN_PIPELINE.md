@@ -1,5 +1,65 @@
 # World Generation Pipeline Notes
 
+## Dev22 runtime followup closed: player correction passes; overall gate fails
+
+Batch184431-462/session12222 exits1. Exact unchanged2 publication methods and
+3 completed22 build artifacts were identity-checked/reused;0freshJUnit/builds.
+Fresh physical/Forge/Neo original+parallel-assisted fixtures pass ALL882 each
+NOISE/decoration/savedstructures/savedlight comparisons. Actual applications/
+distinct-peer/nonempty-shaping:physical637/440/2,Forge448/268/14,Neo428/230/6;
+both owners exercised. Every fixture's two actual post-fullphase players log
+xyzY150/health20/alive/flying. Read-only stopped native gzip NBT separately
+confirms ALL8 saved players Y150/health20/DeathTime0/flying1; hashes retained in
+test-artifacts/feature-pipeline-gate-20261006-184431-462/saved-player-safety.json.
+This resolves the observed fixture fall in these cases,not ordinary gameplay
+or every void-fall mechanism. Source still unchanged after22builds.
+
+Both same22JAR remoteON performance conditions finish/cleanstop,weakE/view32/
+warm1/3same repeats/JFR. Parent correctly FAILS on one parallel prewrite
+job.full_terrain_apply_rejected:authoritative3x3 biome-window differs,job
+56864f6f-44e6-4008-aeab-cca3ec21050b,chunk-2013,3043 at19:12:36.
+The rejection occurs before section writes;original fallback remains.
+No speed/beta/full-safety pass claimed,do not waive/normalize the digest.
+Exact historical partial21/shaping0 and first22premature-player-check failures
+remain below. Next diagnose retained mismatch evidence before new performance
+claims;goal active/publicalpha7 unchanged.
+
+
+## Dev22 safety command after full phase (followup UNRUN)
+
+Quiet NOISE prefix is NOT full fixture/SPAWN completion. First22batch183616-904
+refused premature playercheck;3builds/unchanged2test reuse pass,othercasesNOTRUN.
+Remote safetycommand moved after Complete-CorrectnessRegion requiring fullphase.
+Production22unchanged;reuse exact3build artifacts/fullsource inputs and21tests
+only,not failedplayer/runtime proof. Freshall3loader strict882+playerchecks and
+same22JAR off/parallel weakE/view32 performance UNRUN;see fall diagnosis.
+
+## Dev22 fixture client physics correction (verification UNRUN)
+
+Dev21physical/Forge strict882 chunkparity passed butForge actualshaping0 guard
+failed;Neo/performanceNOTRUN. Both original/assisted21 player saves have deepY
+anddamage,positiveHealth/DeathTime0. Server-only fixture suspension leaves client
+falling;afterbarrier movementacceptance is likely cause,not timedtrace proof.
+Dev22 sends original flyingabilities beforetarget teleport and checks both
+playersxyzY150/fullhealth/alive/flying after original phase. No terrain/ordinary
+physics/authority change. See FIXTURE_PLAYER_FALL_DIAGNOSIS.md. Fresh3loader
+runtime/playerchecks and sameJAR assistanceON BOTH off/parallel weakE/view32
+comparison UNRUN;reuseONLY2unchanged publication tests with input/XML hashes.
+
+## Dev.21 publication lifetime (verification UNRUN)
+
+Originalapply scope -> capture immutable R8/point footprint+identitytoken ->
+original ownedbody -> publishbodyresult -> original completeChunkGeneration
+status/profiler -> signal publication -> releasefootprint/capacity. Worker CPU
+permit returns on body invocation exit independently;no waits. This closes fast
+body completion before original thenApply installation. Fixture replay retains
+the admission token;FEATURES/INIT perchunk futures publish before phase barriers,
+no SPAWN/TERRAIN token/barrier cycle. Privateappliedfuture/copyobserver protects
+status callback from cancellation;errors release only afterbody and publication.
+Otherstages/OFF/customworlds unchanged. See STAGE_PUBLICATION_GUARD.md.
+Fresh affected batch UNRUN;old original saved-light20 failure retained,not causal
+proof;no speed/default/beta claim.
+
 ## Dev.20 result: single worker loses useful overlap
 
 Completed171927-610 retains strict physical/both-native882 four-stage equality.

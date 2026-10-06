@@ -95,10 +95,15 @@ public final class FeatureStageQueue implements AutoCloseable {
 	}
 
 	private <T> void finish(Job<T> job, T value, Throwable error) {
-		// Original ChunkStep completion updates persisted status, which selects the heightmaps
-		// updated by neighboring decoration. Publish those synchronous stage callbacks before
-		// releasing the footprint and starting the next conflicting original body.
+		// Publish the body even while retaining ownership: the original applied-stage callback
+		// needs this result to advance status. The caller may not have installed it yet.
 		if (error == null) job.result.complete(value); else job.result.completeExceptionally(error);
+		var publication = job.footprint.publication();
+		if (publication == null) release(job, error);
+		else publication.whenPublished((ignored, publicationError) -> release(job, error != null ? error : publicationError));
+	}
+
+	private void release(Job<?> job, Throwable error) {
 		Runnable listener;
 		synchronized (this) {
 			active.remove(job);
@@ -121,7 +126,10 @@ public final class FeatureStageQueue implements AutoCloseable {
 		if (pending.isEmpty() && active.isEmpty()) executor.shutdown();
 	}
 
-	public record Footprint(long minX, long minZ, long maxX, long maxZ, boolean global) {
+	public record Footprint(long minX, long minZ, long maxX, long maxZ, boolean global, FeatureStagePublication publication) {
+		public Footprint(long minX, long minZ, long maxX, long maxZ, boolean global) {
+			this(minX, minZ, maxX, maxZ, global, null);
+		}
 		public Footprint {
 			if (minX > maxX || minZ > maxZ) throw new IllegalArgumentException("inverted footprint");
 		}
@@ -130,6 +138,9 @@ public final class FeatureStageQueue implements AutoCloseable {
 			return new Footprint((long)x-radius, (long)z-radius, (long)x+radius, (long)z+radius, false);
 		}
 		public static Footprint serial() { return new Footprint(0, 0, 0, 0, true); }
+		public Footprint withPublication(FeatureStagePublication publication) {
+			return new Footprint(minX, minZ, maxX, maxZ, global, Objects.requireNonNull(publication));
+		}
 		public boolean intersects(Footprint other) {
 			return global || other.global || minX <= other.maxX && other.minX <= maxX && minZ <= other.maxZ && other.minZ <= maxZ;
 		}

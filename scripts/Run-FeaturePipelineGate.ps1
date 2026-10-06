@@ -1,7 +1,7 @@
 [CmdletBinding()]
-param([switch]$Execute,[switch]$LocalOnly,[string]$ResumeNeoOriginalRoot,[switch]$RegionalSingleWorker)
-# Finish implementation first. One lock, ten affected methods, three builds,
-# fresh targeted correctness, then exactly three controlled performance runs.
+param([switch]$Execute,[switch]$LocalOnly,[string]$ResumeNeoOriginalRoot,[switch]$RegionalSingleWorker,[switch]$PublicationFence,[string]$ReusePublicationTestRoot,[string]$ReuseBuildRoot)
+# Finish implementation first. One lock, only selected affected methods, three
+# builds, fresh targeted correctness, then the selected controlled comparison.
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $workspace=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -15,6 +15,9 @@ $functional=@(
 )
 $conditions=@($functional[0],$functional[2],$functional[3])
 $expectedMethods=10;$testSelectors=$classes
+if($RegionalSingleWorker -and $PublicationFence){throw 'Choose exactly one affected-test profile'}
+if($ReusePublicationTestRoot -and (-not $PublicationFence -or $ResumeNeoOriginalRoot)){throw 'Test-only reuse requires fresh publication-fence runtimes'}
+if($ReuseBuildRoot -and (-not $ReusePublicationTestRoot -or -not $PublicationFence)){throw 'Build reuse requires exact publication-test reuse and fresh runtimes'}
 if($RegionalSingleWorker){
     if($ResumeNeoOriginalRoot){throw 'One-worker profile requires fresh affected evidence'}
     $classes=@('io.github.genichimaruo.worldgenassist.server.FeatureStage263Test')
@@ -24,8 +27,17 @@ if($RegionalSingleWorker){
     $functional=@(@{name='original';mode='vanilla';backend='off'},@{name='assisted';mode='assisted';backend='guarded'})
     $conditions=@(@{name='parallel';mode='assisted';backend='parallel'},@{name='guarded';mode='assisted';backend='guarded'})
 }
+if($PublicationFence){
+    if($ResumeNeoOriginalRoot){throw 'Publication hook requires fresh affected evidence'}
+    $classes=@('io.github.genichimaruo.worldgenassist.server.FeatureStage263Test')
+    $featureClass=$classes[0]
+    $testSelectors=@("${featureClass}.originalStageCompletionRunsBeforeAConflictingBodyCanObserveStatus","${featureClass}.cancelledObserverKeepsOwnershipAndFailureDoesNotRetryOrExceedCapacity")
+    $expectedMethods=2
+    $functional=@(@{name='original';mode='vanilla';backend='off'},@{name='assisted';mode='assisted';backend='parallel'})
+    $conditions=@(@{name='off';mode='assisted';backend='off'},@{name='parallel';mode='assisted';backend='parallel'})
+}
 if(-not $Execute){
-    [ordered]@{tests=$testSelectors;expected_methods=$expectedMethods;builds=@('fabric','forge','neoforge');physical_correctness=$functional;feature_fixture='Participants precede demand, frozen ticks,1682 original terrains before recorded/replayed1458 features before1458 light initializations, all1250 snapshots before original SPAWN; unchanged882 compared. Controlled phases, not ordinary mixed-stage coverage';native_correctness='Same phased recorded/replayed two-owner original/assisted pair per native loader, view4 functional only. Neo monster-room list order fixed only inside scoped feature body, original weights/random selector preserved';performance=$conditions;view_distance=32;warmups=1;repeats=3;remote_host='gen1c@100.103.102.109';remote_root='E:/WorldgenAssist/port26.3';cpu_limits=0;sequence='All implementation before one sequential batch; correctness failure prevents performance'}|ConvertTo-Json -Depth 6
+    [ordered]@{tests=$testSelectors;expected_methods=$expectedMethods;fresh_method_count=$(if($ReusePublicationTestRoot){0}else{$expectedMethods});reused_publication_tests=$ReusePublicationTestRoot;builds=@('fabric','forge','neoforge');physical_correctness=$functional;feature_fixture='Participants precede demand, original flying abilities, frozen ticks,1682 original terrains before recorded/replayed1458 features before1458 light initializations, all1250 snapshots before original SPAWN; unchanged882 compared; both player positions/fullhealth/flying checked. Controlled phases, not ordinary mixed-stage coverage';native_correctness='Fresh same phased pair per loader,view4 functional only; publication-fence profile explicit server2/client4 workers. Original Neo weights preserved';performance=$conditions;view_distance=32;warmups=1;repeats=3;remote_host='gen1c@100.103.102.109';remote_root='E:/WorldgenAssist/port26.3';cpu_limits=0;sequence='All implementation before one sequential batch; correctness failure prevents performance'}|ConvertTo-Json -Depth 6
     exit 0
 }
 New-Item -ItemType Directory -Force -Path $base|Out-Null
@@ -36,7 +48,7 @@ $savedJava=$env:JAVA_HOME;$savedPath=$env:Path
 $env:JAVA_HOME='C:\Program Files\Java\jdk-25.0.4';$env:Path="$env:JAVA_HOME\bin;$env:Path"
 $steps=[Collections.Generic.List[object]]::new();$issues=[Collections.Generic.List[string]]::new()
 $savedMods=[Collections.Generic.List[object]]::new();$deployed=[Collections.Generic.List[string]]::new()
-$artifacts=@();$junit=$null;$before=$null;$lock=$null;$performance=@();$use=@();$resume=$null
+$artifacts=@();$junit=$null;$before=$null;$lock=$null;$performance=@();$use=@();$resume=$null;$buildReuse=$null
 . (Join-Path $PSScriptRoot 'FeatureIntervalEvidence.ps1')
 . (Join-Path $PSScriptRoot 'FeatureFixtureEvidence.ps1')
 function Evidence-Child([string]$Path){
@@ -100,6 +112,7 @@ function Check-Physical([string]$Case,[object]$Condition,[bool]$Digest){
 function Check-Assistance([string]$Case,[bool]$Native){
     $logRoot=if($Native){$Case}else{Join-Path $Case 'remote-evidence'}
     $log=Get-Content -LiteralPath (Join-Path $logRoot 'latest.log') -Raw
+    if($PublicationFence){Assert-FeatureFixturePlayers $log}
     if($log -notmatch 'job.full_terrain_accepted .*audited=true' -or $log -notmatch 'job.full_terrain_accepted .*audited=false' -or $log -match 'job.full_terrain_apply_rejected|peer_terrain_mismatch|worker.quarantine|Independent whole-terrain audit mismatch|Independent peer whole-terrain mismatch'){throw 'Actual complete terrain audits/acceptance missing or rejected'}
     $required=@{};foreach($chunk in @(Get-Content -LiteralPath (Join-Path $logRoot 'decoration-required-chunks.json') -Raw|ConvertFrom-Json)){$required[$chunk]=$true}
     $sent=@{};foreach($entry in [regex]::Matches($log,'job.sent id=(\S+) chunk=(?<chunk>-?\d+,-?\d+) .*owner=(?<owner>\S+)')){$sent[$entry.Groups[1].Value]=@{chunk=$entry.Groups['chunk'].Value;owner=$entry.Groups['owner'].Value}}
@@ -133,6 +146,24 @@ try{
         if($errors.Count){throw "$script syntax: $(($errors.Message)-join '; ')"}
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $script) -Destination $root
     }
+    if($ReuseBuildRoot){
+        $ReuseBuildRoot=Evidence-Child (Resolve-Path -LiteralPath $ReuseBuildRoot).Path
+        $buildReuse=Get-Content -LiteralPath (Join-Path $ReuseBuildRoot 'summary.json') -Raw|ConvertFrom-Json
+        if($buildReuse.success -or -not $buildReuse.publication_fence -or $buildReuse.issues.Count -ne 1 -or $buildReuse.issues[0] -ne 'System.Management.Automation.RuntimeException: Step failed: correctness-original (see retained logs)' -or $buildReuse.performance.Count){throw 'Build reuse restricted to closed player-check timing failure'}
+        $savedProduction=@{}
+        foreach($line in Get-Content -LiteralPath (Join-Path $ReuseBuildRoot 'source-manifest-before.sha256')){
+            if($line -match '^([A-F0-9]{64})  (src/.+|loaders/(?:forge|neoforge)/src/.+|gradle\.properties|build\.gradle|settings\.gradle|loaders/(?:forge|neoforge)/build\.gradle)$'){$savedProduction[$Matches[2]]=$Matches[1]}
+        }
+        $currentProduction=@();foreach($dir in @('src','loaders/forge/src','loaders/neoforge/src')){$currentProduction+=Get-ChildItem -LiteralPath (Join-Path $workspace $dir) -Recurse -File}
+        foreach($file in @('gradle.properties','build.gradle','settings.gradle','loaders/forge/build.gradle','loaders/neoforge/build.gradle')){$currentProduction+=Get-Item -LiteralPath (Join-Path $workspace $file)}
+        if($savedProduction.Count -ne $currentProduction.Count){throw 'Reused build source inventory differs'}
+        foreach($file in $currentProduction){$relative=$file.FullName.Substring($workspace.Length+1).Replace('\','/');if($savedProduction[$relative] -ne (Get-FileHash -LiteralPath $file.FullName).Hash){throw "Reused build production input changed: $relative"}}
+        foreach($name in @('fabric-build','forge-build','neoforge-build')){
+            $builtStep=@($buildReuse.steps|Where-Object name -eq $name)
+            if($builtStep.Count -ne 1 -or -not $builtStep[0].success -or $builtStep[0].exit_code -ne 0 -or $builtStep[0].timed_out){throw 'Completed build proof missing'}
+            $steps.Add([ordered]@{name=$name;success=$true;exit_code=0;timed_out=$false;reused_from=$ReuseBuildRoot})
+        }
+    }
     if($ResumeNeoOriginalRoot){
         if($LocalOnly){throw 'Native resume cannot be local-only'}
         $ResumeNeoOriginalRoot=Evidence-Child (Resolve-Path -LiteralPath $ResumeNeoOriginalRoot).Path
@@ -157,6 +188,22 @@ try{
         }
         Write-Host "FEATURE_PIPELINE_REUSE root=$ResumeNeoOriginalRoot identity=unchanged_except_coordinator"
     }else{
+    if($ReusePublicationTestRoot){
+        $reusedRoot=Evidence-Child (Resolve-Path -LiteralPath $ReusePublicationTestRoot).Path
+        $prior=Get-Content -LiteralPath (Join-Path $reusedRoot 'summary.json') -Raw|ConvertFrom-Json
+        if($prior.success -or -not $prior.publication_fence -or $prior.issues.Count -ne 1 -or $prior.issues[0] -ne 'System.Management.Automation.RuntimeException: Both owners and actual shared-region shaping were not exercised' -or $prior.junit.tests -ne 2 -or $prior.junit.failures -or $prior.junit.errors -or $prior.junit.skipped){throw 'Expected closed dev21 publication tests/shaping coverage failure'}
+        $oldHashes=@{}
+        foreach($line in Get-Content -LiteralPath (Join-Path $reusedRoot 'source-manifest-before.sha256')){if($line -match '^([A-F0-9]{64})  (.+)$'){$oldHashes[$Matches[2]]=$Matches[1]}}
+        $unchanged=@('src/main/java/io/github/genichimaruo/worldgenassist/server/FeatureStagePublication.java','src/main/java/io/github/genichimaruo/worldgenassist/server/FeatureStageQueue.java','src/main/java/io/github/genichimaruo/worldgenassist/server/FeatureStageDispatcher.java','src/main/java/io/github/genichimaruo/worldgenassist/server/FeatureStageConfig.java','src/main/java/io/github/genichimaruo/worldgenassist/server/FeatureMessagePump.java','src/main/java/io/github/genichimaruo/worldgenassist/mixin/ChunkStepPublicationMixin263.java','src/main/resources/worldgen_assist.mixins.json','loaders/forge/src/main/resources/worldgen_assist.mixins.json','src/portTest/java/io/github/genichimaruo/worldgenassist/server/FeatureStage263Test.java','build.gradle','settings.gradle')
+        foreach($relative in $unchanged){if($oldHashes[$relative] -ne (Get-FileHash -LiteralPath (Join-Path $workspace $relative)).Hash){throw "Publication test input changed: $relative"}}
+        $testFile="TEST-$($classes[0]).xml"
+        [xml]$oldXml=Get-Content -LiteralPath (Join-Path $reusedRoot $testFile)
+        $names=@($testSelectors|ForEach-Object {($_ -split '\.')[-1]+'()'}|Sort-Object)
+        if([int]$oldXml.testsuite.tests -ne 2 -or [int]$oldXml.testsuite.failures -or [int]$oldXml.testsuite.errors -or [int]$oldXml.testsuite.skipped -or (@($oldXml.testsuite.testcase.name|Sort-Object)-join ',') -ne ($names-join ',')){throw 'Exact selected publication method XML mismatch'}
+        Copy-Item -LiteralPath (Join-Path $reusedRoot $testFile) -Destination $root
+        $junit=[ordered]@{tests=2;failures=0;errors=0;skipped=0;fresh_tests=0;reused_from=$reusedRoot;unchanged_inputs=$unchanged}
+        if(-not $buildReuse){Step 'fabric-build' "$env:SystemRoot\System32\cmd.exe" @('/d','/c',(Join-Path $workspace 'gradlew.bat'),'build','-x','test','--no-daemon')}
+    }else{
     $args=@('/d','/c',(Join-Path $workspace 'gradlew.bat'),'test','--no-daemon')
     foreach($selector in $testSelectors){$args+=@('--tests',$selector)}
     Step 'affected-unit-fabric-build' "$env:SystemRoot\System32\cmd.exe" ($args+@('build'))
@@ -167,11 +214,16 @@ try{
         foreach($key in @('tests','failures','errors','skipped')){$junit[$key]+=[int]$xml.testsuite.GetAttribute($key)}
     }
     if($junit.tests -ne $expectedMethods -or $junit.failures -or $junit.errors -or $junit.skipped){throw 'Affected selected-method evidence incomplete'}
-    foreach($loader in @('forge','neoforge')){Step "$loader-build" "$env:SystemRoot\System32\cmd.exe" @('/d','/c',(Join-Path $workspace 'gradlew.bat'),'-p',(Join-Path $workspace "loaders/$loader"),'build','-x','test','--no-daemon')}
+    }
+    if(-not $buildReuse){foreach($loader in @('forge','neoforge')){Step "$loader-build" "$env:SystemRoot\System32\cmd.exe" @('/d','/c',(Join-Path $workspace 'gradlew.bat'),'-p',(Join-Path $workspace "loaders/$loader"),'build','-x','test','--no-daemon')}}
     }
     if($junit.tests -ne $expectedMethods -or $junit.failures -or $junit.errors -or $junit.skipped){throw 'Affected selected-method evidence incomplete'}
     foreach($loader in @('fabric','forge','neoforge')){
         $artifact=& (Join-Path $PSScriptRoot 'Get-WorldgenArtifact.ps1') -Loader $loader
+        if($buildReuse){
+            $oldArtifact=@($buildReuse.artifacts|Where-Object loader -eq $loader)
+            if($oldArtifact.Count -ne 1 -or $oldArtifact[0].version -ne $artifact.Version -or $oldArtifact[0].sha256 -ne (Get-FileHash -LiteralPath $artifact.Path).Hash -or $oldArtifact[0].sha256 -ne (Get-FileHash -LiteralPath (Join-Path $ReuseBuildRoot $artifact.FileName)).Hash){throw 'Reused JAR exact identity mismatch'}
+        }
         if($resume){
             $prior=@($resume.artifacts|Where-Object loader -eq $loader)
             if($prior.Count -ne 1 -or $prior[0].version -ne $artifact.Version -or $prior[0].sha256 -ne (Get-FileHash -LiteralPath $artifact.Path).Hash -or $prior[0].sha256 -ne (Get-FileHash -LiteralPath (Join-Path $ResumeNeoOriginalRoot ([IO.Path]::GetFileName($artifact.Path)))).Hash){throw 'Original artifact identity mismatch'}
@@ -232,10 +284,13 @@ try{
             foreach($condition in @($functional|Where-Object {$_.name -in @('original','assisted')})){
                 $case=if($resume -and $condition.name -eq 'original'){Join-Path $ResumeNeoOriginalRoot "native/$loader/original"}else{Join-Path $root "native/$loader/$($condition.name)"}
                 $fixtureArgs=@('-FeatureFixture')
+                if($PublicationFence){$fixtureArgs+=@('-ServerActiveProcessorCount','2','-ClientWorkerThreads','4')}
                 if($condition.name -ne 'original'){$fixtureArgs+=@('-FeatureReplayFile',(Join-Path $root "native/$loader/feature-replay.json"))}
                 if(-not ($resume -and $condition.name -eq 'original')){Script-Step "$loader-$($condition.name)" 'Run-InstalledNativeLoaderScenario.ps1' (@('-Loader',$loader,'-Mode',$condition.mode,'-Players','2','-InstalledRoot',$installed,'-AssetsRoot',$assets,'-OutputRoot',$case,'-CompleteTerrain','-CompleteVerification','peer','-RemoteApplicationProfile','overlap','-StructuralShaping','-FeatureBackend',$condition.backend,'-DecorationDigest')+$fixtureArgs)}
                 $native=Get-Content -LiteralPath (Join-Path $case 'result.json') -Raw|ConvertFrom-Json
                 if(-not $native.success -or -not $native.cleanup_safe -or -not $native.loopback_only -or $native.mod_sha256 -ne $built.sha256 -or $native.feature_backend -ne $condition.backend -or -not $native.complete_terrain -or -not $native.structural_shaping -or $native.complete_verification -ne 'peer'){throw 'Native artifact/profile mismatch'}
+                if($PublicationFence -and ($native.server_active_processor_count -ne 2 -or $native.client_worker_threads -ne 4)){throw 'Native functional CPU/worker settings differ'}
+                if($PublicationFence){Assert-FeatureFixturePlayers (Get-Content -LiteralPath (Join-Path $case 'latest.log') -Raw)}
                 if($loader -eq 'neoforge'){
                     $nativeLog=Get-Content -LiteralPath (Join-Path $case 'latest.log') -Raw
                     if($nativeLog -notmatch 'fixture.monster_room_order entries=\[minecraft:skeleton:100, minecraft:spider:100, minecraft:zombie:200\] weights_preserved=true scoped_feature_only=true'){throw 'Actual scoped Neo monster-room order/weights missing'}
@@ -253,7 +308,7 @@ try{
         }
         foreach($condition in $conditions){
             $case=Join-Path $root ('performance/'+$condition.name)
-            $recordingArgs=if($RegionalSingleWorker){@('-ServerFlightRecording')}else{@()}
+            $recordingArgs=if($RegionalSingleWorker -or $PublicationFence){@('-ServerFlightRecording')}else{@()}
             Script-Step ('performance-'+$condition.name) 'Run-WorldgenScenario.ps1' ($common+@('-Mode',$condition.mode,'-Purpose','performance','-Prediction','true','-FeatureBackend',$condition.backend,'-OutputRoot',$case,'-ViewDistance','32','-MeasureFullView','-QuietRemoteTrace','-WarmupRuns','1','-MeasuredRepeats','3')+$recordingArgs) 4200
             $result=Check-Physical $case $condition $false
             if($result.performance.warmup_runs -ne 1 -or $result.performance.measured_repeats -ne 3){throw 'Performance repetition profile differs'}
@@ -269,7 +324,7 @@ try{
             }
             $performance+=[ordered]@{condition=$condition.name;mode=$condition.mode;feature_backend=$condition.backend;result=(Join-Path $case 'scenario-result.json');repeats=$repeats}
         }
-        $pairs=if($RegionalSingleWorker){@(@{name='one-worker';baseline='parallel';candidate='guarded'})}else{@(@{name='scheduler';baseline='original';candidate='parallel'},@{name='client';baseline='parallel';candidate='assisted'},@{name='combined';baseline='original';candidate='assisted'})}
+        $pairs=if($RegionalSingleWorker){@(@{name='one-worker';baseline='parallel';candidate='guarded'})}elseif($PublicationFence){@(@{name='publication-scheduler';baseline='off';candidate='parallel'})}else{@(@{name='scheduler';baseline='original';candidate='parallel'},@{name='client';baseline='parallel';candidate='assisted'},@{name='combined';baseline='original';candidate='assisted'})}
         foreach($comparison in $pairs){
             $compareRoot=Join-Path $root ('performance/compare-'+$comparison.name);New-Item -ItemType Directory -Path $compareRoot|Out-Null
             $plan=@($conditions|Where-Object {$_.name -in @($comparison.baseline,$comparison.candidate)}|ForEach-Object {@{id=$_.name;purpose='performance';dimension='overworld';mode=$_.mode;feature_backend=$_.backend;players=2;cache_entries=128;prediction=$true;validation_cells=8}})
@@ -286,7 +341,7 @@ finally{
     if($before){try{$after=Manifest;[IO.File]::WriteAllLines((Join-Path $root 'source-manifest-after.sha256'),$after);if(($before-join "`n") -cne ($after-join "`n")){$issues.Add('Source/harness changed during batch')}}catch{$issues.Add("Final manifest: $_")}}
     if($lock){$lock.Dispose()}
     $env:JAVA_HOME=$savedJava;$env:Path=$savedPath
-    $summary=[ordered]@{schema='worldgen-assist.feature-pipeline-gate.v1';success=($issues.Count -eq 0);root=$root;reuse_parent=$ResumeNeoOriginalRoot;regional_single_worker=[bool]$RegionalSingleWorker;local_only=[bool]$LocalOnly;junit=$junit;artifacts=$artifacts;steps=@($steps);assistance_use=$use;performance=$performance;issues=@($issues);beta_claim=$false;scope='Focused experimental stock Overworld scheduler; targeted pre-SPAWN decoration, saved structures and light; regional-single-worker profile has only2 affected methods and2 assisted performance conditions. Not general mod compatibility or final gameplay-state proof'}
+    $summary=[ordered]@{schema='worldgen-assist.feature-pipeline-gate.v1';success=($issues.Count -eq 0);root=$root;reuse_parent=$ResumeNeoOriginalRoot;regional_single_worker=[bool]$RegionalSingleWorker;publication_fence=[bool]$PublicationFence;local_only=[bool]$LocalOnly;junit=$junit;artifacts=$artifacts;steps=@($steps);assistance_use=$use;performance=$performance;issues=@($issues);beta_claim=$false;scope='Focused experimental stock Overworld scheduler; targeted pre-SPAWN decoration, saved structures and light; regional-single-worker and publication-fence profiles each have only2 affected methods and2 assisted performance conditions. Not general mod compatibility or final gameplay-state proof'}
     $summary|ConvertTo-Json -Depth 12|Set-Content -LiteralPath (Join-Path $root 'summary.json') -Encoding utf8
     Write-Output "FEATURE_PIPELINE_GATE success=$($summary.success) summary=$(Join-Path $root 'summary.json')"
 }

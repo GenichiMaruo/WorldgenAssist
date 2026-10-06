@@ -1,5 +1,72 @@
 # Repository agent instructions
 
+## Dev22 runtime followup closed: player correction passes; overall gate fails
+
+Batch184431-462/session12222 exits1. Exact unchanged2 publication methods and
+3 completed22 build artifacts were identity-checked/reused;0freshJUnit/builds.
+Fresh physical/Forge/Neo original+parallel-assisted fixtures pass ALL882 each
+NOISE/decoration/savedstructures/savedlight comparisons. Actual applications/
+distinct-peer/nonempty-shaping:physical637/440/2,Forge448/268/14,Neo428/230/6;
+both owners exercised. Every fixture's two actual post-fullphase players log
+xyzY150/health20/alive/flying. Read-only stopped native gzip NBT separately
+confirms ALL8 saved players Y150/health20/DeathTime0/flying1; hashes retained in
+test-artifacts/feature-pipeline-gate-20261006-184431-462/saved-player-safety.json.
+This resolves the observed fixture fall in these cases,not ordinary gameplay
+or every void-fall mechanism. Source still unchanged after22builds.
+
+Both same22JAR remoteON performance conditions finish/cleanstop,weakE/view32/
+warm1/3same repeats/JFR. Parent correctly FAILS on one parallel prewrite
+job.full_terrain_apply_rejected:authoritative3x3 biome-window differs,job
+56864f6f-44e6-4008-aeab-cca3ec21050b,chunk-2013,3043 at19:12:36.
+The rejection occurs before section writes;original fallback remains.
+No speed/beta/full-safety pass claimed,do not waive/normalize the digest.
+Exact historical partial21/shaping0 and first22premature-player-check failures
+remain below. Next diagnose retained mismatch evidence before new performance
+claims;goal active/publicalpha7 unchanged.
+
+
+## Dev22 corrected player-check timing; followup UNRUN
+
+First22batch183616-904/session40122 builds3pass,reuses exact2tests;physical
+original stops because new playercheck was before fullphase (quiet NOISE prefix
+only). Remote harness now calls after Complete-CorrectnessRegion. Production22
+unchanged. NextONE -PublicationFence -ReusePublicationTestRoot181055-178
+-ReuseBuildRoot183616-904:exact allproduction inventory/hash+3current/retained
+JAR+completedbuild-step proofs;0fresh builds/JUnit. Freshall3loader strict882+
+playerchecks(native2server/4client/view4),then same22JAR off/parallel weakE/view32.
+No failed original/player proof reuse;ALLfollowup UNRUN. See fall diagnosis.
+
+## Dev22 fixture flight/player safety (new verification UNRUN)
+
+Dev21batch181055-178 exits1 afterForge nonempty shaping0 guard;2affectedmethods/
+3builds/physical andForge strict882 parity pass,Neo/performance NOTRUN. User
+observed fall confirmed in BOTH original andassisted playerNBT deeplynegativeY/
+damage/positiveHealth/DeathTime0;no death proved. Source suggests server-only
+fixturepause leaves clientphysics falling,then accepts positionafterbarrier.
+Dev22 sends original flyingabilities/zero motion beforeteleport and console-only
+afterfixture checks both xyzY150/alive/fullhealth/flying. No healing/ordinary
+physics/terrain/authority change. See FIXTURE_PLAYER_FALL_DIAGNOSIS.md.
+All edits before ONE -PublicationFence -ReusePublicationTestRoot closed21root:
+reuseONLYexact unchanged2publication-method XML/input hashes;0freshJUnit,
+3fresh22builds,physical/bothnative fresh882pairs+playerproof;nativeexplicit
+2server/4client workers/view4 functionalonly;then same22JAR assistedoff/parallel
+weakE/view32/warm1/3repeats/JFR. ALLnewverification UNRUN;do notwaive shaping,
+reuse fallingplayer success,or rerun unrelated methods. Goalactive/no beta.
+
+## Dev.21 original applied-stage publication (verification UNRUN)
+
+See STAGE_PUBLICATION_GUARD.md. Shared small ChunkStep.apply wrapper verified
+against primary26.2 and exactFabric/Forge/Neo26.3. NonOFF stock Overworld only
+FEATURES/INITIALIZE_LIGHT capture identity-bound local publication in immutable
+footprint (survives replay). Publish BODY immediately,retain R8/point/capacity
+until full ORIGINAL applied future;CPU permits nonblocking. Original status/
+profiler unchanged,observercopy protects callback from cancellation,nested/error
+scopes restore;body/apply/callback failures drain without retry. Defaults/protocol
+13/native4/remote guards unchanged. ALL edits before ONE -PublicationFence gate:
+exact2affected existingmethods,3freshbuilds,physical/bothnative strict882 original/
+parallel-assisted pairs,then SAMEnewJAR remoteON BOTH FEATURESoff/parallel2 weakE/
+view32/warm1/3repeats/JFR. No broad unaffected tests. Allverification UNRUN.
+
 ## Dev.20 batch171927-610 complete; one worker rejected for speed
 
 Session42610 exits0,2affected existing methods/3builds,physical and BOTH native

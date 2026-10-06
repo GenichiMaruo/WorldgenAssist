@@ -5,6 +5,7 @@
 	"mixins": [
 		"ChunkAccessRemoteDensityMixin",
 		"ChunkStatusTasksMixin",
+		"ChunkStepPublicationMixin263",
 		"ChunkMapFeatureSchedulerMixin263",
 		"CommandsFeatureFixtureMixin263",
 		"ServerPlayerFeatureFixtureMixin263",

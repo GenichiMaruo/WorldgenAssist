@@ -50,6 +50,31 @@ public final class FeatureFixture263 {
 		dispatcher.register(Commands.literal("worldgenassist_feature_fixture_start")
 			.requires(source -> source.getEntity() == null && Commands.hasPermission(Commands.LEVEL_OWNERS).test(source))
 			.executes(command -> arm(command.getSource().getServer())));
+		dispatcher.register(Commands.literal("worldgenassist_feature_fixture_players")
+			.requires(source -> source.getEntity() == null && Commands.hasPermission(Commands.LEVEL_OWNERS).test(source))
+			.executes(command -> checkPlayers(command.getSource().getServer())));
+	}
+	private static int checkPlayers(MinecraftServer server) {
+		var level = server.overworld();
+		synchronized (FeatureFixture263.class) {
+			var state = STATES.get(level);
+			if (!ENABLED || state == null || state.awaitingSpawnCompletion())
+				throw new IllegalStateException("completed feature fixture required for player safety check");
+		}
+		var players = server.getPlayerList().getPlayers();
+		if (players.size() != 2) throw new IllegalStateException("exact two fixture players required");
+		for (var player : players) {
+			String name = player.getScoreboardName();
+			int sign = name.equals("ScenarioOwnerA") || name.equals("NativeA") ? 1
+				: name.equals("ScenarioOwnerB") || name.equals("NativeB") ? -1 : 0;
+			if (sign == 0 || player.level() != level || Math.abs(player.getX() - sign * 16000.0) > 1.0
+				|| Math.abs(player.getZ() + sign * 32000.0) > 1.0 || Math.abs(player.getY() - 150.0) > 1.0
+				|| !player.isAlive() || player.getHealth() != player.getMaxHealth() || !player.getAbilities().flying)
+				throw new IllegalStateException("unsafe fixture player " + name + " y=" + player.getY() + " health=" + player.getHealth());
+			WorldgenAssist.LOGGER.info("[CAWG] fixture.player_safe owner={} x={} y={} z={} health={} alive=true flying=true complete=true",
+				name, player.getX(), player.getY(), player.getZ(), player.getHealth());
+		}
+		return players.size();
 	}
 	private static int arm(MinecraftServer server) {
 		try {
@@ -98,6 +123,12 @@ public final class FeatureFixture263 {
 			for (int index=0;index<2;index++) {
 				var player = players.get(index); int sign = index == 0 ? 1 : -1;
 				player.setGameMode(GameType.CREATIVE);
+				// Tick freeze excludes client player physics. Send original flying abilities too,
+				// otherwise the client falls through unloaded terrain while server motion is paused,
+				// then its accumulated negative Y is accepted when the fixture resumes players.
+				player.getAbilities().flying = true;
+				player.setDeltaMovement(0.0, 0.0, 0.0);
+				player.onUpdateAbilities();
 				if (!player.teleportTo(level,sign*16000.0,150.0,sign*-32000.0,Set.of(),player.getYRot(),player.getXRot(),true)
 					|| player.chunkPosition().x() != sign*1000 || player.chunkPosition().z() != sign*-2000 || player.isSpectator())
 					throw new IllegalStateException("fixture participant placement failed");

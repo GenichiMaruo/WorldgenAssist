@@ -13,6 +13,7 @@ param(
     [switch]$RemoteBiomes,
     [switch]$BiomeDigest,
     [ValidateRange(0,32)][int]$ServerActiveProcessorCount=0,
+    [ValidateRange(0,8)][int]$ClientWorkerThreads=0,
     [ValidateRange(2,10)][int]$ViewDistance=4,
     [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='ready',
     [switch]$StructuralShaping,
@@ -24,6 +25,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$effectiveClientWorkers=if($ClientWorkerThreads){$ClientWorkerThreads}elseif($BiomeDigest){4}else{2}
 if($CompleteTerrain){$TerrainDecisions=[switch]$true}
 if($DecorationDigest -and -not $CompleteTerrain){throw 'Decoration comparison requires the bounded complete-terrain region fixture'}
 if(($StructuralShaping -or $CompleteVerification -eq 'peer' -or $RemoteApplicationProfile -eq 'overlap') -and -not $CompleteTerrain){throw 'Shaping/peer/overlap native profiles require complete terrain'}
@@ -221,8 +223,10 @@ try {
             $optionLines=@(Get-Content -LiteralPath $optionPath|Where-Object {$_ -notmatch '^(renderDistance|graphicsPreset):'})
             $optionLines+=@("renderDistance:$ViewDistance",'graphicsPreset:"custom"')
             $optionLines|Set-Content -LiteralPath $optionPath -Encoding utf8
+        }
+        if($ClientWorkerThreads -or $BiomeDigest){
             $argumentPath=$launch.Arguments[0].Substring(1)
-            @('-Dworldgen_assist.client.worker_threads=4')+@(Get-Content -LiteralPath $argumentPath)|Set-Content -LiteralPath $argumentPath
+            @("-Dworldgen_assist.client.worker_threads=$effectiveClientWorkers")+@(Get-Content -LiteralPath $argumentPath)|Set-Content -LiteralPath $argumentPath
         }
         $clientEnvironment = @{WORLDGEN_ASSIST_REMOTE=if($Mode -eq 'assisted'){'true'}else{'false'}}
         if ($TerrainDecisions) { $clientEnvironment.WORLDGEN_ASSIST_CLIENT_JOB_WINDOW = '16' }
@@ -275,7 +279,11 @@ try {
         }
         if ($required.Count) { throw "Native comparison region missing $($required.Count) terrain digests" }
         if ($decorationRemaining.Count) { throw "Native comparison region missing $($decorationRemaining.Count) final-decoration digests" }
-        if($FeatureFixture){Wait-Log $serverLog 'fixture.complete ' 120 $server $server.StartTime.ToUniversalTime()}
+        if($FeatureFixture){
+            Wait-Log $serverLog 'fixture.complete ' 120 $server $server.StartTime.ToUniversalTime()
+            Send-ServerCommand 'worldgenassist_feature_fixture_players'
+            foreach($name in $ownerNames){Wait-Log $serverLog ('fixture.player_safe owner='+[regex]::Escape($name)+' .*alive=true flying=true complete=true') 15 $server $server.StartTime.ToUniversalTime()}
+        }
     } elseif ($Mode -eq 'assisted') {
         $owners = @($ownerIds | Select-Object -First $Players)
         if ($owners.Count -ne $Players) { throw 'Not all distinct owners registered' }
@@ -360,7 +368,7 @@ finally {
     $result = [ordered]@{schema='worldgen-assist.installed-native-scenario.v1';loader=$Loader;mode=$Mode;players=$Players;world=$world;success=$success;cleanup_safe=$cleanupSafe;loopback_only=$true;failure=$failure;mod_sha256=$modHash;terrain_decisions=[bool]$TerrainDecisions;complete_terrain=[bool]$CompleteTerrain;complete_verification=$CompleteVerification;remote_application_profile=$RemoteApplicationProfile;structural_shaping=[bool]$StructuralShaping;remote_biomes=[bool]$RemoteBiomes;biome_digest=[bool]$BiomeDigest;view_distance=4;validation_cells=8}
     $result.server_active_processor_count=$ServerActiveProcessorCount
     $result.view_distance=$ViewDistance
-    $result.client_worker_threads=if($BiomeDigest){4}else{2}
+    $result.client_worker_threads=$effectiveClientWorkers
     $result.feature_backend=$FeatureBackend
     $result.decoration_digest=[bool]$DecorationDigest
     $result.feature_fixture=[bool]$FeatureFixture

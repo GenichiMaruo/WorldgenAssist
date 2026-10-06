@@ -1,5 +1,63 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## Dev22 runtime followup closed: player correction passes; overall gate fails
+
+Batch184431-462/session12222 exits1. Exact unchanged2 publication methods and
+3 completed22 build artifacts were identity-checked/reused;0freshJUnit/builds.
+Fresh physical/Forge/Neo original+parallel-assisted fixtures pass ALL882 each
+NOISE/decoration/savedstructures/savedlight comparisons. Actual applications/
+distinct-peer/nonempty-shaping:physical637/440/2,Forge448/268/14,Neo428/230/6;
+both owners exercised. Every fixture's two actual post-fullphase players log
+xyzY150/health20/alive/flying. Read-only stopped native gzip NBT separately
+confirms ALL8 saved players Y150/health20/DeathTime0/flying1; hashes retained in
+test-artifacts/feature-pipeline-gate-20261006-184431-462/saved-player-safety.json.
+This resolves the observed fixture fall in these cases,not ordinary gameplay
+or every void-fall mechanism. Source still unchanged after22builds.
+
+Both same22JAR remoteON performance conditions finish/cleanstop,weakE/view32/
+warm1/3same repeats/JFR. Parent correctly FAILS on one parallel prewrite
+job.full_terrain_apply_rejected:authoritative3x3 biome-window differs,job
+56864f6f-44e6-4008-aeab-cca3ec21050b,chunk-2013,3043 at19:12:36.
+The rejection occurs before section writes;original fallback remains.
+No speed/beta/full-safety pass claimed,do not waive/normalize the digest.
+Exact historical partial21/shaping0 and first22premature-player-check failures
+remain below. Next diagnose retained mismatch evidence before new performance
+claims;goal active/publicalpha7 unchanged.
+
+
+## Dev22 first attempt stopped; runtime followup UNRUN
+
+183616-904/session40122:3freshbuilds pass,2unchanged21methods exactreuse,
+0freshJUnit. Physicaloriginal safetycommand BEFOREfullphase refuses,remaining
+cases/performanceNOTRUN. Only remoteharness timing moved after fullfixture.
+Next exact ALLproduction/JAR/buildproof reuse (0fresh builds/JUnit),freshall3
+loader strict882/playerchecks,then same22JAR assistedoff/parallel weakE/view32.
+No new flight/speed/beta proof yet;fall diagnosis preservesbothfailedattempts.
+
+## Dev21 stopped; dev22 player correction verification UNRUN
+
+181055-178/session55467 exits1:Forge actualshaping0 guard.2affectedmethods pass,
+3builds/physical andForge ALL882 four-stage comparisons pass;Neo/performance
+NOTRUN. Userobserved fall confirmed in BOTH original/assisted player saves,
+negativeY/damage butpositiveHealth/DeathTime0/no deathstatistic. Dev22 onlyfixture
+flightabilities/zero motion and completedtwo-player xyzY150/fullhealth/flying
+check;no ordinaryphysics/terrain/authority change. Next ONE gate reuses ONLY
+2unchanged publicationtest XML/inputs (0freshJUnit),3fresh22builds/fresh3loader
+strict882+player checks/native2server4client workers/view4 functional;then same22
+JAR assistedoff/parallel weakE/view32/warm1/3repeats/JFR. ALL newverification UNRUN.
+See FIXTURE_PLAYER_FALL_DIAGNOSIS.md;oldfailure retained/no beta/release claim.
+
+## Dev.21 original applied-stage guard (verification UNRUN)
+
+New verified shared ChunkStep.apply hook retains original status/profiler plus
+immutable local publication token through late callback installation/replay.
+Ownership waits for body AND full applied future;CPU remains nonblocking.
+Protocol13/native4/defaults unchanged. All edits BEFORE ONE -PublicationFence
+gate:exact2affected methods/3builds/physical and BOTH native strict882 freshpairs/
+SAME-JAR remoteON BOTH FEATURESoff/parallel weakE/view32/warm1/3repeats/JFR.
+See STAGE_PUBLICATION_GUARD.md;ALLverification UNRUN. Safety prerequisite,unknown
+speed impact;historical saved-light20 fail retained;no beta/release/default claim.
+
 ## Dev.20 complete171927-610: no waiting-time improvement
 
 ONE session42610 exits0/issues[].Exactly2affected methods (0fail/errors/skips),
