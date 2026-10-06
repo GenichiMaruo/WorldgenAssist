@@ -28,6 +28,7 @@ param(
     [ValidateSet('server','peer')][string]$CompleteVerification='server',
     [ValidateSet('inline','decoder')][string]$SectionPreparation='inline',
     [ValidateSet('off','ready')][string]$RemoteBiomes='off',
+    [ValidateSet('off','demand')][string]$AuthoritativeBiomes='off',
     [switch]$BiomeDigest,
     [ValidateSet('off','serial','guarded','parallel')][string]$FeatureBackend='off',
     [switch]$DecorationDigest,
@@ -429,6 +430,8 @@ try {
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_COMPLETE_VERIFICATION'] = $CompleteVerification
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREPARE_SECTIONS'] = ($SectionPreparation -eq 'decoder').ToString().ToLowerInvariant()
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_ALLOW_REMOTE_BIOMES'] = ($RemoteBiomes -eq 'ready').ToString().ToLowerInvariant()
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_AUTHORITATIVE_BIOMES'] = ($AuthoritativeBiomes -eq 'demand').ToString().ToLowerInvariant()
+    [ordered]@{mode=$AuthoritativeBiomes;source='original_completed_BIOMES_dependencies';scope='fresh_actual_terrain_requests';speculative='private';grants_authority=$false} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'authoritative-biomes-config.json')
     $start.EnvironmentVariables['JAVA_TOOL_OPTIONS'] = if($BiomeDigest){'-Dworldgen_assist.biome.digest=true'}else{''}
     [ordered]@{mode=$RemoteBiomes;digest=[bool]$BiomeDigest;consumption='ready_only';additional_jobs=0} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'remote-biomes-config.json')
     [ordered]@{mode=$SectionPreparation;existing_decoder_workers=2;new_executor=$false;world_access=$false} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'section-preparation-config.json')

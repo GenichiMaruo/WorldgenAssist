@@ -78,6 +78,8 @@ public final class CompleteTerrainApplicator {
 		var biomeInputs = TerrainBiomeWindow.inspect(chunk.getPos().x(), chunk.getPos().z(),
 			job.minY(), job.height(), (x, z) -> region.getChunk(x, z));
 		byte[] expectedBiomes = biomeInputs.digest();
+		if(job.biomeInputs()!=null && !java.security.MessageDigest.isEqual(expectedBiomes,job.biomeInputs().digest()))
+			throw new IllegalArgumentException("Authoritative assigned biome input changed before application");
 		if (!biomeInputs.possibleBiomes().equals(possibleBiomes)) throw new IllegalArgumentException("Surface biome optimization inputs differ");
 		data=result.selectCompleteTerrainForBiomes(expectedBiomes);
 		CompleteTerrainPalette palette = new CompleteTerrainPalette();
@@ -105,9 +107,13 @@ public final class CompleteTerrainApplicator {
 			packed.preflight(chunk.getSections());
 		}
 		var prepared = new Prepared(chunk, data, states, highestWrites, packed, precomputed, packHeights(surface, job.height()), packHeights(floor, job.height()), offsets,
-			result.hasPeerBiomeAlternative() ? () -> io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
-				"[CAWG] job.peer_biome_choice_applied id={} side={}",job.identity().jobId(),
-				java.security.MessageDigest.isEqual(expectedBiomes,result.completeTerrain().biomeWindowDigest()) ? "primary" : "peer") : () -> {});
+			() -> {
+				if(result.hasPeerBiomeAlternative()) io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
+					"[CAWG] job.peer_biome_choice_applied id={} side={}",job.identity().jobId(),
+					java.security.MessageDigest.isEqual(expectedBiomes,result.completeTerrain().biomeWindowDigest()) ? "primary" : "peer");
+				if(job.biomeInputs()!=null) io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
+					"[CAWG] job.authoritative_biomes_applied id={} chunk={},{}",job.identity().jobId(),chunk.getPos().x(),chunk.getPos().z());
+			});
 		requireAuthority.run();
 		return prepared;
 	}

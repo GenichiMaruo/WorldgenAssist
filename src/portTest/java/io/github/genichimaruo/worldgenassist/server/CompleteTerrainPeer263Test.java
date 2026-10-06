@@ -67,6 +67,14 @@ class CompleteTerrainPeer263Test {
 		var shape = new TerrainBeardifierData(java.util.List.of(new TerrainBeardifierData.Rigid(box, 2, 0)), java.util.List.of(), box);
 		var wrongShape = new TerrainDensityJob(b.identity(), b.worldSeed(), b.generateStructures(), b.noiseSettings(), b.minY(), b.height(), 1, 1, b.workKind(), shape);
 		assertThrows(IllegalArgumentException.class, () -> CompleteTerrainPeerVerifier.agree(submission(ownerA, a, first), submission(ownerB, wrongShape, second), () -> true, () -> {}, error -> {}));
+		var biome=new CompleteBiomeData(-64,16,java.util.List.of("minecraft:plains"),new byte[][]{new byte[]{0}},new byte[64]);
+		var inputs=new AuthoritativeBiomeWindow(1,-2,-64,16,java.util.Collections.nCopies(9,biome));
+		var assignedA=new TerrainDensityJob(a.identity(),a.worldSeed(),a.generateStructures(),a.noiseSettings(),-64,16,1,1,a.workKind(),a.shaping(),false,inputs);
+		var assignedB=new TerrainDensityJob(b.identity(),b.worldSeed(),b.generateStructures(),b.noiseSettings(),-64,16,1,1,b.workKind(),b.shaping(),false,inputs);
+		assertThrows(IllegalArgumentException.class,()->CompleteTerrainPeerVerifier.agree(submission(ownerA,assignedA,first),submission(ownerB,b,second),()->true,()->{},error->{}));
+		var agreedInput=CompleteTerrainPeerVerifier.agree(submission(ownerA,assignedA,CompletableFuture.completedFuture(TerrainDensityResult.fromCompleteTerrain(a.identity(),data(0),0))),
+			submission(ownerB,assignedB,CompletableFuture.completedFuture(TerrainDensityResult.fromCompleteTerrain(b.identity(),data(0),0))),()->true,()->{},error->fail(error)).join();
+		assertTrue(agreedInput.hasPeerVerification());
 		var failed = CompleteTerrainPeerVerifier.agree(submission(ownerA, a, first), submission(ownerB, b, second), () -> true, () -> {}, error -> fail("Late comparison"));
 		second.completeExceptionally(new IllegalStateException("Disconnected")); assertTrue(failed.isCompletedExceptionally());
 		first.complete(TerrainDensityResult.fromCompleteTerrain(a.identity(), data(0), 0)); assertTrue(failed.isCompletedExceptionally());

@@ -66,6 +66,7 @@ final class EarlyBiomePairs<K> {
 		Pair(RemoteJobCoordinator.Submission a, RemoteJobCoordinator.Submission b, long deadline, BooleanSupplier authority) {
 			TerrainDensityJob x = a.job(), y = b.job();
 			if (a.ownerId().equals(b.ownerId()) || x.identity().jobId().equals(y.identity().jobId()) || !x.earlyBiomes() || !y.earlyBiomes()
+				|| !java.util.Objects.equals(x.biomeInputs(),y.biomeInputs())
 				|| !x.identity().protocolVersion().equals(y.identity().protocolVersion()) || !x.identity().dimension().equals(y.identity().dimension())
 				|| !x.identity().chunkPos().equals(y.identity().chunkPos()) || !x.identity().contextFingerprint().equals(y.identity().contextFingerprint())
 				|| x.worldSeed() != y.worldSeed() || x.generateStructures() != y.generateStructures() || !x.shaping().equals(y.shaping())

@@ -77,6 +77,8 @@ public final class RemoteWorldgenManager {
 	private final CompleteTerrainAuditPolicy<CompleteAuditContext> completeAudits;
 	private final boolean peerVerification = CompleteTerrainVerificationMode.peerRequested();
 	private final boolean earlyBiomes;
+	private final boolean authoritativeBiomeInputs = Boolean.parseBoolean(System.getProperty(
+		"worldgen_assist.remote.authoritative_biomes",System.getenv("WORLDGEN_ASSIST_REMOTE_AUTHORITATIVE_BIOMES")));
 	private final EarlyBiomePairs<RemoteDensityResultCache.Key> earlyBiomePairs;
 	private final boolean prepareSectionsOnDecoder = Boolean.parseBoolean(System.getProperty(
 		"worldgen_assist.remote.prepare_sections", System.getenv("WORLDGEN_ASSIST_REMOTE_PREPARE_SECTIONS")));
@@ -112,6 +114,7 @@ public final class RemoteWorldgenManager {
 			"worldgen_assist.remote.allow_remote_biomes", System.getenv("WORLDGEN_ASSIST_REMOTE_ALLOW_REMOTE_BIOMES")));
 		this.earlyBiomePairs = new EarlyBiomePairs<>(Math.max(2, config.maxInFlightJobs()));
 		WorldgenAssist.LOGGER.info("[CAWG] biome.policy early={} consumption=ready_only", earlyBiomes);
+		WorldgenAssist.LOGGER.info("[CAWG] biome_inputs.policy demand={} speculative=private",authoritativeBiomeInputs);
 		this.coordinator = new RemoteJobCoordinator(config, sender);
 		this.resultCache = new RemoteDensityResultCache(config.cacheEntries(), config.jobTimeout().toNanos());
 		this.startedTerrain = new StartedTerrain<>(16_384, config.jobTimeout().toNanos());
@@ -946,7 +949,7 @@ public final class RemoteWorldgenManager {
 			var job = primary.job();
 			var admitted = coordinator.trySubmitForOwner(key.ownerId(), key.dimension(), key.chunkX(), key.chunkZ(), key.contextFingerprint(),
 				identity -> new TerrainDensityJob(identity, job.worldSeed(), job.generateStructures(), job.noiseSettings(), job.minY(),
-					job.height(), job.cellWidth(), job.cellHeight(), job.workKind(), job.shaping(), job.earlyBiomes()));
+					job.height(), job.cellWidth(), job.cellHeight(), job.workKind(), job.shaping(), job.earlyBiomes(),job.biomeInputs()));
 			if (admitted.isEmpty()) { ticket.cancel(); return null; }
 			peer = admitted.get();
 			var checked = ticket.startPrepared(RemoteDensityValidator.Prepared.completeTerrain(peer.job(), null, 0), peer.result(), (value, prepared) -> {
@@ -1314,13 +1317,17 @@ public final class RemoteWorldgenManager {
 			dispatchKey = cacheKey;
 			ticket = preparation.reserve(demand.ownerId(), Math.max(1, coordinator.ownerJobLimit(demand.ownerId())));
 			if (ticket == null) { dispatching.remove(cacheKey); noCapacityFallbacks.increment(); return invokeFallback(localFallback); }
+			// Original TERRAIN dependencies are already generated. Copy outside coordinator/result locks;
+			// no holder lookup, new generation task, ticket, mutable container or late network-side world access.
+			var biomeInputs=authoritativeBiomeInputs && cacheKey.workKind()==io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.COMPLETE_TERRAIN
+				? captureBiomeInputs(chunk,eligibleContext) : null;
 			submission = coordinator.trySubmitForOwner(
 				demand.ownerId(),
 				eligibleContext.level().dimension().identifier(),
 				chunk.getPos().x(),
 				chunk.getPos().z(),
 				fingerprint,
-				identity -> createJob(identity, eligibleContext, noiseSettings)
+				identity -> createJob(identity, eligibleContext, noiseSettings,biomeInputs)
 			);
 			dispatching.remove(cacheKey);
 		} catch (RuntimeException error) {
@@ -1449,6 +1456,17 @@ public final class RemoteWorldgenManager {
 		RemoteWorldgenEligibility.EligibleContext eligibleContext,
 		net.minecraft.resources.Identifier noiseSettings
 	) {
+		return createJob(identity,eligibleContext,noiseSettings,null);
+	}
+	private io.github.genichimaruo.worldgenassist.common.AuthoritativeBiomeWindow captureBiomeInputs(ChunkAccess chunk,RemoteWorldgenEligibility.EligibleContext context) {
+		long started=System.nanoTime();
+		var result=io.github.genichimaruo.worldgenassist.common.AuthoritativeBiomeWindow.capture(chunk.getPos().x(),chunk.getPos().z(),context.noise().minY(),context.noise().height(),
+			(x,z)->context.region().getChunk(x,z));
+		if(diagnostics)WorldgenAssist.LOGGER.info("[CAWG] biome_inputs.captured chunk={},{} capture_ms={}",chunk.getPos().x(),chunk.getPos().z(),(System.nanoTime()-started)/1_000_000.0);
+		return result;
+	}
+	private TerrainDensityJob createJob(TerrainJobIdentity identity,RemoteWorldgenEligibility.EligibleContext eligibleContext,
+		net.minecraft.resources.Identifier noiseSettings,io.github.genichimaruo.worldgenassist.common.AuthoritativeBiomeWindow biomeInputs) {
 		return new TerrainDensityJob(
 			identity,
 			eligibleContext.level().getSeed(),
@@ -1460,7 +1478,8 @@ public final class RemoteWorldgenManager {
 			1,
 			io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(noiseSettings, eligibleContext.settings().value()),
 			eligibleContext.shaping(), earlyBiomes && io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(
-				noiseSettings, eligibleContext.settings().value()) == io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.COMPLETE_TERRAIN
+				noiseSettings, eligibleContext.settings().value()) == io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.COMPLETE_TERRAIN,
+			biomeInputs
 		);
 	}
 

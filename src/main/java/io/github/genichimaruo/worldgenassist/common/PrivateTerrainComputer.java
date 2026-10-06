@@ -37,6 +37,7 @@ import net.minecraft.world.level.levelgen.densityfunction.DensityVolume;
 public final class PrivateTerrainComputer {
 	private final PalettedContainerFactory containers;
 	private final CompleteTerrainPalette palette;
+	private final HolderLookup.Provider registries;
 	private final PrivateBiomeChunkCache biomeCache = new PrivateBiomeChunkCache(512);
 	private NoiseBasedChunkGenerator cachedGenerator;
 	private RandomState cachedState;
@@ -44,6 +45,7 @@ public final class PrivateTerrainComputer {
 	private long completedComputations;
 
 	public PrivateTerrainComputer(HolderLookup.Provider registries) {
+		this.registries=registries;
 		var biomes = registries.lookupOrThrow(Registries.BIOME);
 		IdMapper<Holder<Biome>> biomeIds = new IdMapper<>();
 		biomes.listElements().forEach(biomeIds::add);
@@ -84,11 +86,13 @@ public final class PrivateTerrainComputer {
 			biomeCache.clear(); cachedGenerator = generator; cachedState = state;
 			cachedMinY = job.minY(); cachedHeight = job.height();
 		}
-		ProtoChunk[][] window = new ProtoChunk[3][3];
+		ProtoChunk[][] window = job.biomeInputs()==null ? new ProtoChunk[3][3]
+			: job.biomeInputs().restore(registries,containers,generator.getBiomeSource().possibleBiomes());
 		Set<Holder<Biome>> possibleBiomes = new HashSet<>();
 		int centerX = job.identity().chunkX(), centerZ = job.identity().chunkZ();
 		for (int z = 0; z < 3; z++) for (int x = 0; x < 3; x++) {
 			checkCancellation();
+			if(job.biomeInputs()!=null) {window[z][x].collectBiomesInPalette(possibleBiomes);continue;}
 			ChunkPos pos = new ChunkPos(centerX + x - 1, centerZ + z - 1);
 			ProtoChunk source = biomeCache.canonical(pos, () -> {
 				ProtoChunk created = new ProtoChunk(pos, UpgradeData.EMPTY, height, containers, null);

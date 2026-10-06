@@ -29,6 +29,7 @@ param(
     [ValidateSet('server','peer')][string]$CompleteVerification='server',
     [ValidateSet('inline','decoder')][string]$SectionPreparation='inline',
     [ValidateSet('off','ready')][string]$RemoteBiomes='off',
+    [ValidateSet('off','demand')][string]$AuthoritativeBiomes='off',
     [switch]$BiomeDigest,
     [ValidateSet('off','serial','guarded','parallel')][string]$FeatureBackend='off',
     [switch]$DecorationDigest,
@@ -222,6 +223,7 @@ try {
     $remoteCommand += ' -CompleteVerification '+$CompleteVerification
     $remoteCommand += ' -SectionPreparation '+$SectionPreparation
     $remoteCommand += ' -RemoteBiomes '+$RemoteBiomes
+    $remoteCommand += ' -AuthoritativeBiomes '+$AuthoritativeBiomes
     if($BiomeDigest){$remoteCommand += ' -BiomeDigest'}
     $remoteCommand += ' -FeatureBackend '+$FeatureBackend
     if($DecorationDigest){$remoteCommand += ' -DecorationDigest'}
@@ -320,6 +322,7 @@ try {
     $result.complete_verification = $CompleteVerification
     $result.section_preparation = $SectionPreparation
     $result.remote_biomes = $RemoteBiomes
+    $result.authoritative_biomes = $AuthoritativeBiomes
     $result.biome_digest = [bool]$BiomeDigest
     $result.feature_backend = $FeatureBackend
     $result.decoration_digest = [bool]$DecorationDigest

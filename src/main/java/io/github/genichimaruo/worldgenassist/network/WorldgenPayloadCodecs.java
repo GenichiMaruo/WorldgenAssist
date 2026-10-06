@@ -57,6 +57,8 @@ final class WorldgenPayloadCodecs {
 		if (job.workKind() == TerrainWorkKind.COMPLETE_TERRAIN) {
 			byte[] shaping = job.shaping().encode(); buffer.writeVarInt(shaping.length); buffer.writeBytes(shaping);
 			buffer.writeBoolean(job.earlyBiomes());
+			buffer.writeBoolean(job.biomeInputs()!=null);
+			if(job.biomeInputs()!=null) {byte[] input=job.biomeInputs().encode();buffer.writeVarInt(input.length);buffer.writeBytes(input);}
 		}
 	}
 
@@ -79,8 +81,15 @@ final class WorldgenPayloadCodecs {
 		}
 		byte[] encoded = new byte[length]; buffer.readBytes(encoded);
 		var shaping = io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData.decode(encoded);
+		boolean earlyBiomes=buffer.readBoolean();
+		io.github.genichimaruo.worldgenassist.common.AuthoritativeBiomeWindow inputs=null;
+		if(buffer.readBoolean()) {
+			int inputSize=buffer.readVarInt();
+			if(inputSize<20 || inputSize>io.github.genichimaruo.worldgenassist.common.AuthoritativeBiomeWindow.MAX_BYTES || inputSize>buffer.readableBytes()) throw new IllegalArgumentException("Authoritative input byte bound");
+			byte[] input=new byte[inputSize];buffer.readBytes(input);inputs=io.github.genichimaruo.worldgenassist.common.AuthoritativeBiomeWindow.decode(input);
+		}
 		return new TerrainDensityJob(base.identity(), base.worldSeed(), base.generateStructures(), base.noiseSettings(),
-			base.minY(), base.height(), base.cellWidth(), base.cellHeight(), base.workKind(), shaping, buffer.readBoolean());
+			base.minY(), base.height(), base.cellWidth(), base.cellHeight(), base.workKind(), shaping, earlyBiomes, inputs);
 	}
 
 	static void writeResult(RegistryFriendlyByteBuf buffer, TerrainDensityResultEnvelope result) {

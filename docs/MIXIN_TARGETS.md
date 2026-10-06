@@ -1,5 +1,56 @@
 # Mixin Targets
 
+## Dev23 gate231008-388 complete: current assistance gain, not beta
+
+One sequential session21220 exits0:exactly4 affected methods/0 failures/errors/
+skips,3fresh builds,all16steps pass. Physical/Fabric and BOTH native fresh
+original/assisted ALL882 required coordinates per loader match NOISE,
+decoration,savedstructures,savedlight;both owners use distinct peers and actual
+provided BIOMES inputs. Required-region complete/peer/shaped/input counts:
+Fabric583/432/7/152,Forge530/407/16/212,Neo466/306/16/166. Fresh post-fullphase
+player checks pass Y150/fullhealth/alive/flying;not ordinary gameplay proof.
+
+SAME23JAR remoteOFF/ON with identical parallel FEATURES,ordinary natural weak
+E-server/view32/two clients on one stronger PC,predictionON/warm1/3same repeats:
+paired FULL-20.4767%,receipt-20.5726%,CPU-19.4748%,ALL3 improve;tickp95+8.7435%,
+ALL3 higher. All10658tasks/3461receipts per owner/repeat,10082feature/light bodies,
+peak2/allownershipconflicts0,failedtasks/timeouts/quarantine/appreject0,clean
+stops/frozen runtime identity. This is current client-assistance gain,NOT isolated
+input-edit attribution or reverse-order reproducibility. Initial230842bootstrap
+failure retained;following UNRUN headings are historical implementation records.
+
+AFTER stopped batch,offline coverage/JFR only:actual complete8802/9886/9221,
+provided5369/6461/5485;exact repeat2 original BIOMES4.227/6.488%,six-volume
+assembly0.165/0.280%,input capture4.012%/digest1.271% ON. Inclusive overlapping
+samples/truncated stacks are not CPU durations/critical-path savings. Five
+analysis-only groups added AFTER runtime;raw hashes/sample populations/allprior
+category counts unchanged. See AUTHORITATIVE_BIOME_INPUTS.md for full identities.
+Next opposite-order confirmation with exact unchanged production/JAR/unit reuse,
+then measured metadata/ordinary mixed-stage safety gaps. Protocol14/native5 and
+new input/remote defaultsOFF;publicalpha7 unchanged. Old light/dev22 failure
+retained;no beta/release claim and the full objective stays active.
+
+## Dev23 authoritative biome inputs implemented; verification UNRUN
+
+See [AUTHORITATIVE_BIOME_INPUTS.md](AUTHORITATIVE_BIOME_INPUTS.md). Fresh actual
+COMPLETE requests can carry immutable original completed3x3 BIOMES inputs;
+private original restoration avoids resampling those dependencies. Capture is
+outside coordinator locks; no new task/ticket/Mixin or worldgen semantic policy.
+Protocol14/native5 requires matching clients; new policy and remote assistance
+remain defaultOFF. Peer/audit/epoch/domain/final-current3x3 checks stay intact;
+snapshot input grants no reply authority. Speculative jobs are unchanged.
+This does not remove server BIOMES work and may add capture/transport overhead.
+
+After all edits ONE -AuthoritativeBiomeInputs gate:exactly4 affected methods,
+3 fresh sequential builds,physical/both-native fresh strict882 four-stage pairs,
+actual provided-input applications for both owners and player-safety checks.
+Functional predictionOFF/native2server4client;then same23JAR remoteOFF/ON with
+identical parallel FEATURES,ordinary weak E-server/view32/predictionON/warm1/
+3same repeats/JFR. No unrelated unit suites. All dev23 verification UNRUN,
+no speed/beta/release claim;older failed light/dev22 rejection evidence retained.
+Full distributed acceleration/beta goal remains active. Following headings are
+historical checkpoints with their original artifact identities.
+
 ## Actual-coordinate biome tie confirmed; production unchanged
 
 Offline224045-917/99626 exits0:original chunk-volume climate sampling/ALLpreset

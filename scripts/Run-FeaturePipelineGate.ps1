@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$Execute,[switch]$LocalOnly,[string]$ResumeNeoOriginalRoot,[switch]$RegionalSingleWorker,[switch]$PublicationFence,[string]$ReusePublicationTestRoot,[string]$ReuseBuildRoot)
+param([switch]$Execute,[switch]$LocalOnly,[string]$ResumeNeoOriginalRoot,[switch]$RegionalSingleWorker,[switch]$PublicationFence,[string]$ReusePublicationTestRoot,[string]$ReuseBuildRoot,[switch]$AuthoritativeBiomeInputs)
 # Finish implementation first. One lock, only selected affected methods, three
 # builds, fresh targeted correctness, then the selected controlled comparison.
 Set-StrictMode -Version Latest
@@ -16,6 +16,7 @@ $functional=@(
 $conditions=@($functional[0],$functional[2],$functional[3])
 $expectedMethods=10;$testSelectors=$classes
 if($RegionalSingleWorker -and $PublicationFence){throw 'Choose exactly one affected-test profile'}
+if($AuthoritativeBiomeInputs -and ($RegionalSingleWorker -or $PublicationFence -or $ReusePublicationTestRoot -or $ReuseBuildRoot -or $ResumeNeoOriginalRoot)){throw 'Authoritative inputs require fresh focused evidence'}
 if($ReusePublicationTestRoot -and (-not $PublicationFence -or $ResumeNeoOriginalRoot)){throw 'Test-only reuse requires fresh publication-fence runtimes'}
 if($ReuseBuildRoot -and (-not $ReusePublicationTestRoot -or -not $PublicationFence)){throw 'Build reuse requires exact publication-test reuse and fresh runtimes'}
 if($RegionalSingleWorker){
@@ -36,8 +37,15 @@ if($PublicationFence){
     $functional=@(@{name='original';mode='vanilla';backend='off'},@{name='assisted';mode='assisted';backend='parallel'})
     $conditions=@(@{name='off';mode='assisted';backend='off'},@{name='parallel';mode='assisted';backend='parallel'})
 }
+if($AuthoritativeBiomeInputs){
+    $classes=@('io.github.genichimaruo.worldgenassist.common.AuthoritativeBiomeWindow263Test','io.github.genichimaruo.worldgenassist.network.TerrainShapingPayload263Test','io.github.genichimaruo.worldgenassist.server.CompleteTerrainPeer263Test','io.github.genichimaruo.worldgenassist.server.BiomePhase263Test')
+    $testSelectors=@("$($classes[0]).originalWindowSurvivesWireAndPrivateRestorationWithoutSharingMutableChunks","$($classes[1]).boundedShapingSurvivesMixedBatchAndInvalidLengthIsRejectedBeforeReadingBody","$($classes[2]).agreementRequiresDistinctAssignmentsAndEveryTerrainComponentAndFailsPromptly","$($classes[3]).distinctPeerPhaseIsBoundedRevocableAndConsistentWithFinalReplies")
+    $expectedMethods=4
+    $functional=@(@{name='original';mode='vanilla';backend='off'},@{name='assisted';mode='assisted';backend='parallel'})
+    $conditions=@(@{name='original';mode='vanilla';backend='parallel'},@{name='assisted';mode='assisted';backend='parallel'})
+}
 if(-not $Execute){
-    [ordered]@{tests=$testSelectors;expected_methods=$expectedMethods;fresh_method_count=$(if($ReusePublicationTestRoot){0}else{$expectedMethods});reused_publication_tests=$ReusePublicationTestRoot;builds=@('fabric','forge','neoforge');physical_correctness=$functional;feature_fixture='Participants precede demand, original flying abilities, frozen ticks,1682 original terrains before recorded/replayed1458 features before1458 light initializations, all1250 snapshots before original SPAWN; unchanged882 compared; both player positions/fullhealth/flying checked. Controlled phases, not ordinary mixed-stage coverage';native_correctness='Fresh same phased pair per loader,view4 functional only; publication-fence profile explicit server2/client4 workers. Original Neo weights preserved';performance=$conditions;view_distance=32;warmups=1;repeats=3;remote_host='gen1c@100.103.102.109';remote_root='E:/WorldgenAssist/port26.3';cpu_limits=0;sequence='All implementation before one sequential batch; correctness failure prevents performance'}|ConvertTo-Json -Depth 6
+    [ordered]@{tests=$testSelectors;expected_methods=$expectedMethods;fresh_method_count=$(if($ReusePublicationTestRoot){0}else{$expectedMethods});reused_publication_tests=$ReusePublicationTestRoot;authoritative_biome_inputs=[bool]$AuthoritativeBiomeInputs;builds=@('fabric','forge','neoforge');physical_correctness=$functional;feature_fixture='Participants precede demand, original flying abilities, frozen ticks,1682 original terrains before recorded/replayed1458 features before1458 light initializations, all1250 snapshots before original SPAWN; unchanged882 compared; both player positions/fullhealth/flying checked. Controlled phases, not ordinary mixed-stage coverage';native_correctness='Fresh same phased pair per loader,view4 functional only; publication-fence and authoritative-input profiles explicit server2/client4 workers. Original Neo weights preserved';authoritative_input_scope='When selected: fresh actual COMPLETE_TERRAIN inputs, prediction OFF for functional coverage, ON for ordinary performance. Remote OFF/ON performance uses the same JAR and parallel feature scheduler';performance=$conditions;view_distance=32;warmups=1;repeats=3;remote_host='gen1c@100.103.102.109';remote_root='E:/WorldgenAssist/port26.3';cpu_limits=0;sequence='All implementation before one sequential batch; correctness failure prevents performance'}|ConvertTo-Json -Depth 6
     exit 0
 }
 New-Item -ItemType Directory -Force -Path $base|Out-Null
@@ -86,6 +94,7 @@ function Check-Physical([string]$Case,[object]$Condition,[bool]$Digest){
     $result=Get-Content -LiteralPath (Join-Path $Case 'scenario-result.json') -Raw|ConvertFrom-Json
     if(-not $result.success -or -not $result.cleanup_safe -or -not $result.loopback_only -or $result.artifact_sha256 -ne $artifacts[0].sha256 -or $result.feature_backend -ne $Condition.backend -or $result.mode -ne $Condition.mode -or [bool]$result.decoration_digest -ne $Digest){throw 'Physical identity/profile/cleanup mismatch'}
     if($result.server_logical_processors -ne 0 -or $result.server_jvm_processors -ne 0 -or $result.remote_work_kind -ne 'complete' -or $result.complete_verification -ne 'peer' -or $result.source_manifest_before_sha256 -ne $result.source_manifest_after_sha256){throw 'Physical authority/CPU/source profile mismatch'}
+    if($AuthoritativeBiomeInputs -and ($result.authoritative_biomes -ne 'demand' -or [bool]$result.prediction -ne (-not $Digest))){throw 'Actual authoritative input/prediction profile differs'}
     $config=Get-Content -LiteralPath (Join-Path $Case 'remote-evidence/feature-backend-config.json') -Raw|ConvertFrom-Json
     if($config.mode -ne $Condition.backend -or [bool]$config.decoration_digest -ne $Digest -or $config.capacity -ne 128 -or $config.message_reservation -ne 18){throw 'Observed feature configuration differs'}
     if($Condition.backend -eq 'guarded' -and $config.workers -ne 1){throw 'Actual single guarded worker missing'}
@@ -103,6 +112,10 @@ function Check-Physical([string]$Case,[object]$Condition,[bool]$Digest){
         }
     }
     $log=Get-Content -LiteralPath (Join-Path $Case 'remote-evidence/latest.log') -Raw
+    if($AuthoritativeBiomeInputs){
+        $inputs=Get-Content -LiteralPath (Join-Path $Case 'remote-evidence/authoritative-biomes-config.json') -Raw|ConvertFrom-Json
+        if($inputs.mode -ne 'demand' -or $inputs.scope -ne 'fresh_actual_terrain_requests' -or $inputs.grants_authority -or $log -notmatch 'biome_inputs.policy demand=true speculative=private'){throw 'Observed authoritative biome input configuration differs'}
+    }
     if($Condition.backend -ne 'off' -and $log -notmatch ('feature.backend mode='+$Condition.backend.ToUpperInvariant()+' workers=')){throw 'Actual scheduler constructor replacement missing'}
     if($log -match 'fixture.failed|saved_structures.failed|outside guarded stock|message reservation exceeded|Mixin apply failed|Encountered an unexpected exception|job.full_terrain_apply_rejected|peer_terrain_mismatch|worker.quarantine|Independent whole-terrain audit mismatch|Independent peer whole-terrain mismatch'){throw 'Runtime failure marker'}
     if($Digest){if(-not $result.feature_fixture){throw 'Controlled decoration fixture missing'};$null=Assert-FeatureFixture $log $result.feature_replay_sha256}
@@ -112,22 +125,24 @@ function Check-Physical([string]$Case,[object]$Condition,[bool]$Digest){
 function Check-Assistance([string]$Case,[bool]$Native){
     $logRoot=if($Native){$Case}else{Join-Path $Case 'remote-evidence'}
     $log=Get-Content -LiteralPath (Join-Path $logRoot 'latest.log') -Raw
-    if($PublicationFence){Assert-FeatureFixturePlayers $log}
+    if($PublicationFence -or $AuthoritativeBiomeInputs){Assert-FeatureFixturePlayers $log}
     if($log -notmatch 'job.full_terrain_accepted .*audited=true' -or $log -notmatch 'job.full_terrain_accepted .*audited=false' -or $log -match 'job.full_terrain_apply_rejected|peer_terrain_mismatch|worker.quarantine|Independent whole-terrain audit mismatch|Independent peer whole-terrain mismatch'){throw 'Actual complete terrain audits/acceptance missing or rejected'}
     $required=@{};foreach($chunk in @(Get-Content -LiteralPath (Join-Path $logRoot 'decoration-required-chunks.json') -Raw|ConvertFrom-Json)){$required[$chunk]=$true}
     $sent=@{};foreach($entry in [regex]::Matches($log,'job.sent id=(\S+) chunk=(?<chunk>-?\d+,-?\d+) .*owner=(?<owner>\S+)')){$sent[$entry.Groups[1].Value]=@{chunk=$entry.Groups['chunk'].Value;owner=$entry.Groups['owner'].Value}}
     $peer=@{};foreach($entry in [regex]::Matches($log,'job.peer_terrain_applied id=(\S+) peer_owner=(\S+)')){$peer[$entry.Groups[1].Value]=$entry.Groups[2].Value}
     $shaped=@{};foreach($entry in [regex]::Matches($log,'job.shaped_terrain_applied id=(\S+) pieces=(\d+) junctions=(\d+)')){$shaped[$entry.Groups[1].Value]=$true}
+    $authoritative=@{};foreach($entry in [regex]::Matches($log,'job.authoritative_biomes_applied id=(\S+) chunk=(-?\d+,-?\d+)')){$authoritative[$entry.Groups[1].Value]=$true}
     $rows=@()
     foreach($entry in [regex]::Matches($log,'job.complete id=(\S+) .*work_kind=COMPLETE_TERRAIN .*decision_samples=(\d+)')){
         $id=$entry.Groups[1].Value
         if([long]$entry.Groups[2].Value -lt 98304 -or -not $sent.ContainsKey($id) -or -not $required.ContainsKey($sent[$id].chunk)){continue}
-        $rows+=[ordered]@{id=$id;chunk=$sent[$id].chunk;owner=$sent[$id].owner;peer=($peer.ContainsKey($id) -and $peer[$id] -ne $sent[$id].owner);shaped=$shaped.ContainsKey($id)}
+        $rows+=[ordered]@{id=$id;chunk=$sent[$id].chunk;owner=$sent[$id].owner;peer=($peer.ContainsKey($id) -and $peer[$id] -ne $sent[$id].owner);shaped=$shaped.ContainsKey($id);authoritative_biomes=$authoritative.ContainsKey($id)}
     }
     $owners=@($rows|ForEach-Object {$_.owner}|Sort-Object -Unique)
     if($owners.Count -ne 2 -or @($rows|Where-Object shaped).Count -eq 0){throw 'Both owners and actual shared-region shaping were not exercised'}
     foreach($owner in $owners){if(@($rows|Where-Object {$_.owner -eq $owner -and $_.peer}).Count -eq 0){throw 'Distinct peer actual application missing for an owner'}}
-    return [ordered]@{case=$Case;scope='Actual applications in the required digest region';owners=$owners;applied=$rows.Count;peer_applied=@($rows|Where-Object peer).Count;shaped_applied=@($rows|Where-Object shaped).Count}
+    if($AuthoritativeBiomeInputs){foreach($owner in $owners){if(@($rows|Where-Object {$_.owner -eq $owner -and $_.authoritative_biomes}).Count -eq 0){throw 'Actual authoritative biome application missing for an owner'}}}
+    return [ordered]@{case=$Case;scope='Actual applications in the required digest region';owners=$owners;applied=$rows.Count;peer_applied=@($rows|Where-Object peer).Count;shaped_applied=@($rows|Where-Object shaped).Count;authoritative_biome_applied=@($rows|Where-Object authoritative_biomes).Count}
 }
 function Check-ReusedComparison([string]$Directory){
     $comparison=Get-Content -LiteralPath (Join-Path $Directory 'summary.json') -Raw|ConvertFrom-Json
@@ -240,6 +255,7 @@ try{
         if(-not $profile.runtime_exists -or $profile.e_free_bytes -lt 20GB){throw 'E runtime/free capacity prerequisite is missing'}
         Get-CimInstance Win32_Processor|Select-Object Name,NumberOfCores,NumberOfLogicalProcessors|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'client-cpu.json')
         $common=@('-RemoteHost','gen1c@100.103.102.109','-RemoteRoot','E:/WorldgenAssist/port26.3','-Dimension','overworld','-Players','2','-CacheEntries','128','-ValidationCells','8','-Seed','8675309','-ServerLogicalProcessors','0','-ServerJvmProcessors','0','-NoiseBackend','cooperative','-WindowProfile','deep','-RemoteApplicationProfile','overlap','-PrefetchLookahead','0','-RemoteWorkKind','complete','-CompleteVerification','peer')
+        if($AuthoritativeBiomeInputs){$common+=@('-AuthoritativeBiomes','demand')}
         $functionalRoot=if($resume){$ResumeNeoOriginalRoot}else{$root}
         if(-not $resume){
         foreach($condition in $functional){
@@ -284,13 +300,16 @@ try{
             foreach($condition in @($functional|Where-Object {$_.name -in @('original','assisted')})){
                 $case=if($resume -and $condition.name -eq 'original'){Join-Path $ResumeNeoOriginalRoot "native/$loader/original"}else{Join-Path $root "native/$loader/$($condition.name)"}
                 $fixtureArgs=@('-FeatureFixture')
-                if($PublicationFence){$fixtureArgs+=@('-ServerActiveProcessorCount','2','-ClientWorkerThreads','4')}
+                if($PublicationFence -or $AuthoritativeBiomeInputs){$fixtureArgs+=@('-ServerActiveProcessorCount','2','-ClientWorkerThreads','4')}
+                if($AuthoritativeBiomeInputs){$fixtureArgs+=@('-AuthoritativeBiomes','-Prediction','false')}
                 if($condition.name -ne 'original'){$fixtureArgs+=@('-FeatureReplayFile',(Join-Path $root "native/$loader/feature-replay.json"))}
                 if(-not ($resume -and $condition.name -eq 'original')){Script-Step "$loader-$($condition.name)" 'Run-InstalledNativeLoaderScenario.ps1' (@('-Loader',$loader,'-Mode',$condition.mode,'-Players','2','-InstalledRoot',$installed,'-AssetsRoot',$assets,'-OutputRoot',$case,'-CompleteTerrain','-CompleteVerification','peer','-RemoteApplicationProfile','overlap','-StructuralShaping','-FeatureBackend',$condition.backend,'-DecorationDigest')+$fixtureArgs)}
                 $native=Get-Content -LiteralPath (Join-Path $case 'result.json') -Raw|ConvertFrom-Json
                 if(-not $native.success -or -not $native.cleanup_safe -or -not $native.loopback_only -or $native.mod_sha256 -ne $built.sha256 -or $native.feature_backend -ne $condition.backend -or -not $native.complete_terrain -or -not $native.structural_shaping -or $native.complete_verification -ne 'peer'){throw 'Native artifact/profile mismatch'}
-                if($PublicationFence -and ($native.server_active_processor_count -ne 2 -or $native.client_worker_threads -ne 4)){throw 'Native functional CPU/worker settings differ'}
-                if($PublicationFence){Assert-FeatureFixturePlayers (Get-Content -LiteralPath (Join-Path $case 'latest.log') -Raw)}
+                if(($PublicationFence -or $AuthoritativeBiomeInputs) -and ($native.server_active_processor_count -ne 2 -or $native.client_worker_threads -ne 4)){throw 'Native functional CPU/worker settings differ'}
+                if($AuthoritativeBiomeInputs -and (-not $native.authoritative_biomes -or $native.prediction)){throw 'Actual native authoritative input profile differs'}
+                if($AuthoritativeBiomeInputs -and (Get-Content -LiteralPath (Join-Path $case 'latest.log') -Raw) -notmatch 'biome_inputs.policy demand=true speculative=private'){throw 'Actual native authoritative input policy missing'}
+                if($PublicationFence -or $AuthoritativeBiomeInputs){Assert-FeatureFixturePlayers (Get-Content -LiteralPath (Join-Path $case 'latest.log') -Raw)}
                 if($loader -eq 'neoforge'){
                     $nativeLog=Get-Content -LiteralPath (Join-Path $case 'latest.log') -Raw
                     if($nativeLog -notmatch 'fixture.monster_room_order entries=\[minecraft:skeleton:100, minecraft:spider:100, minecraft:zombie:200\] weights_preserved=true scoped_feature_only=true'){throw 'Actual scoped Neo monster-room order/weights missing'}
@@ -308,7 +327,7 @@ try{
         }
         foreach($condition in $conditions){
             $case=Join-Path $root ('performance/'+$condition.name)
-            $recordingArgs=if($RegionalSingleWorker -or $PublicationFence){@('-ServerFlightRecording')}else{@()}
+            $recordingArgs=if($RegionalSingleWorker -or $PublicationFence -or $AuthoritativeBiomeInputs){@('-ServerFlightRecording')}else{@()}
             Script-Step ('performance-'+$condition.name) 'Run-WorldgenScenario.ps1' ($common+@('-Mode',$condition.mode,'-Purpose','performance','-Prediction','true','-FeatureBackend',$condition.backend,'-OutputRoot',$case,'-ViewDistance','32','-MeasureFullView','-QuietRemoteTrace','-WarmupRuns','1','-MeasuredRepeats','3')+$recordingArgs) 4200
             $result=Check-Physical $case $condition $false
             if($result.performance.warmup_runs -ne 1 -or $result.performance.measured_repeats -ne 3){throw 'Performance repetition profile differs'}
@@ -320,11 +339,12 @@ try{
                 $interval=Get-FeatureIntervalEvidence $window.Groups['body'].Value
                 if(-not $interval.bodies -or -not $interval.light_initializations -or $interval.conflicting_pairs -or ($condition.backend -ne 'off' -and ($interval.feature_light_conflicting_pairs -or $interval.light_light_conflicting_pairs)) -or ($condition.backend -eq 'parallel' -and -not $interval.overlapping_pairs)){throw 'Feature/light execution/independence coverage missing'}
                 if($condition.backend -eq 'guarded' -and ($interval.overlapping_pairs -or $interval.peak_bodies -ne 1)){throw 'Single-worker body execution bound differs'}
+                if($AuthoritativeBiomeInputs -and $condition.mode -eq 'assisted' -and $window.Groups['body'].Value -notmatch 'job.authoritative_biomes_applied'){throw 'Actual authoritative input application missing in measured repeat'}
                 $repeats+=[ordered]@{repeat=$repeat;features=$interval}
             }
             $performance+=[ordered]@{condition=$condition.name;mode=$condition.mode;feature_backend=$condition.backend;result=(Join-Path $case 'scenario-result.json');repeats=$repeats}
         }
-        $pairs=if($RegionalSingleWorker){@(@{name='one-worker';baseline='parallel';candidate='guarded'})}elseif($PublicationFence){@(@{name='publication-scheduler';baseline='off';candidate='parallel'})}else{@(@{name='scheduler';baseline='original';candidate='parallel'},@{name='client';baseline='parallel';candidate='assisted'},@{name='combined';baseline='original';candidate='assisted'})}
+        $pairs=if($AuthoritativeBiomeInputs){@(@{name='authoritative-client';baseline='original';candidate='assisted'})}elseif($RegionalSingleWorker){@(@{name='one-worker';baseline='parallel';candidate='guarded'})}elseif($PublicationFence){@(@{name='publication-scheduler';baseline='off';candidate='parallel'})}else{@(@{name='scheduler';baseline='original';candidate='parallel'},@{name='client';baseline='parallel';candidate='assisted'},@{name='combined';baseline='original';candidate='assisted'})}
         foreach($comparison in $pairs){
             $compareRoot=Join-Path $root ('performance/compare-'+$comparison.name);New-Item -ItemType Directory -Path $compareRoot|Out-Null
             $plan=@($conditions|Where-Object {$_.name -in @($comparison.baseline,$comparison.candidate)}|ForEach-Object {@{id=$_.name;purpose='performance';dimension='overworld';mode=$_.mode;feature_backend=$_.backend;players=2;cache_entries=128;prediction=$true;validation_cells=8}})
@@ -341,7 +361,7 @@ finally{
     if($before){try{$after=Manifest;[IO.File]::WriteAllLines((Join-Path $root 'source-manifest-after.sha256'),$after);if(($before-join "`n") -cne ($after-join "`n")){$issues.Add('Source/harness changed during batch')}}catch{$issues.Add("Final manifest: $_")}}
     if($lock){$lock.Dispose()}
     $env:JAVA_HOME=$savedJava;$env:Path=$savedPath
-    $summary=[ordered]@{schema='worldgen-assist.feature-pipeline-gate.v1';success=($issues.Count -eq 0);root=$root;reuse_parent=$ResumeNeoOriginalRoot;regional_single_worker=[bool]$RegionalSingleWorker;publication_fence=[bool]$PublicationFence;local_only=[bool]$LocalOnly;junit=$junit;artifacts=$artifacts;steps=@($steps);assistance_use=$use;performance=$performance;issues=@($issues);beta_claim=$false;scope='Focused experimental stock Overworld scheduler; targeted pre-SPAWN decoration, saved structures and light; regional-single-worker and publication-fence profiles each have only2 affected methods and2 assisted performance conditions. Not general mod compatibility or final gameplay-state proof'}
+    $summary=[ordered]@{schema='worldgen-assist.feature-pipeline-gate.v1';success=($issues.Count -eq 0);root=$root;reuse_parent=$ResumeNeoOriginalRoot;regional_single_worker=[bool]$RegionalSingleWorker;publication_fence=[bool]$PublicationFence;authoritative_biome_inputs=[bool]$AuthoritativeBiomeInputs;local_only=[bool]$LocalOnly;junit=$junit;artifacts=$artifacts;steps=@($steps);assistance_use=$use;performance=$performance;issues=@($issues);beta_claim=$false;scope='Focused stock Overworld input/scheduler experiment; pre-SPAWN decoration, saved structures and light. Authoritative-input profile selects4 affected methods and same-JAR remote OFF/ON with identical parallel scheduler. Regional-single-worker/publication-fence profiles each select2 methods and2 assisted conditions. Not general mod compatibility or final gameplay-state proof'}
     $summary|ConvertTo-Json -Depth 12|Set-Content -LiteralPath (Join-Path $root 'summary.json') -Encoding utf8
     Write-Output "FEATURE_PIPELINE_GATE success=$($summary.success) summary=$(Join-Path $root 'summary.json')"
 }

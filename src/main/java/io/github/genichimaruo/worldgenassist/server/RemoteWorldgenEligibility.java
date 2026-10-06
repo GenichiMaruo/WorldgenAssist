@@ -69,7 +69,7 @@ final class RemoteWorldgenEligibility {
 		if (!noise.equals(settings.value().noiseSettings()) || !hasProtocolGeometry(noise, level.getMinY(), level.getHeight())) {
 			return Optional.empty();
 		}
-		return Optional.of(new EligibleContext(level, generator, settings, noise, structureManager, blender, shaping));
+		return Optional.of(new EligibleContext(level, generator, settings, noise, structureManager, blender, shaping, region));
 	}
 
 	static Optional<SpeculativeContext> evaluatePrediction(ServerLevel level) {
@@ -127,7 +127,8 @@ final class RemoteWorldgenEligibility {
 		NoiseSettings noise,
 		StructureManager structureManager,
 		Blender blender,
-		io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData shaping
+		io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData shaping,
+		WorldGenRegion region
 	) {
 	}
 

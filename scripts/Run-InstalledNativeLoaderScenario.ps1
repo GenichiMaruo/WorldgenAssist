@@ -11,6 +11,8 @@ param(
     [switch]$CompleteTerrain,
     [ValidateSet('server','peer')][string]$CompleteVerification='server',
     [switch]$RemoteBiomes,
+    [switch]$AuthoritativeBiomes,
+    [ValidateSet('true','false')][string]$Prediction='true',
     [switch]$BiomeDigest,
     [ValidateRange(0,32)][int]$ServerActiveProcessorCount=0,
     [ValidateRange(0,8)][int]$ClientWorkerThreads=0,
@@ -159,6 +161,8 @@ try {
         WORLDGEN_ASSIST_REMOTE_VALIDATION_SAMPLE_CELLS = '8'
         WORLDGEN_ASSIST_NOISE_DIGEST = 'true'
         WORLDGEN_ASSIST_FEATURE_BACKEND = $FeatureBackend
+        WORLDGEN_ASSIST_REMOTE_AUTHORITATIVE_BIOMES = ([bool]$AuthoritativeBiomes).ToString().ToLowerInvariant()
+        WORLDGEN_ASSIST_REMOTE_PREDICTION = $Prediction
         WORLDGEN_ASSIST_DECORATION_DIGEST = ([bool]$DecorationDigest).ToString().ToLowerInvariant()
         WORLDGEN_ASSIST_FEATURE_FIXTURE = ([bool]$FeatureFixture).ToString().ToLowerInvariant()
         WORLDGEN_ASSIST_FEATURE_REPLAY = if($replay){Join-Path $output 'feature-replay.json'}else{''}
@@ -367,6 +371,8 @@ finally {
     }
     $result = [ordered]@{schema='worldgen-assist.installed-native-scenario.v1';loader=$Loader;mode=$Mode;players=$Players;world=$world;success=$success;cleanup_safe=$cleanupSafe;loopback_only=$true;failure=$failure;mod_sha256=$modHash;terrain_decisions=[bool]$TerrainDecisions;complete_terrain=[bool]$CompleteTerrain;complete_verification=$CompleteVerification;remote_application_profile=$RemoteApplicationProfile;structural_shaping=[bool]$StructuralShaping;remote_biomes=[bool]$RemoteBiomes;biome_digest=[bool]$BiomeDigest;view_distance=4;validation_cells=8}
     $result.server_active_processor_count=$ServerActiveProcessorCount
+    $result.authoritative_biomes=[bool]$AuthoritativeBiomes
+    $result.prediction=[bool]::Parse($Prediction)
     $result.view_distance=$ViewDistance
     $result.client_worker_threads=$effectiveClientWorkers
     $result.feature_backend=$FeatureBackend

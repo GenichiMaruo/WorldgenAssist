@@ -90,6 +90,10 @@ class BiomePhase263Test {
 	}
 	@Test void distinctPeerPhaseIsBoundedRevocableAndConsistentWithFinalReplies() {
 		var a=submission(UUID.randomUUID());var b=submission(UUID.randomUUID());var current=new AtomicBoolean(true);var connected=new AtomicBoolean(true);var book=new EarlyBiomePairs<String>(2);
+		var base=a.job();var input=new AuthoritativeBiomeWindow(-2,3,0,16,java.util.Collections.nCopies(9,biome(true)));
+		var bound=new TerrainDensityJob(base.identity(),base.worldSeed(),base.generateStructures(),base.noiseSettings(),0,16,1,1,base.workKind(),base.shaping(),true,input);
+		assertThrows(IllegalArgumentException.class,()->book.register("different-input",new RemoteJobCoordinator.Submission(a.ownerId(),bound,a.result()),b,Long.MAX_VALUE,()->true));
+		assertEquals(0,book.size());
 		var pair=book.register("chunk",a,b,System.nanoTime()+30_000_000_000L,current::get);assertNotNull(pair);assertEquals(2,book.size());
 		final var initialPair=pair;
 		assertNull(book.register("other",submission(UUID.randomUUID()),submission(UUID.randomUUID()),Long.MAX_VALUE,()->true));

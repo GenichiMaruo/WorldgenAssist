@@ -24,7 +24,7 @@ final class ForgeNetwork {
     static void register(ForgeWorldgenAssist owner) {
         if (channel != null) throw new IllegalStateException("Forge channel already registered");
         channel = ChannelBuilder.named("worldgen_assist:play")
-            .networkProtocolVersion(4).optional().payloadChannel().play().flow(PacketFlow.SERVERBOUND)
+            .networkProtocolVersion(5).optional().payloadChannel().play().flow(PacketFlow.SERVERBOUND)
             .addMain(WorkerHelloPayload.TYPE, WorkerHelloPayload.CODEC, (payload, context) -> {
                 ServerPlayer player = context.getSender();
                 if (player != null) channel.reply(owner.manager().handleHello(player.getUUID(), payload), context);

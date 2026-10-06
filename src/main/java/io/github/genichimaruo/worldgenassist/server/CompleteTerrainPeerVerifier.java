@@ -23,6 +23,7 @@ final class CompleteTerrainPeerVerifier {
 			|| a.worldSeed() != b.worldSeed() || a.generateStructures() != b.generateStructures()
 			|| !a.shaping().equals(b.shaping())
 			|| a.earlyBiomes() != b.earlyBiomes()
+			|| !java.util.Objects.equals(a.biomeInputs(),b.biomeInputs())
 			|| !a.noiseSettings().equals(b.noiseSettings()) || a.minY() != b.minY() || a.height() != b.height()
 			|| a.cellWidth() != b.cellWidth() || a.cellHeight() != b.cellHeight()) {
 			throw new IllegalArgumentException("Peer assignments are not independent matching terrain work");

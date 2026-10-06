@@ -18,6 +18,11 @@ public class AnalyzeWorldgenJfr {
         new Group("density samplers", n -> n.startsWith("net.minecraft.world.level.levelgen.densityfunction.")),
         new Group("biome selection", n -> n.startsWith("net.minecraft.world.level.biome.")),
         new Group("original biome stage", n -> n.equals("net.minecraft.world.level.chunk.ChunkGenerator.doCreateBiomes")),
+        new Group("original biome volume assembly", n -> n.equals("net.minecraft.world.level.biome.MultiNoiseBiomeSource.createResolverForChunk")),
+        new Group("authoritative biome input capture", n -> n.equals("io.github.genichimaruo.worldgenassist.common.AuthoritativeBiomeWindow.capture")),
+        new Group("authoritative biome input restore", n -> n.equals("io.github.genichimaruo.worldgenassist.common.AuthoritativeBiomeWindow.restore")),
+        new Group("authoritative biome input encode", n -> n.equals("io.github.genichimaruo.worldgenassist.common.AuthoritativeBiomeWindow.encode")),
+        new Group("authoritative biome input digest", n -> n.equals("io.github.genichimaruo.worldgenassist.common.AuthoritativeBiomeWindow.digest")),
         new Group("early biome application", n -> n.startsWith("io.github.genichimaruo.worldgenassist.server.EarlyBiomeApplicator.")
             || n.startsWith("io.github.genichimaruo.worldgenassist.server.EarlyBiomeApplicator$")),
         new Group("center biome capture", n -> n.equals("io.github.genichimaruo.worldgenassist.common.CompleteBiomeData.capture")),
