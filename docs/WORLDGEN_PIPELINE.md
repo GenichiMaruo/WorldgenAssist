@@ -1,5 +1,50 @@
 # World Generation Pipeline Notes
 
+## Actual-coordinate biome tie confirmed; production unchanged
+
+Offline224045-917/99626 exits0:original chunk-volume climate sampling/ALLpreset
+fitness atquart-8048,-16,12168 yields EXACTtwo globalminima1,532,644:
+frozen_ocean andsnowy_plains. Combinedwith4history223527-608 andactualsaved
+frozen_ocean,this establishes real standard selection history sensitivity here.
+Failed liveclientpayload/threadtrace absent,so exacthistorical cause remains
+inferred. Same rawregion hash unchanged;0unchangedhistory/JUnit/MODbuild/game
+reruns,helpercompilation only. See BIOME_ORDER_DIAGNOSIS.md. No production/
+Mixin/version/authority/default/digest change. Next preserve actual server BIO
+inputs in distributed design;deterministic tiepolicy wouldbe deliberateworldgen
+semanticchange,not silentlyvanillaparity. Dev22 performance gate remainsfailed,
+goalactive;followingUNRUN fitnessheading is retained history.
+
+## Actual dev22 biome history witness; tie fitness UNRUN
+
+Offline saved-biome-diagnosis223522-724/16701 exits0,0JUnit/MODbuilds/games;
+helper compilation only. One stopped E-region hash unchanged,ALL13824 saved
+quart names versus4original cache/carver histories. Exactly1voxel atquart
+-8048,-16,12168 differs byhistory:snowy_plains forward/frozen_ocean reverse;
+saved=frozen_ocean. All289carver/orderedinput comparisons unchanged. This
+supports current refusal's history hypothesis,NOTactualfailedpayload proof.
+See BIOME_ORDER_DIAGNOSIS.md. Production/JAR unchanged;overall184431failure
+retained. Afterallnewhelperedits,one narrowed tie-fitness analysis uses SAME
+savedinput/original climate-volume sampling+originalfitness,0history/JUnit/
+MODbuild/newgame reruns. All newfitnessverification UNRUN;no normalization/
+removedcheck/semanticproductionchange/default/speed/beta claim. Goal active.
+
+## Dev22 saved biome diagnosis implemented; offline batch UNRUN
+
+New Run-SavedBiomeDiagnosis reads ONLY exact closed184431-462/parallel failure,
+verifies cleanup/seed/view/JAR/rejection identity and no owned server live,hashes
+and copies one E-drive r.-63.95.mca before/after. Expanded existing offline
+BiomeHistoryInspector accepts only known public-2013,3043 saved input;original
+RegionFileStorage/RegistryOps/paletted codec decodes ALL9 FULL/24sections/chunk,
+compares ALL13824 quart names against each of4 original BIOMES/cache/carver
+histories. Saved compaction may change unused palettes;name values are separate
+from runtime digest framing. No failed payload or timing-cause proof.
+ONE offline batch after all edits,0JUnit/MODbuilds/newgames/native/performance,
+helper compilation only;all inputs/rawfile/JAR frozen. No production/Mixin/
+authority/digest/default/version change. Primary26.2 and26.3 Climate.RTree
+lastResult is thread-local and equal-distance search retains prior candidate;
+previous synthetic/history results do not prove this current failure cause.
+New diagnosis UNRUN;goal active and dev22 overall performance failure retained.
+
 ## Dev22 runtime followup closed: player correction passes; overall gate fails
 
 Batch184431-462/session12222 exits1. Exact unchanged2 publication methods and

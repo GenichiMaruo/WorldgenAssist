@@ -137,7 +137,8 @@ tasks.register('inspectBiomeHistory', JavaExec) {
 	args providers.gradleProperty('biomeHistoryOutput').map { [it,
 		providers.gradleProperty('biomeHistoryX').getOrElse('-2012'),
 		providers.gradleProperty('biomeHistoryZ').getOrElse('3041'),
-		providers.gradleProperty('biomeHistoryProfile').getOrElse('plain')] }.getOrElse([])
+		providers.gradleProperty('biomeHistoryProfile').getOrElse('plain'),
+		providers.gradleProperty('biomeHistorySavedRegion').getOrElse('')] }.getOrElse([])
 }
 
 publishing {
