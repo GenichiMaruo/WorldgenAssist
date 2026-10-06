@@ -24,6 +24,8 @@ public final class FabricRemoteWorldgenEvents {
 		});
 		ServerPlayNetworking.registerGlobalReceiver(TerrainJobResultPayload.TYPE, (payload, context) ->
 			manager.handleResult(context.player().getUUID(), payload));
+		ServerPlayNetworking.registerGlobalReceiver(io.github.genichimaruo.worldgenassist.network.TerrainBiomeResultPayload.TYPE, (payload, context) ->
+			manager.handleBiomeResult(context.player().getUUID(), payload));
 		ServerPlayNetworking.registerGlobalReceiver(TerrainJobFailurePayload.TYPE, (payload, context) ->
 			manager.handleFailure(context.player().getUUID(), payload));
 		ServerPlayConnectionEvents.DISCONNECT.register((listener, server) ->

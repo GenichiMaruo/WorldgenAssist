@@ -25,7 +25,7 @@ function Source-Manifest {
         'loaders/neoforge/build.gradle','loaders/forge/src/main/resources/worldgen_assist.mixins.json',
         'scripts/Get-WorldgenArtifact.ps1','scripts/Run-TerrainNativeGate.ps1',
         'scripts/Run-InstalledNativeLoaderScenario.ps1','scripts/New-InstalledNativeLoaderClient.ps1',
-        'scripts/Compare-LocalLoaderDigests.ps1')) { $files+=Get-Item -LiteralPath (Join-Path $workspace $name) }
+        'scripts/Compare-LocalLoaderDigests.ps1','scripts/Compare-BiomeStageDigests.ps1')) { $files+=Get-Item -LiteralPath (Join-Path $workspace $name) }
     return @($files|Sort-Object FullName|ForEach-Object { (Get-FileHash -LiteralPath $_.FullName).Hash+'  '+$_.FullName.Substring($workspace.Length+1).Replace('\','/') })
 }
 function Step([string]$Name,[string[]]$Arguments,[int]$Seconds=1200) {
@@ -51,6 +51,7 @@ try {
     $prior=Get-Content -LiteralPath (Join-Path $original 'summary.json') -Raw|ConvertFrom-Json
     if(-not $prior.success -or $prior.junit.failures -or $prior.junit.errors -or $prior.junit.skipped -or
         $prior.remote_work_kind -notin @('decisions','complete')) {throw 'Original build/runtime evidence is incomplete'}
+    $biomeProfile=$prior.test_profile -in @('complete-early-biomes','complete-biome-authority')
     $before=Source-Manifest
     [IO.File]::WriteAllLines((Join-Path $root 'source-manifest-before.sha256'),$before)
     $originalSources=@{}
@@ -116,6 +117,12 @@ try {
             if($prior.remote_work_kind -eq 'complete'){
                 $scenarioArguments+=@('-CompleteTerrain','-CompleteVerification',$prior.complete_verification,'-RemoteApplicationProfile',$prior.remote_application_profile)
                 if($prior.test_profile -eq 'complete-shaping'){$scenarioArguments+='-StructuralShaping'}
+                if($biomeProfile){
+                    # Both conditions use the same two-processor server JVM so the ready-only path is exercised.
+                    # This is a functional fixture, never a native speed measurement.
+                    $scenarioArguments+=@('-BiomeDigest','-ServerActiveProcessorCount','2','-ViewDistance','10')
+                    if($mode -eq 'assisted'){$scenarioArguments+='-RemoteBiomes'}
+                }
             }
             $steps+=Step "$loader-$mode" $scenarioArguments
             if(-not $steps[-1].success){throw "Native scenario failed: $loader/$mode"}
@@ -126,9 +133,19 @@ try {
             if($prior.remote_work_kind -eq 'complete' -and -not $result.complete_terrain){throw 'Native complete terrain selection missing'}
             if($prior.remote_work_kind -eq 'complete' -and ($result.complete_verification -ne $prior.complete_verification -or $result.remote_application_profile -ne $prior.remote_application_profile)){throw 'Native complete verification/application mode differs'}
             if($prior.test_profile -eq 'complete-shaping' -and -not $result.structural_shaping){throw 'Native shaping fixture selection missing'}
+            if($biomeProfile -and (-not $result.biome_digest -or $result.remote_biomes -ne ($mode -eq 'assisted'))){throw 'Native biome fixture identity differs'}
+            if($biomeProfile -and $result.server_active_processor_count -ne 2){throw 'Native functional server CPU profile differs'}
+            if($biomeProfile -and ($result.view_distance -ne 10 -or $result.client_worker_threads -ne 4)){throw 'Native biome demand/client profile differs'}
         }
         $assistedLog=Join-Path $root "$loader/assisted/latest.log"
         $text=Get-Content -LiteralPath $assistedLog -Raw
+        if($biomeProfile){
+            if($text -notmatch 'biome\.policy early=true consumption=ready_only'){throw "$loader actual early biome policy missing"}
+            $steps+=Step "$loader-full-biome-parity" @('-File',(Join-Path $PSScriptRoot 'Compare-BiomeStageDigests.ps1'),
+                '-VanillaLog',(Join-Path $root "$loader/vanilla/latest.log"),'-AssistedLog',$assistedLog,
+                '-Output',(Join-Path $root "$loader/full-biome-parity.json"),'-Marker','CAWG_NATIVE_DECISIONS_BEGIN','-RequireApplied') 120
+            if(-not $steps[-1].success){throw "$loader full original biome parity or actual application missing"}
+        }
         if($prior.test_profile -eq 'complete-packed-application' -and
             $text -notmatch 'terrain\.bulk_applied chunk=-?\d+,-?\d+ sections=24 blocks=98304'){
             throw "$loader did not actually use original-format packed section application"

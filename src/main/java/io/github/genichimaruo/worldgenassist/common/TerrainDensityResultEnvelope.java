@@ -223,7 +223,8 @@ public final class TerrainDensityResultEnvelope {
 			if (count < 4096 || count > TerrainDensityJob.MAX_SAMPLE_COUNT || count % 4096 != 0) {
 				throw new IllegalArgumentException("Complete terrain requires section-aligned volume");
 			}
-			return 4 + 48 + count + 1024 + count / 4096 * 4 + count * CompleteTerrainData.MAX_POST_PROCESS_PER_BLOCK * 2;
+			return 4 + 48 + count + 1024 + count / 4096 * 4 + count * CompleteTerrainData.MAX_POST_PROCESS_PER_BLOCK * 2
+				+ 5 + CompleteBiomeData.MAX_BYTES;
 		}
 		return encoding.decisions() ? Math.addExact(decisionCount(count), SurfaceDensityData.SAMPLE_COUNT * Float.BYTES)
 			: Math.multiplyExact(count, BYTES_PER_DENSITY);

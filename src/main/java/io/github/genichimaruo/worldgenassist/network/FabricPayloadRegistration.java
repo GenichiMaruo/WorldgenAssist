@@ -19,6 +19,7 @@ public final class FabricPayloadRegistration {
 		PayloadTypeRegistry.serverboundPlay().registerLarge(TerrainJobResultPayload.TYPE,
 			TerrainJobResultPayload.CODEC, WorldgenPayloadTypes.MAX_DENSITY_RESULT_PAYLOAD_BYTES);
 		PayloadTypeRegistry.serverboundPlay().register(TerrainJobFailurePayload.TYPE, TerrainJobFailurePayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(TerrainBiomeResultPayload.TYPE, TerrainBiomeResultPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(TerrainJobCancelPayload.TYPE, TerrainJobCancelPayload.CODEC);
 		registered = true;
 	}

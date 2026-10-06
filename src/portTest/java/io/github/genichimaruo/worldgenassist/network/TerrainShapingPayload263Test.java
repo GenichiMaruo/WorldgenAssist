@@ -29,14 +29,14 @@ class TerrainShapingPayload263Test {
 			TerrainJobBatchPayload.CODEC.encode(buffer, batch);
 			assertEquals(batch, TerrainJobBatchPayload.CODEC.decode(buffer)); assertEquals(0, buffer.readableBytes());
 			buffer.clear(); WorldgenPayloadCodecs.writeJob(buffer, complete);
-			int lengthOffset = buffer.writerIndex() - shaping.encode().length - 1; // This body has a one-byte length.
+		int lengthOffset = buffer.writerIndex() - shaping.encode().length - 2; // One-byte length and final early-biome flag.
 			for (int invalid : new int[]{-1, 0, 12, TerrainBeardifierData.MAX_BYTES + 1}) {
 				buffer.setIndex(0, lengthOffset); buffer.writeVarInt(invalid); int end = buffer.writerIndex();
 				assertThrows(IllegalArgumentException.class, () -> WorldgenPayloadCodecs.readJob(buffer));
 				assertEquals(end, buffer.readerIndex());
 			}
-			assertEquals(12, WorldgenProtocolVersion.CURRENT.value());
-			assertThrows(IllegalArgumentException.class, () -> new WorldgenProtocolVersion(11).requireSupported());
+			assertEquals(13, WorldgenProtocolVersion.CURRENT.value());
+			assertThrows(IllegalArgumentException.class, () -> new WorldgenProtocolVersion(12).requireSupported());
 		} finally { buffer.release(); }
 	}
 }

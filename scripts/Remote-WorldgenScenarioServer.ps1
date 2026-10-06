@@ -27,6 +27,8 @@ param(
     [ValidateSet('grid','surface','density','block','decisions','complete')][string]$RemoteWorkKind='grid',
     [ValidateSet('server','peer')][string]$CompleteVerification='server',
     [ValidateSet('inline','decoder')][string]$SectionPreparation='inline',
+    [ValidateSet('off','ready')][string]$RemoteBiomes='off',
+    [switch]$BiomeDigest,
     [ValidateSet('off','serial','parallel')][string]$FeatureBackend='off',
     [switch]$DecorationDigest,
     [switch]$FeatureFixture,
@@ -426,6 +428,9 @@ try {
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_ALLOW_COMPLETE_TERRAIN'] = ($RemoteWorkKind -eq 'complete').ToString().ToLowerInvariant()
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_COMPLETE_VERIFICATION'] = $CompleteVerification
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_PREPARE_SECTIONS'] = ($SectionPreparation -eq 'decoder').ToString().ToLowerInvariant()
+    $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE_ALLOW_REMOTE_BIOMES'] = ($RemoteBiomes -eq 'ready').ToString().ToLowerInvariant()
+    $start.EnvironmentVariables['JAVA_TOOL_OPTIONS'] = if($BiomeDigest){'-Dworldgen_assist.biome.digest=true'}else{''}
+    [ordered]@{mode=$RemoteBiomes;digest=[bool]$BiomeDigest;consumption='ready_only';additional_jobs=0} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'remote-biomes-config.json')
     [ordered]@{mode=$SectionPreparation;existing_decoder_workers=2;new_executor=$false;world_access=$false} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'section-preparation-config.json')
     [ordered]@{selected_work_kind=$RemoteWorkKind;terrain_decisions_allowed=($RemoteWorkKind -eq 'decisions');complete_terrain_allowed=($RemoteWorkKind -eq 'complete');complete_verification=$CompleteVerification;complete_initial_audits=2;complete_server_audit_denominator=8;complete_peer_audit_denominator=64;complete_audit_policy=if($CompleteVerification -eq 'peer'){'first_two_successful_per_owner_then_private_one_in_64_if_distinct_trusted_peer_available_otherwise_one_in_8;peer_admission_race_forces_server_full_audit;every_peer_result_requires_entire_agreement'}else{'first_two_successful_then_private_one_in_eight'}} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'remote-work-kind-config.json')
     [ordered]@{profile=$RemoteApplicationProfile;ready_surface_only=($RemoteApplicationProfile -eq 'ready');base_wait_ms=if($PipelineProfile -eq 'current'){30000}elseif($Purpose -eq 'correctness'){$CorrectnessDemandWaitMs}else{100};maximum_wait_ms=if($PipelineProfile -eq 'current'){30000}elseif($Purpose -eq 'correctness'){[Math]::Min(1000,$CorrectnessDemandWaitMs*2)}else{200}} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'remote-application-config.json')
@@ -481,6 +486,7 @@ try {
     $fixtureOffset=(Log-Text).Length
     if($FeatureFixture){Send-Command 'worldgenassist_feature_fixture_start';Wait-Log 'fixture.armed tickets=882 features=1458 spawns=1250 frozen=true' 30|Out-Null}
     if($Purpose -eq 'correctness') {
+        if($BiomeDigest){Send-Command 'say CAWG_BIOME_CORRECTNESS_BEGIN'}
         if($FeatureFixture){$offset=$fixtureOffset}else{$offset=(Log-Text).Length; Start-Location 0; Send-Command 'gamemode creative @a'}
         Wait-CorrectnessComplete $offset $assisted
         $required=@()

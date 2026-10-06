@@ -322,6 +322,11 @@ final class RemoteDensityValidator {
 		}
 
 		long prepareNanos() { return prepareNanos; }
+		TerrainDensityResult authorizeAuditedCenterBiomes(TerrainDensityResult result, java.util.function.BooleanSupplier current) {
+			if (!job.earlyBiomes() || expectedTerrain == null) return result;
+			compare(result);
+			return result.withServerAuditApproval(expectedTerrain, current);
+		}
 		ValidationMetrics compare(TerrainDensityResult result) {
 			long started = System.nanoTime();
 			if (!job.identity().equals(result.identity()) || result.densityCount() != job.sampleCount()) {
@@ -330,6 +335,9 @@ final class RemoteDensityValidator {
 			if (job.workKind() == TerrainWorkKind.COMPLETE_TERRAIN) {
 				if (!result.hasCompleteTerrain() || result.completeTerrain().minY() != job.minY()
 					|| result.completeTerrain().height() != job.height()) throw new RemoteDensityValidationException("Invalid complete terrain shape");
+				if (job.earlyBiomes() != (result.completeTerrain().centerBiomes() != null)) {
+					throw new RemoteDensityValidationException("Center biome phase differs from assignment");
+				}
 				if (expectedTerrain != null && !expectedTerrain.equals(result.completeTerrain())) {
 					throw new RemoteDensityValidationException("Independent whole-terrain audit mismatch");
 				}

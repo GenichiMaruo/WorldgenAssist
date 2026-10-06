@@ -22,6 +22,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ChunkStatusTasks.class)
 abstract class ChunkStatusTasksMixin {
+	@WrapMethod(method = "generateBiomes")
+	private static CompletableFuture<ChunkAccess> worldgenAssist$reuseVerifiedBiomes(WorldGenContext context, ChunkStep step,
+		StaticCache2D<GenerationChunkHolder> chunks, ChunkAccess chunk, Operation<CompletableFuture<ChunkAccess>> original) {
+		var result = RemoteWorldgenManager.generateBiomesOrFallback(context, step, chunks, chunk,
+			() -> original.call(context, step, chunks, chunk));
+		return io.github.genichimaruo.worldgenassist.server.BiomeStageDigestLogger.enabled()
+			? result.thenApply(generated -> { io.github.genichimaruo.worldgenassist.server.BiomeStageDigestLogger.log(generated); return generated; }) : result;
+	}
 	@Inject(method = "generateSpawn", at = @At("HEAD"))
 	private static void worldgenAssist$observeFinalDecoration(WorldGenContext context, ChunkStep step,
 		StaticCache2D<GenerationChunkHolder> chunks, ChunkAccess chunk,

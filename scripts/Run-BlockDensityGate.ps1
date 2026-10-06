@@ -5,13 +5,13 @@ param([switch]$Execute,[switch]$LocalOnly,[switch]$SkipPerformance,[ValidateSet(
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
     [ValidateSet('wide','deep')][string]$WindowProfile='wide',
     [ValidateSet('vanilla-first','assisted-first')][string]$ConditionOrder='vanilla-first',
-    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation','complete-peer','complete-shaping','complete-biome-choice','complete-application','complete-prefetch-index','complete-packed-application')][string]$TestProfile='transport',
+    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation','complete-peer','complete-shaping','complete-biome-choice','complete-application','complete-prefetch-index','complete-packed-application','complete-early-biomes','complete-biome-authority')][string]$TestProfile='transport',
     [string]$ReuseBuildEvidence,[string]$ReuseCorrectnessEvidence)
 # Finish all implementation first; affected units/builds/runtime/performance are sequential.
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $workspace=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-if(($SkipPerformance -or $SectionPreparation -eq 'decoder') -and ($TestProfile -ne 'complete-packed-application' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence)){throw 'Section preparation experiment requires fresh packed-application evidence'}
+if(($SkipPerformance -or $SectionPreparation -eq 'decoder') -and ($TestProfile -notin @('complete-packed-application','complete-early-biomes','complete-biome-authority') -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence)){throw 'Preparation/biome experiments require fresh affected evidence'}
 if($SectionPreparation -eq 'decoder' -and -not $SkipPerformance){throw 'Decoder preparation speed is evaluated by the same-artifact controlled gate'}
 if($ReuseCorrectnessEvidence -and (-not $ReuseBuildEvidence -or $LocalOnly)){throw 'Correctness reuse requires matching saved build evidence and the performance batch'}
 $selections=@(
@@ -58,7 +58,19 @@ if($TestProfile -eq 'complete-preparation'){
         'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedReplyBypassesBlockedPreparationWithoutReleasingItsRemoteSlot',
         'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedCancellationAndFailuresReleaseOnceAndIgnoreLateReplies');$expectedTests=4
 }
-$verification=if($TestProfile -in @('complete-peer','complete-shaping','complete-biome-choice','complete-application','complete-prefetch-index','complete-packed-application')){'peer'}else{'server'}
+$verification=if($TestProfile -in @('complete-peer','complete-shaping','complete-biome-choice','complete-application','complete-prefetch-index','complete-packed-application','complete-early-biomes','complete-biome-authority')){'peer'}else{'server'}
+if($TestProfile -eq 'complete-biome-authority'){
+    if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $SectionPreparation -ne 'inline' -or -not $SkipPerformance -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Biome audit authority requires fresh focused inline/overlap evidence'}
+    $selections=@('io.github.genichimaruo.worldgenassist.server.BiomePhase263Test.boundedWireAndFinalBodiesNeverImportLocalAuthority');$expectedTests=1
+}
+if($TestProfile -eq 'complete-early-biomes'){
+    if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $SectionPreparation -ne 'inline' -or -not $SkipPerformance -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Early biomes require fresh affected inline/overlap evidence; controlled performance is in Run-EarlyBiomesGate'}
+    $selections=@('io.github.genichimaruo.worldgenassist.server.BiomePhase263Test',
+        'io.github.genichimaruo.worldgenassist.server.ConnectionScopedResultIngress263Test',
+        'io.github.genichimaruo.worldgenassist.network.TerrainShapingPayload263Test',
+        'io.github.genichimaruo.worldgenassist.server.CompleteTerrain263Test.immutableCompleteTransportPreservesExactOrderedOffsetsAndRejectsMixedKinds',
+        'io.github.genichimaruo.worldgenassist.server.CompleteTerrain263Test.rejectsMalformedDomainGeometryOffsetsAndCompressedBounds');$expectedTests=7
+}
 if($TestProfile -eq 'complete-packed-application'){
     if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Packed application requires fresh affected build and correctness evidence'}
     $selections=@('io.github.genichimaruo.worldgenassist.server.CompleteTerrainApply263Test.boundedColumnsPreserveEveryVoxelAndSectionCountAndRejectWrongHeights');$expectedTests=1
@@ -162,7 +174,7 @@ try{
     $arguments=@('/d','/c',(Join-Path $workspace 'gradlew.bat'),'test','--rerun-tasks')
     # This profile runs inside a second redirected process. On Windows an idle
     # persistent daemon can retain that ancestor's pipe after the gate exits.
-    if($TestProfile -eq 'complete-packed-application'){$arguments+='--no-daemon'}
+    if($TestProfile -in @('complete-packed-application','complete-early-biomes','complete-biome-authority')){$arguments+='--no-daemon'}
     foreach($selection in $selections){$arguments+=@('--tests',$selection)}
     $arguments+='build'
     $steps+=Step 'unit-build' "$env:SystemRoot\System32\cmd.exe" $arguments 1800
@@ -177,20 +189,22 @@ try{
     if($junit.tests -ne $expectedTests -or $junit.failures -or $junit.errors -or $junit.skipped){throw 'Affected JUnit evidence incomplete'}
     foreach($loader in @('forge','neoforge')){
         $nativeArgs=@('/d','/c',(Join-Path $workspace 'gradlew.bat'),'-p',(Join-Path $workspace "loaders/$loader"))
-        if($TestProfile -eq 'complete-packed-application'){$nativeArgs+='--no-daemon'}
-        if($loader -eq 'forge' -and $TestProfile -in @('transport','complete')){
+        if($TestProfile -in @('complete-packed-application','complete-early-biomes','complete-biome-authority')){$nativeArgs+='--no-daemon'}
+        if($loader -eq 'forge' -and $TestProfile -eq 'complete-early-biomes'){
+            $nativeArgs+=@('test','--tests','io.github.genichimaruo.worldgenassist.forge.ForgeResultAssemblerTest.completeTerrainVariableRawFragmentsPreserveMetadata','build')
+        }elseif($loader -eq 'forge' -and $TestProfile -in @('transport','complete')){
             $nativeArgs+=@('test','--tests','io.github.genichimaruo.worldgenassist.forge.ForgeResultAssemblerTest.reassemblesOutOfOrderAndDuplicateFragments','--tests','io.github.genichimaruo.worldgenassist.forge.ForgeResultAssemblerTest.fullTerrainPackedAndFloatFragmentsRemainBoundedAndRoundTrip','build')
             if($TestProfile -eq 'complete'){$nativeArgs=$nativeArgs[0..($nativeArgs.Length-2)]+@('--tests','io.github.genichimaruo.worldgenassist.forge.ForgeResultAssemblerTest.completeTerrainVariableRawFragmentsPreserveMetadata','build')}
         }else{$nativeArgs+=@('build','-x','test')}
         $steps+=Step "$loader-build" "$env:SystemRoot\System32\cmd.exe" $nativeArgs 1800
         if($steps[-1].status -ne 'PASSED'){throw "$loader build failed"}
-        if($loader -eq 'forge' -and $TestProfile -in @('transport','complete')){
+        if($loader -eq 'forge' -and $TestProfile -in @('transport','complete','complete-early-biomes')){
             $nativeTestPath=Join-Path $workspace 'loaders/forge/build/test-results/test/TEST-io.github.genichimaruo.worldgenassist.forge.ForgeResultAssemblerTest.xml'
             Copy-Item -LiteralPath $nativeTestPath -Destination $root
             [xml]$nativeXml=Get-Content -LiteralPath $nativeTestPath
             $nativeJunit=[ordered]@{}
             foreach($field in @('tests','failures','errors','skipped')){$nativeJunit[$field]=[int]$nativeXml.testsuite.GetAttribute($field)}
-            $expectedNative=if($TestProfile -eq 'complete'){3}else{2}
+            $expectedNative=if($TestProfile -eq 'complete-early-biomes'){1}elseif($TestProfile -eq 'complete'){3}else{2}
             if($nativeJunit.tests -ne $expectedNative -or $nativeJunit.failures -or $nativeJunit.errors -or $nativeJunit.skipped){throw 'Affected Forge fragment evidence incomplete'}
         }
     }
@@ -254,7 +268,9 @@ try{
         $cases=@()
         foreach($mode in @('vanilla','assisted')){
             $directory=Join-Path $correct $mode
-            $steps+=Step "correctness-$mode" $pwsh @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-WorldgenScenario.ps1'),'-RemoteHost','gen1c@100.103.102.109','-RemoteRoot','E:/WorldgenAssist/port26.3','-Dimension','overworld','-Mode',$mode,'-Players','2','-Purpose','correctness','-CacheEntries','128','-Prediction','false','-ValidationCells','8','-Seed','8675309','-ServerLogicalProcessors','0','-ServerJvmProcessors','0','-CorrectnessDemandWaitMs','100','-NoiseBackend','cooperative','-WindowProfile',$WindowProfile,'-RemoteApplicationProfile',$RemoteApplicationProfile,'-PrefetchLookahead',[string]$PrefetchLookahead,'-RemoteWorkKind',$RemoteWorkKind,'-CompleteVerification',$verification,'-OutputRoot',$directory,'-SectionPreparation',$SectionPreparation) 1200
+            $scenarioArgs=@('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-WorldgenScenario.ps1'),'-RemoteHost','gen1c@100.103.102.109','-RemoteRoot','E:/WorldgenAssist/port26.3','-Dimension','overworld','-Mode',$mode,'-Players','2','-Purpose','correctness','-CacheEntries','128','-Prediction','false','-ValidationCells','8','-Seed','8675309','-ServerLogicalProcessors','0','-ServerJvmProcessors','0','-CorrectnessDemandWaitMs','100','-NoiseBackend','cooperative','-WindowProfile',$WindowProfile,'-RemoteApplicationProfile',$RemoteApplicationProfile,'-PrefetchLookahead',[string]$PrefetchLookahead,'-RemoteWorkKind',$RemoteWorkKind,'-CompleteVerification',$verification,'-OutputRoot',$directory,'-SectionPreparation',$SectionPreparation)
+            if($TestProfile -in @('complete-early-biomes','complete-biome-authority')){$scenarioArgs+=@('-BiomeDigest','-RemoteBiomes',$(if($mode -eq 'assisted'){'ready'}else{'off'}))}
+            $steps+=Step "correctness-$mode" $pwsh $scenarioArgs 1200
             if($steps[-1].status -ne 'PASSED'){throw "Affected runtime failed: $mode"}
             $result=Get-Content -LiteralPath (Join-Path $directory 'scenario-result.json') -Raw|ConvertFrom-Json
             if(-not $result.success -or -not $result.cleanup_safe -or $result.artifact_sha256 -ne $hash){throw 'Runtime cleanup/artifact mismatch'}
@@ -342,6 +358,12 @@ try{
             [IO.File]::WriteAllText((Join-Path $root 'shaped-terrain-use.json'),([ordered]@{applied_matching=$shapedUse.Count;chunks=$shapedUse}|ConvertTo-Json -Depth 5))
         }
         [IO.File]::WriteAllText((Join-Path $root 'block-density-use.json'),($use|ConvertTo-Json))
+        if($TestProfile -in @('complete-early-biomes','complete-biome-authority')){
+            $steps+=Step 'full-biome-parity' $pwsh @('-NoProfile','-File',(Join-Path $PSScriptRoot 'Compare-BiomeStageDigests.ps1'),
+                '-VanillaLog',(Join-Path $correct 'vanilla/remote-evidence/latest.log'),'-AssistedLog',(Join-Path $correct 'assisted/remote-evidence/latest.log'),
+                '-Output',(Join-Path $root 'full-biome-parity.json'),'-RequireApplied') 120
+            if($steps[-1].status -ne 'PASSED'){throw 'Full original biome parity or actual application missing'}
+        }
         $lock.Dispose();$lock=$null
         if(-not $SkipPerformance){
         $steps+=Step 'performance-pair' $pwsh @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-ConstrainedServerBenchmark.ps1'),'-Execute','-PhysicalServer','-ServerFlightRecording','-ViewDistance',[string]$ViewDistance,'-MeasureFullView','-QuietRemoteTrace','-AssistedNoiseBackend','cooperative','-VanillaNoiseBackend','cooperative','-WindowProfile',$WindowProfile,'-ConditionOrder',$ConditionOrder,'-RemoteApplicationProfile',$RemoteApplicationProfile,'-PrefetchLookahead',[string]$PrefetchLookahead,'-RemoteWorkKind',$RemoteWorkKind,'-CompleteVerification',$verification) 7200

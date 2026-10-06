@@ -36,5 +36,13 @@ class ConnectionScopedResultIngress263Test {
 		assertEquals(List.of(a, b, a), owners);
 		ingress.remove(other); assertFalse(queued.get(1).getAsBoolean()); assertTrue(queued.get(2).getAsBoolean());
 		ingress.clear(); assertFalse(queued.get(2).getAsBoolean());
+		List<BooleanSupplier> biomeQueued=new ArrayList<>();List<UUID> biomeOwners=new ArrayList<>();
+		ConnectionScopedResultIngress.BiomeReceiver biomes=(owner,reply,current)->{biomeOwners.add(owner);biomeQueued.add(current);};
+		var early=new io.github.genichimaruo.worldgenassist.network.TerrainBiomeResultPayload(identity,
+			new CompleteBiomeData(0,16,List.of("minecraft:plains"),new byte[][]{{0}},new byte[64]));
+		ingress.bind(old,a,receiver,biomes);assertTrue(ingress.receive(old,early));
+		ingress.bind(replacement,a,receiver,biomes);assertFalse(biomeQueued.getFirst().getAsBoolean());assertFalse(ingress.receive(old,early));
+		ingress.remove(old);assertTrue(ingress.receive(replacement,early));assertEquals(List.of(a,a),biomeOwners);
+		ingress.remove(replacement);assertFalse(biomeQueued.getLast().getAsBoolean());assertFalse(ingress.receive(replacement,early));
 	}
 }

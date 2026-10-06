@@ -182,7 +182,13 @@ public final class ClientWorldgenWorker {
 					job.identity().chunkZ()
 				);
 				long workerStarted = System.nanoTime();
-				TerrainDensityResult result = ClientTerrainDensityComputer.compute(requestSession, currentDimension, job);
+					TerrainDensityResult result = ClientTerrainDensityComputer.compute(requestSession, currentDimension, job, biomes -> {
+						if (!cancelled.get()) {
+							boolean earlySent = requestReplies.send(new io.github.genichimaruo.worldgenassist.network.TerrainBiomeResultPayload(job.identity(), biomes),
+								() -> !cancelled.get());
+							WorldgenAssist.LOGGER.info("[CAWG] job.client_biomes_dispatched id={} sent={}", job.identity().jobId(), earlySent);
+						}
+					});
 				if (corruptResultsForAdversarialTest) {
 					result = corruptEveryDensity(result);
 				}

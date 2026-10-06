@@ -60,6 +60,10 @@ public final class PrivateTerrainComputer {
 		return compute(job,generator,state,null);
 	}
 	public CompleteTerrainData compute(TerrainDensityJob job, NoiseBasedChunkGenerator generator, RandomState state, PublicPeerProbe probe) {
+		return compute(job, generator, state, probe, null);
+	}
+	public CompleteTerrainData compute(TerrainDensityJob job, NoiseBasedChunkGenerator generator, RandomState state,
+		PublicPeerProbe probe, java.util.function.Consumer<CompleteBiomeData> earlyReply) {
 		var settings = generator.generatorSettings().value();
 		if (generator.getClass() != NoiseBasedChunkGenerator.class
 			|| !(generator.getBiomeSource() instanceof MultiNoiseBiomeSource biomes)
@@ -97,6 +101,8 @@ public final class PrivateTerrainComputer {
 			window[z][x] = chunk;
 		}
 		ProtoChunk center = window[1][1];
+		CompleteBiomeData centerBiomes = job.earlyBiomes() ? CompleteBiomeData.capture(center) : null;
+		if (centerBiomes != null && earlyReply != null) { checkCancellation(); earlyReply.accept(centerBiomes); }
 		BiomeResolver uncached = biomes.createUncachedResolver(state);
 		BiomeResolver resolver = (qx, qy, qz) -> {
 			int dx = Math.floorDiv(qx, 4) - centerX + 1, dz = Math.floorDiv(qz, 4) - centerZ + 1;
@@ -142,7 +148,7 @@ public final class PrivateTerrainComputer {
 		for (int i = 0; i < offsets.length; i++) offsets[i] = original[i] == null ? new short[0] : original[i].toShortArray();
 		byte[] digest = TerrainBiomeWindow.digest(centerX, centerZ, job.minY(), job.height(),
 			(x, z) -> window[z - centerZ + 1][x - centerX + 1]);
-		CompleteTerrainData result = new CompleteTerrainData(job.minY(), job.height(), choices, surface, floor, offsets, digest);
+		CompleteTerrainData result = new CompleteTerrainData(job.minY(), job.height(), choices, surface, floor, offsets, digest, centerBiomes);
 		if(probe!=null) try { probe.capture(job,result,(x,z) -> window[z-centerZ+1][x-centerX+1]); }
 		catch(java.io.IOException | RuntimeException error) {
 			io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.warn("[CAWG] public_peer_probe.failed job={} reason={}",job.identity().jobId(),error.toString());

@@ -77,6 +77,12 @@ public final class RemoteJobCoordinator {
 		WorldgenAssist.LOGGER.info("[CAWG] job.request_dispatch id={} request_queue_ms={}",
 			attempt.job.identity().jobId(), (System.nanoTime() - attempt.registeredNanos) / 1_000_000.0);
 	}
+	/** Complete pair registration before either same-turn request can leave the server. */
+	public <T> T withJobBatchResult(java.util.function.Supplier<T> dispatch) {
+		var value = new java.util.concurrent.atomic.AtomicReference<T>();
+		withJobBatch(() -> value.set(dispatch.get()));
+		return value.get();
+	}
 
 	// Cache consumers must observe watchdog quarantine without acquiring the
 	// coordinator monitor while holding the manager's result-state lock.

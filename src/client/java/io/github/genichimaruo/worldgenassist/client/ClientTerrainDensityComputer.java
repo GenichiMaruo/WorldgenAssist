@@ -33,6 +33,10 @@ final class ClientTerrainDensityComputer {
 	}
 
 	static TerrainDensityResult compute(Session session, Identifier currentDimension, TerrainDensityJob job) {
+		return compute(session, currentDimension, job, null);
+	}
+	static TerrainDensityResult compute(Session session, Identifier currentDimension, TerrainDensityJob job,
+		java.util.function.Consumer<io.github.genichimaruo.worldgenassist.common.CompleteBiomeData> earlyReply) {
 		long prepareStarted = System.nanoTime();
 		if (!currentDimension.equals(job.identity().dimension())) {
 			throw new RejectedJobException(TerrainJobFailurePayload.Reason.UNSUPPORTED_CONTEXT);
@@ -60,7 +64,7 @@ final class ClientTerrainDensityComputer {
 		RandomState randomState = prepared.state();
 		if (job.workKind() == TerrainWorkKind.COMPLETE_TERRAIN) {
 			long started = System.nanoTime();
-			var terrain = prepared.terrainComputer().compute(job, prepared.generator(), randomState, session.probe);
+			var terrain = prepared.terrainComputer().compute(job, prepared.generator(), randomState, session.probe, earlyReply);
 			return TerrainDensityResult.fromCompleteTerrain(job.identity(), terrain, System.nanoTime() - started);
 		}
 		if (job.workKind() == TerrainWorkKind.TERRAIN_DECISIONS_AND_SURFACE) {

@@ -24,7 +24,7 @@ final class ForgeNetwork {
     static void register(ForgeWorldgenAssist owner) {
         if (channel != null) throw new IllegalStateException("Forge channel already registered");
         channel = ChannelBuilder.named("worldgen_assist:play")
-            .networkProtocolVersion(3).optional().payloadChannel().play().flow(PacketFlow.SERVERBOUND)
+            .networkProtocolVersion(4).optional().payloadChannel().play().flow(PacketFlow.SERVERBOUND)
             .addMain(WorkerHelloPayload.TYPE, WorkerHelloPayload.CODEC, (payload, context) -> {
                 ServerPlayer player = context.getSender();
                 if (player != null) channel.reply(owner.manager().handleHello(player.getUUID(), payload), context);
@@ -33,6 +33,11 @@ final class ForgeNetwork {
                 ServerPlayer player = context.getSender();
                 if (player != null) owner.manager().handleResult(player.getUUID(), payload);
             })
+            .addMain(io.github.genichimaruo.worldgenassist.network.TerrainBiomeResultPayload.TYPE,
+                io.github.genichimaruo.worldgenassist.network.TerrainBiomeResultPayload.CODEC, (payload, context) -> {
+                    ServerPlayer player = context.getSender();
+                    if (player != null) owner.manager().handleBiomeResult(player.getUUID(), payload);
+                })
             .addMain(ForgeResultFragmentPayload.TYPE, ForgeResultFragmentPayload.CODEC, (payload, context) -> {
                 ServerPlayer player = context.getSender();
                 if (player != null && owner.manager().acceptsFragment(player.getUUID(), payload.identity())) {

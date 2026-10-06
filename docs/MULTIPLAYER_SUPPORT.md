@@ -1,5 +1,112 @@
 # Player-owned concurrent assistance
 
+## Dev.19 gate154217-052 completed: no end-to-end gain
+
+ONE sequential session51372 exits0;exactly1 affected method (0 failures/errors/
+skips),3fresh builds,physical1,822 shared format2 NOISE digests/0 differences,
+required applied-995,2000 and997,-2000 match original. Actual complete708/732
+and distinct peers677/585. Independent full-BIOMES2,114 shared/0 differences;
+ALL472 postmarker applications original-equal (2early_peer/470complete_cache).
+Audit-only cached BIO authority now requires explicit server-local full-body
+proof;domain-only unaudited/nonpeer replies have no BIO approval. Peer center
+agreement and existing original3x3 TERRAIN guard remain;wire cannot import it.
+
+Fresh native154618-136:Forge2,913/Neo2,852 shared full-BIO digests/0 differences,
+ALL111/64 actual postmarker BIO applications match original (allcomplete_cache).
+Full NOISE2,551/2,494 shared/0 differences;ALL618/513 counted applications
+original-present/equal,both owners use distinct peers (82/206,59/133). Explicit
+functional view10/4client-workers/2JVM-server-processors;not native speed proof.
+Prior failed dev.18 attempts are retained. Passing now does NOT establish the
+cause/fix of previous Neo onboarding0,18 private biome-window refusal.
+
+Exact hashes:FabricA5A16BC24A75FFB94A72FF6E75CB164D8A6B590D2E8B607F3694038B1482619F;
+Forge0F126E47262A3B9E4DCB5FC3E64E6BF1F0528D5C0E6B4883AB8B342DCDC00E55;
+NeoCF48D139B24A7B484694EFDFD97750A37F87A96AE0060CDE9F17305BF9DE3C92.
+SAME-JAR/source assistance ON BOTH,BIOMESoff/ready natural weak E-server/
+two clients on one stronger PC,view32/4workers/owner32/global64/cache128/30s,
+FEATURESoff/sectionprepINLINE/BIOdigestOFF,warm1/3same relocations.
+All10658 tasks and3461 receipts per owner/repeat,0failed tasks/timeouts/
+quarantines/terrain differences/application rejects,clean stops.
+FULLoff87.189735/102.394324/103.584116s;ready86.933417/106.794932/104.507590s.
+Receipt off92.083757/108.484672/108.257515s;ready91.882352/113.296220/109.166816s.
+CPUoff325531.250/326968.750/329000.000ms;ready329187.500/327515.625/328375.000ms.
+Paired median ratios:FULL+0.89%,receipt+0.84%,CPU+0.17%,tickp95+0.50%;
+each only1/3 lower. Application+1.60%,decode+7.50%;RTT-0.87%(2/3 lower).
+No demonstrated speedup/CPU saving. Ready BIO stays defaultOFF. NOT a
+remote-OFF comparison;do not attach old~11% general gains to this artifact.
+
+One AFTER-batch offline sequence/session66265 exits0,no new game/build/test/SSH:
+actual ready BIO1079/1635/1534,ALL within same measured NOISE coordinates,
+10.12/15.34/14.39% of10658 NOISE tasks (NOT all BIO-task coverage). Early first
+reply only7/11/9;complete-cache1072/1624/1525. BIO apply event means0.342/
+0.339/0.396ms;overlapping event spans,not CPU durations. Actual full TERRAIN
+off8417/9580/8687 versusready8473/9446/8405. Exact repeat2 JFR18752/18748
+computational samples,1225/1235 truncated. Original biome-stage inclusive
+7.18->6.30%,generic biome11.52->10.68%,features30.14/29.84%,remote management
+8.94/8.98%,early BIO application0.267%,center capture0.149%. Categories overlap/
+sampling truncates;not critical-path or CPU-time proof. String capture therefore
+is NOT supported as a large measured server bottleneck. Main evidence is low
+early consumption and larger remaining original work;do not weaken checks to
+force more accepted jobs. Next inspect earlier assignment/client ingress and
+remaining FEATURES/light-proof gaps before another targeted change.
+
+Frozen sourcefbe9c003e0a9d9cf060192a72b173fbab34e96a03eeb3d22fc2fe907cdc73d47;
+coordinate0DC57CE29A8567861E7EC756E7EC8556AACC9A02A0912F0D5A371BB2CC4F886F;
+coordinator641868F163E0EAE9CDF819F6EB87AAE956B71780E0A8F257D63BDE799CE23238.
+Evidence:early-biomes-gate-20261006-154217-052/summary.json and both
+analysis-biomes directories;block-density-gate154217-883/native154618-136.
+Publicalpha7 unchanged;no new release/beta claim;goal remains active.
+Following implementation-time UNRUN headings are HISTORY.
+
+
+## Current dev.19: explicit audited BIOMES provenance (UNRUN)
+
+Source0.1.0-alpha.8-dev.19+mc26.3 retains protocol13/native4/bodyv2 and all
+original dev.18 stage/safety bounds. Cache BIOMES reuse now REQUIRES an explicit
+process-local exact-center peer agreement OR a successful independent FULL
+original server-body audit. Mere absence of peer approval/domain-only unaudited
+comparison cannot grant BIOMES authority. Server-audit approval includes all
+original metadata/blocks/heights/offsets,has its own current-context supplier,
+does not masquerade as peer verification,and cannot cross the wire. Existing
+first2/private1/64(peer) or1/8(nonpeer) audit policy stays unchanged.
+
+Dev.18 gate125027-160 passed7+1 affected methods/3builds/physical parity:
+2,113 full biome-stage shared digests/0 differences,ALL535 actual postmarker
+applications match original (1early_peer/534complete_cache). Those hashes/source
+belong ONLY to dev.18,not this new source. Unrestricted and2-processor native
+view4 attempts correctly FAILED zero-route coverage. View10/4client-workers/
+2-server-processors native152742-552 exercises Forge209/Neo128 actual BIOMES,
+all equal original,2,883/2,913 shared full biome-stage digests match. Whole gate
+still FAILS one Neo onboarding original3x3 biome-window refusal at0,18. No
+partial remote terrain was written;original fallback's actual full biome and
+format2 NOISE digests at0,18 independently match vanilla. Private history cause
+remains unproved;do not normalize hashes,palettes or waive the retained failure.
+
+After ALL edits:ONE Run-EarlyBiomesGate -Execute -TestProfile
+complete-biome-authority sequential batch;exactly1 expanded affected existing
+method,3fresh builds,small physical original/assisted full-biome/terrain parity,
+fresh native pairs with explicit view10/4workers/2-processor functional profile,
+then SAME-JAR assistance ON BOTH BIOMESoff/ready ordinary view32 on natural weak
+E-server (CPU limit0),two clients on one stronger PC. Existing7 other methods/
+fragment tests are NOT rerun. Diagnostic full-BIOMES digest OFF for performance;
+frozen source/JAR/coordinates,actual application,receipt/CPU/tick checks remain.
+ALL dev.19 tests/builds/runtime/performance UNRUN;no speed/beta/publication claim.
+Publicalpha7 unchanged. Following dev.18 implementation-time UNRUN headers are
+HISTORY;completed evidence above and EARLY_BIOMES_EXPERIMENT take precedence.
+
+
+## Dev.18 first-phase BIOMES (UNRUN)
+
+Protocol13/nativechannel4 adds defaultOFF allow_remote_biomes on existing
+remote/trusted_raw/complete/peer mode. Only already-trusted distinct owners'
+NONAUDIT exact center agreement can replace original BIOMES. Existing
+first2/private audits,global/per-owner capacity,epochs/deadlines/revocation
+remain; first reply keeps its full assignment slot. No new world tickets/ACK.
+Final reply must retain its own original early center. Different private
+histories are unavailable for BIOMES,not normalized; old terrain alternatives
+remain. Separate exact center cache approval cannot cross wire. No seed secrecy,
+hostile collusion or beta claim. All verification UNRUN;see EARLY_BIOMES_EXPERIMENT.md.
+
 ## Dev.13 completed gate200326-361 (not beta)
 
 Single sequential gate `test-artifacts/block-density-gate-20261005-200326-361`

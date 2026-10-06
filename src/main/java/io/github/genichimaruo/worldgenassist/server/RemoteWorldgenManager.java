@@ -76,6 +76,8 @@ public final class RemoteWorldgenManager {
 	private final SecureRandom validationRandom = new SecureRandom();
 	private final CompleteTerrainAuditPolicy<CompleteAuditContext> completeAudits;
 	private final boolean peerVerification = CompleteTerrainVerificationMode.peerRequested();
+	private final boolean earlyBiomes;
+	private final EarlyBiomePairs<RemoteDensityResultCache.Key> earlyBiomePairs;
 	private final boolean prepareSectionsOnDecoder = Boolean.parseBoolean(System.getProperty(
 		"worldgen_assist.remote.prepare_sections", System.getenv("WORLDGEN_ASSIST_REMOTE_PREPARE_SECTIONS")));
 	/** Only the owned validation executor computes; lifecycle mutations use resultStateLock. */
@@ -106,6 +108,10 @@ public final class RemoteWorldgenManager {
 
 	private RemoteWorldgenManager(RemoteWorldgenConfig config, RemoteJobSender sender) {
 		this.config = config;
+		this.earlyBiomes = config.remoteExecutionEnabled() && peerVerification && Boolean.parseBoolean(System.getProperty(
+			"worldgen_assist.remote.allow_remote_biomes", System.getenv("WORLDGEN_ASSIST_REMOTE_ALLOW_REMOTE_BIOMES")));
+		this.earlyBiomePairs = new EarlyBiomePairs<>(Math.max(2, config.maxInFlightJobs()));
+		WorldgenAssist.LOGGER.info("[CAWG] biome.policy early={} consumption=ready_only", earlyBiomes);
 		this.coordinator = new RemoteJobCoordinator(config, sender);
 		this.resultCache = new RemoteDensityResultCache(config.cacheEntries(), config.jobTimeout().toNanos());
 		this.startedTerrain = new StartedTerrain<>(16_384, config.jobTimeout().toNanos());
@@ -165,7 +171,9 @@ public final class RemoteWorldgenManager {
 		RemoteWorldgenManager manager = instance;
 		if (manager == null) return invokeFallback(localFallback);
 		long generation=manager.cacheGeneration.get();
-		var result=manager.generate(context,step,chunks,chunk,localFallback);
+		var result=manager.earlyBiomes
+			? manager.coordinator.withJobBatchResult(() -> manager.generate(context,step,chunks,chunk,localFallback))
+			: manager.generate(context,step,chunks,chunk,localFallback);
 		if (!manager.config.remoteExecutionEnabled()) return result;
 		return result.whenComplete((generated,error)->{
 			if (generation!=manager.cacheGeneration.get()) return;
@@ -173,6 +181,70 @@ public final class RemoteWorldgenManager {
 			manager.requestPrefetchDispatch();
 		});
 	}
+	/** Ready-only first-phase reuse; no new job, ticket, or response wait at BIOMES. */
+	public static CompletableFuture<ChunkAccess> generateBiomesOrFallback(WorldGenContext context, ChunkStep step,
+		StaticCache2D<GenerationChunkHolder> chunks, ChunkAccess chunk, Supplier<CompletableFuture<ChunkAccess>> local) {
+		RemoteWorldgenManager manager = instance;
+		if (manager == null || !manager.earlyBiomes || context.level().getServer() != manager.server) return invokeFallback(local);
+		BiomeCandidate candidate;
+		try { candidate = manager.biomeCandidate(context, step, chunks, chunk); }
+		catch (RuntimeException rejected) { return invokeFallback(local); }
+		if (candidate == null) return invokeFallback(local);
+		return CompletableFuture.supplyAsync(() -> {
+			long started = System.nanoTime(); EarlyBiomeApplicator.Prepared prepared;
+			try {
+				prepared = EarlyBiomeApplicator.prepare(candidate.data(), chunk,
+					(net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator)context.generator(), context.level().registryAccess(), candidate.authority());
+			} catch (java.util.concurrent.CancellationException unavailable) {
+				manager.trace("[CAWG] biome.apply_unavailable id={} reason=obsolete_authority", candidate.jobId());
+				return invokeFallback(local);
+			} catch (RuntimeException rejected) {
+				manager.trace("[CAWG] biome.apply_rejected id={} chunk={},{} reason={}", candidate.jobId(), chunk.getPos().x(), chunk.getPos().z(), rejected.getClass().getSimpleName());
+				return invokeFallback(local);
+			}
+			// Never invoke vanilla after the first live write, even if an unexpected original hook fails.
+			if (!prepared.apply()) return invokeFallback(local);
+			WorldgenAssist.LOGGER.info("[CAWG] biome.applied id={} chunk={},{} source={} apply_ms={}", candidate.jobId(),
+				chunk.getPos().x(), chunk.getPos().z(), candidate.source(), (System.nanoTime() - started) / 1_000_000.0);
+			return CompletableFuture.completedFuture(chunk);
+		}, net.minecraft.util.Util.backgroundExecutor().forName("createBiomes")).thenCompose(future -> future);
+	}
+	private BiomeCandidate biomeCandidate(WorldGenContext context, ChunkStep step, StaticCache2D<GenerationChunkHolder> chunks, ChunkAccess chunk) {
+		if (context.generator().getClass() != net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator.class
+			|| chunk.isOldNoiseGeneration() || chunk.getBelowZeroRetrogen() != null) return null;
+		var eligible = RemoteWorldgenEligibility.evaluatePrediction(context.level());
+		if (eligible.isEmpty() || !net.minecraft.world.level.levelgen.blending.Blender.of(
+			new net.minecraft.server.level.WorldGenRegion(context.level(), chunks, step, chunk)).isEmpty()) return null;
+		var demand = PlayerChunkDemand.selectGeneration(demands, context.level().dimension().identifier(), chunk.getPos().x(), chunk.getPos().z()).orElse(null);
+		if (demand == null) return null;
+		var spec = eligible.orElseThrow();
+		var fingerprint = contextFingerprints.computeIfAbsent(context.level().dimension(),
+			ignored -> WorldgenContextFingerprintFactory.create(spec.level(), spec.generator()));
+		var key = createCacheKey(demand.ownerId(), spec.level(), chunk.getPos(), fingerprint,
+			spec.settings().unwrapKey().orElseThrow().identifier(), spec.noise(), io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.COMPLETE_TERRAIN,
+			io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData.EMPTY);
+		if (!currentCacheKey(key)) return null;
+		var cached = resultCache.peekResult(key);
+		if (cached.isPresent()) {
+			var result = cached.orElseThrow(); var data = result.completeTerrain().centerBiomes();
+			if (data != null && result.hasVerifiedCenterBiomes()) {
+				return new BiomeCandidate(result.identity().jobId(), data, "complete_cache", () -> {
+					if (!currentCacheKey(key)) throw new java.util.concurrent.CancellationException("Cached biome context expired");
+					if (resultCache.peekResult(key).orElse(null) != result) throw new java.util.concurrent.CancellationException("Cached biome TTL or entry expired");
+					result.requireCurrentAuthority();
+				});
+			}
+		}
+		var pair = earlyBiomePairs.get(key).orElse(null);
+		if (pair == null) return null;
+		var data = pair.ready().orElse(null);
+		return data == null ? null : new BiomeCandidate(pair.primaryId(), data, "early_peer", () -> {
+			if (!currentCacheKey(key)) throw new java.util.concurrent.CancellationException("Early biome context expired");
+			pair.requireCurrent();
+		});
+	}
+	private record BiomeCandidate(UUID jobId, io.github.genichimaruo.worldgenassist.common.CompleteBiomeData data,
+		String source, Runnable authority) { }
 
 	public static void observeGeneration(WorldGenContext context, ChunkAccess chunk) {
 		observeCandidate(context,chunk,false);
@@ -264,6 +336,28 @@ public final class RemoteWorldgenManager {
 
 	public void handleResult(UUID ownerId, TerrainJobResultPayload payload) {
 		acceptResult(ownerId, payload, System.nanoTime(), () -> true, "main");
+	}
+	public void handleBiomeResult(UUID ownerId, io.github.genichimaruo.worldgenassist.network.TerrainBiomeResultPayload payload) {
+		receiveBiomeResultFromNetwork(ownerId, payload, () -> true);
+	}
+	/** Small first-phase replies use the same bounded decoder, never a live-world/network mutation. */
+	public void receiveBiomeResultFromNetwork(UUID ownerId, io.github.genichimaruo.worldgenassist.network.TerrainBiomeResultPayload payload,
+		java.util.function.BooleanSupplier currentConnection) {
+		if (!earlyBiomes || !currentConnection.getAsBoolean()) return;
+		try { resultDecoder.execute(() -> {
+			if (!currentConnection.getAsBoolean()) return;
+			EarlyBiomePairs.Pair pair = null;
+			try {
+				pair = earlyBiomePairs.receive(ownerId, payload, currentConnection);
+				if (!currentConnection.getAsBoolean()) { earlyBiomePairs.remove(pair); return; }
+				if (pair != null) trace("[CAWG] biome.received id={} ready={} names={}", payload.identity().jobId(), pair.ready().isPresent(), payload.biomes().names().size());
+			} catch (RemoteDensityValidator.RemoteDensityValidationException error) {
+				// The admitted owner changed its own first/final reply, rather than two private histories disagreeing.
+				quarantineWorker(ownerId, payload.identity().jobId(), "biomes", "changed_biome_reply");
+			}
+		}); } catch (RejectedExecutionException error) {
+			trace("[CAWG] biome.ingress_rejected id={} reason=decoder_capacity", payload.identity().jobId());
+		}
 	}
 
 	/** Netty ingress only offers to a bounded decoder; it never reads player/world state. */
@@ -700,12 +794,27 @@ public final class RemoteWorldgenManager {
 		}
 		final var audit = selected;
 		final var peer = admittedPeer;
+		EarlyBiomePairs.Pair registeredBiomes;
+		try {
+			registeredBiomes = earlyBiomes && peer != null && remote.job().earlyBiomes()
+				? earlyBiomePairs.register(key, remote, peer.remote(), started + config.jobTimeout().toNanos(),
+					() -> currentCacheKey(key) && currentCacheKey(peer.key())
+						&& completeAudits.trusted(auditContext(key)) && completeAudits.trusted(auditContext(peer.key()))) : null;
+		} catch (RuntimeException error) {
+			if (audit != null) completeAudits.cancel(audit);
+			if (peer != null) cancelPeer(peer);
+			ticket.cancel(); coordinator.cancelJob(remote.ownerId(), remote.job().identity());
+			return CompletableFuture.failedFuture(error);
+		}
+		final EarlyBiomePairs.Pair biomePair = registeredBiomes;
 		CompletableFuture<TerrainDensityResult> incoming = remote.result();
 		try {
 		if (peer != null) {
 			var peerKey = peer.key();
-			incoming = CompleteTerrainPeerVerifier.agree(remote,
-				new RemoteJobCoordinator.Submission(peer.remote().ownerId(), peer.remote().job(), peer.checked()),
+			var primaryIncoming = biomePair == null ? remote.result() : remote.result().thenApply(value -> checkEarlyBiomeFull(biomePair,value));
+			var peerIncoming = biomePair == null ? peer.checked() : peer.checked().thenApply(value -> checkEarlyBiomeFull(biomePair,value));
+			incoming = CompleteTerrainPeerVerifier.agree(new RemoteJobCoordinator.Submission(remote.ownerId(), remote.job(), primaryIncoming),
+				new RemoteJobCoordinator.Submission(peer.remote().ownerId(), peer.remote().job(), peerIncoming),
 				() -> currentCacheKey(key) && currentCacheKey(peerKey),
 				() -> {
 					if (currentCacheKey(key) && currentCacheKey(peerKey)) {
@@ -719,6 +828,7 @@ public final class RemoteWorldgenManager {
 				});
 		}
 		} catch (RuntimeException error) {
+			earlyBiomePairs.remove(biomePair);
 			if (audit != null) completeAudits.cancel(audit);
 			if (peer != null) cancelPeer(peer);
 			ticket.cancel(); coordinator.cancelJob(remote.ownerId(), remote.job().identity());
@@ -763,7 +873,8 @@ public final class RemoteWorldgenManager {
 					}
 					if (currentCacheKey(key)) demandWait.recordReady(remote.ownerId(), System.nanoTime() - started);
 				}
-				return density;
+				return completeTerrain && audit.requiresFullAudit()
+					? prepared.authorizeAuditedCenterBiomes(density, () -> currentCacheKey(key)) : density;
 			} catch (RemoteDensityValidator.RemoteDensityValidationException error) {
 				quarantineWorker(remote.ownerId(), remote.job().identity().jobId(), source, "density_mismatch");
 				throw error;
@@ -778,6 +889,7 @@ public final class RemoteWorldgenManager {
 				? ticket.startPrepared(prepare.get(), incomingResult, compare)
 				: ticket.start(prepare, incomingResult, compare);
 		} catch (RuntimeException error) {
+			earlyBiomePairs.remove(biomePair);
 			if (audit != null) completeAudits.cancel(audit);
 			if (peer != null) cancelPeer(peer);
 			ticket.cancel(); coordinator.cancelJob(remote.ownerId(), remote.job().identity());
@@ -785,6 +897,7 @@ public final class RemoteWorldgenManager {
 		}
 		long remaining = Math.max(1L, config.jobTimeout().toNanos() - (System.nanoTime() - started));
 		result.orTimeout(remaining, TimeUnit.NANOSECONDS).whenComplete((density, error) -> {
+			earlyBiomePairs.complete(biomePair, error == null);
 			if (audit != null) completeAudits.cancel(audit);
 			if (peer != null) cancelPeer(peer);
 			if (error != null) {
@@ -796,6 +909,14 @@ public final class RemoteWorldgenManager {
 			requestPrefetchDispatch();
 		});
 		return result;
+	}
+	private TerrainDensityResult checkEarlyBiomeFull(EarlyBiomePairs.Pair pair, TerrainDensityResult result) {
+		try { return pair.checkFull(result); }
+		catch (RemoteDensityValidator.RemoteDensityValidationException error) {
+			quarantineWorker(pair.primaryOwner(), pair.primaryId(), "biomes", "early_final_biome_mismatch");
+			quarantineWorker(pair.peerOwner(), pair.peerId(), "biomes", "early_final_biome_mismatch");
+			throw error;
+		}
 	}
 	static CompleteAuditContext auditContext(RemoteDensityResultCache.Key key) {
 		return new CompleteAuditContext(key.ownerId(), key.ownerGeneration(), key.generation(), key.dimension(), key.contextFingerprint());
@@ -825,7 +946,7 @@ public final class RemoteWorldgenManager {
 			var job = primary.job();
 			var admitted = coordinator.trySubmitForOwner(key.ownerId(), key.dimension(), key.chunkX(), key.chunkZ(), key.contextFingerprint(),
 				identity -> new TerrainDensityJob(identity, job.worldSeed(), job.generateStructures(), job.noiseSettings(), job.minY(),
-					job.height(), job.cellWidth(), job.cellHeight(), job.workKind(), job.shaping()));
+					job.height(), job.cellWidth(), job.cellHeight(), job.workKind(), job.shaping(), job.earlyBiomes()));
 			if (admitted.isEmpty()) { ticket.cancel(); return null; }
 			peer = admitted.get();
 			var checked = ticket.startPrepared(RemoteDensityValidator.Prepared.completeTerrain(peer.job(), null, 0), peer.result(), (value, prepared) -> {
@@ -888,6 +1009,7 @@ public final class RemoteWorldgenManager {
 	}
 
 	private void clearResultState(String reason) {
+		earlyBiomePairs.clear();
 		preparation.cancelAll();
 		generationCandidates.clear();
 		long generation;
@@ -1286,7 +1408,7 @@ public final class RemoteWorldgenManager {
 				if (cached.isPresent()) {
 				var result = cached.orElseThrow();
 				var job = new TerrainDensityJob(result.identity(), seed, structures, key.noiseSettings(), key.minY(), key.height(),
-					1, 1, key.workKind(), key.shaping());
+					1, 1, key.workKind(), key.shaping(), earlyBiomes && key.workKind() == io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.COMPLETE_TERRAIN);
 				field = new RemoteDensityField(job, result, settings, state);
 				target.worldgenAssist$installRemoteDensity(field);
 				prefetchUsed.increment();
@@ -1322,7 +1444,7 @@ public final class RemoteWorldgenManager {
 		});
 	}
 
-	private static TerrainDensityJob createJob(
+	private TerrainDensityJob createJob(
 		TerrainJobIdentity identity,
 		RemoteWorldgenEligibility.EligibleContext eligibleContext,
 		net.minecraft.resources.Identifier noiseSettings
@@ -1337,11 +1459,12 @@ public final class RemoteWorldgenManager {
 			1,
 			1,
 			io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(noiseSettings, eligibleContext.settings().value()),
-			eligibleContext.shaping()
+			eligibleContext.shaping(), earlyBiomes && io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(
+				noiseSettings, eligibleContext.settings().value()) == io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.COMPLETE_TERRAIN
 		);
 	}
 
-	private static TerrainDensityJob createPredictionJob(
+	private TerrainDensityJob createPredictionJob(
 		TerrainJobIdentity identity,
 		RemoteWorldgenEligibility.SpeculativeContext speculative,
 		net.minecraft.resources.Identifier noiseSettings
@@ -1356,7 +1479,8 @@ public final class RemoteWorldgenManager {
 			1,
 			1,
 			io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(noiseSettings, speculative.settings().value()),
-			speculative.shaping()
+			speculative.shaping(), earlyBiomes && io.github.genichimaruo.worldgenassist.common.SurfaceDensityData.selectedKind(
+				noiseSettings, speculative.settings().value()) == io.github.genichimaruo.worldgenassist.common.TerrainWorkKind.COMPLETE_TERRAIN
 		);
 	}
 
@@ -1392,6 +1516,7 @@ public final class RemoteWorldgenManager {
 	}
 
 	private void invalidateOwner(UUID ownerId, boolean retainConnection) {
+		earlyBiomePairs.removeOwner(ownerId);
 		synchronized (resultStateLock) {
 			Long previous = ownerGenerations.remove(ownerId);
 			completeAudits.invalidateMatching(context -> ownerId.equals(context.owner()));

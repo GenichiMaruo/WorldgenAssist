@@ -10,6 +10,10 @@ param(
     [switch]$TerrainDecisions,
     [switch]$CompleteTerrain,
     [ValidateSet('server','peer')][string]$CompleteVerification='server',
+    [switch]$RemoteBiomes,
+    [switch]$BiomeDigest,
+    [ValidateRange(0,32)][int]$ServerActiveProcessorCount=0,
+    [ValidateRange(2,10)][int]$ViewDistance=4,
     [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='ready',
     [switch]$StructuralShaping,
     [ValidateSet('off','serial','parallel')][string]$FeatureBackend='off',
@@ -141,7 +145,7 @@ try {
         'server-ip'='127.0.0.1';'server-port'='25585';'online-mode'='false';
         'enable-rcon'='true';'rcon.port'='25575';'rcon.password'=$password;
         'level-name'=$world;'level-seed'='8675309';'gamemode'='creative';
-        'view-distance'='4';'simulation-distance'='3';'max-players'=[string]$Players;
+        'view-distance'=[string]$ViewDistance;'simulation-distance'='3';'max-players'=[string]$Players;
         'pause-when-empty-seconds'='-1'
     }.GetEnumerator()) { $properties = Set-Property $properties $entry.Key $entry.Value }
     [IO.File]::WriteAllText($serverProperties,$properties)
@@ -168,6 +172,7 @@ try {
             $serverEnvironment.WORLDGEN_ASSIST_REMOTE_ALLOW_TERRAIN_DECISIONS='false'
             $serverEnvironment.WORLDGEN_ASSIST_REMOTE_ALLOW_COMPLETE_TERRAIN='true'
             $serverEnvironment.WORLDGEN_ASSIST_REMOTE_COMPLETE_VERIFICATION=$CompleteVerification
+            $serverEnvironment.WORLDGEN_ASSIST_REMOTE_ALLOW_REMOTE_BIOMES=([bool]$RemoteBiomes).ToString().ToLowerInvariant()
         }
         $serverEnvironment.WORLDGEN_ASSIST_REMOTE_CACHE_ENTRIES = '128'
         $serverEnvironment.WORLDGEN_ASSIST_REMOTE_PREFETCH = 'true'
@@ -182,6 +187,8 @@ try {
         $serverEnvironment.WORLDGEN_ASSIST_REMOTE_PREDICTION = 'false'
     }
     $serverArguments = @('-Xmx3G')
+    if($ServerActiveProcessorCount){$serverArguments+="-XX:ActiveProcessorCount=$ServerActiveProcessorCount"}
+    if($BiomeDigest){$serverArguments+='-Dworldgen_assist.biome.digest=true'}
     if ($TerrainDecisions) { $serverArguments += '-Dworldgen_assist.remote.diagnostics=true' }
     $serverArguments += @($nativeArguments,'nogui')
     $server = Start-Owned $java $serverArguments $serverRoot $serverEnvironment
@@ -208,6 +215,14 @@ try {
                 'renderDistance:4','simulationDistance:4','fullscreen:false','enableVsync:false','maxFps:30') +
                 (@('forward','back','left','right','jump','sneak','sprint','attack','use') | ForEach-Object { 'key_key.' + $_ + ':key.keyboard.unknown' }) |
                 Set-Content -LiteralPath (Join-Path $clientRoot 'options.txt') -Encoding utf8
+        }
+        if($BiomeDigest){
+            $optionPath=Join-Path $clientRoot 'options.txt'
+            $optionLines=@(Get-Content -LiteralPath $optionPath|Where-Object {$_ -notmatch '^(renderDistance|graphicsPreset):'})
+            $optionLines+=@("renderDistance:$ViewDistance",'graphicsPreset:"custom"')
+            $optionLines|Set-Content -LiteralPath $optionPath -Encoding utf8
+            $argumentPath=$launch.Arguments[0].Substring(1)
+            @('-Dworldgen_assist.client.worker_threads=4')+@(Get-Content -LiteralPath $argumentPath)|Set-Content -LiteralPath $argumentPath
         }
         $clientEnvironment = @{WORLDGEN_ASSIST_REMOTE=if($Mode -eq 'assisted'){'true'}else{'false'}}
         if ($TerrainDecisions) { $clientEnvironment.WORLDGEN_ASSIST_CLIENT_JOB_WINDOW = '16' }
@@ -342,7 +357,10 @@ finally {
     if (-not (Test-Path -LiteralPath $logCopy) -and (Test-Path -LiteralPath (Join-Path $serverRoot 'logs/latest.log'))) {
         Copy-Item -LiteralPath (Join-Path $serverRoot 'logs/latest.log') -Destination $logCopy
     }
-    $result = [ordered]@{schema='worldgen-assist.installed-native-scenario.v1';loader=$Loader;mode=$Mode;players=$Players;world=$world;success=$success;cleanup_safe=$cleanupSafe;loopback_only=$true;failure=$failure;mod_sha256=$modHash;terrain_decisions=[bool]$TerrainDecisions;complete_terrain=[bool]$CompleteTerrain;complete_verification=$CompleteVerification;remote_application_profile=$RemoteApplicationProfile;structural_shaping=[bool]$StructuralShaping;view_distance=4;validation_cells=8}
+    $result = [ordered]@{schema='worldgen-assist.installed-native-scenario.v1';loader=$Loader;mode=$Mode;players=$Players;world=$world;success=$success;cleanup_safe=$cleanupSafe;loopback_only=$true;failure=$failure;mod_sha256=$modHash;terrain_decisions=[bool]$TerrainDecisions;complete_terrain=[bool]$CompleteTerrain;complete_verification=$CompleteVerification;remote_application_profile=$RemoteApplicationProfile;structural_shaping=[bool]$StructuralShaping;remote_biomes=[bool]$RemoteBiomes;biome_digest=[bool]$BiomeDigest;view_distance=4;validation_cells=8}
+    $result.server_active_processor_count=$ServerActiveProcessorCount
+    $result.view_distance=$ViewDistance
+    $result.client_worker_threads=if($BiomeDigest){4}else{2}
     $result.feature_backend=$FeatureBackend
     $result.decoration_digest=[bool]$DecorationDigest
     $result.feature_fixture=[bool]$FeatureFixture

@@ -16,9 +16,11 @@ public final class TerrainDensityResult {
 	private final long clientComputeNanos;
 	/** Process-local only; decoding never imports authority or callbacks from the wire. */
 	private final LocalApproval localApproval;
+	/** Independent full-server audit provenance, process-local and absent after decoding. */
+	private final java.util.function.BooleanSupplier centerAuditAuthority;
 
 	public TerrainDensityResult(TerrainJobIdentity identity, double[] densities, long clientComputeNanos) {
-		localApproval = null;
+		localApproval = null; centerAuditAuthority = null;
 		this.identity = Objects.requireNonNull(identity, "identity");
 		Objects.requireNonNull(densities, "densities");
 		if (densities.length < 1 || densities.length > TerrainDensityJob.MAX_TERRAIN_SAMPLE_COUNT) {
@@ -49,7 +51,7 @@ public final class TerrainDensityResult {
 	}
 
 	private TerrainDensityResult(TerrainJobIdentity identity, float[] values, long computeNanos) {
-		localApproval = null;
+		localApproval = null; centerAuditAuthority = null;
 		this.identity = Objects.requireNonNull(identity, "identity");
 		Objects.requireNonNull(values, "values");
 		if (values.length < 1 || values.length > TerrainDensityJob.MAX_TERRAIN_SAMPLE_COUNT
@@ -70,7 +72,7 @@ public final class TerrainDensityResult {
 		return new TerrainDensityResult(identity, codes, surface, computeNanos);
 	}
 	private TerrainDensityResult(TerrainJobIdentity identity, byte[] codes, float[] surface, long computeNanos) {
-		localApproval = null;
+		localApproval = null; centerAuditAuthority = null;
 		this.identity = Objects.requireNonNull(identity, "identity");
 		Objects.requireNonNull(codes, "codes"); Objects.requireNonNull(surface, "surface");
 		if (codes.length < 2048 || codes.length > TerrainDensityJob.MAX_SAMPLE_COUNT || codes.length % 2048 != 0
@@ -92,7 +94,12 @@ public final class TerrainDensityResult {
 		this(identity, data, computeNanos, null);
 	}
 	private TerrainDensityResult(TerrainJobIdentity identity, CompleteTerrainData data, long computeNanos, LocalApproval approval) {
+		this(identity, data, computeNanos, approval, null);
+	}
+	private TerrainDensityResult(TerrainJobIdentity identity, CompleteTerrainData data, long computeNanos, LocalApproval approval,
+		java.util.function.BooleanSupplier centerAuditAuthority) {
 		localApproval = approval;
+		this.centerAuditAuthority = centerAuditAuthority;
 		this.identity = Objects.requireNonNull(identity);
 		completeTerrain = Objects.requireNonNull(data);
 		if (computeNanos < 0 || computeNanos > MAX_CLIENT_COMPUTE_NANOS) throw new IllegalArgumentException("Invalid terrain timing");
@@ -106,10 +113,21 @@ public final class TerrainDensityResult {
 	}
 	/** The alternative is process-local, exact original data, and must agree on ALL terrain. */
 	public TerrainDensityResult withLocalApproval(java.util.function.BooleanSupplier current, Runnable applied, CompleteTerrainData alternative) {
+		return withLocalApproval(current, applied, alternative, false);
+	}
+	/** Separate exact center-biome agreement; old terrain-only approval grants no early biome use. */
+	public TerrainDensityResult withLocalApproval(java.util.function.BooleanSupplier current, Runnable applied,
+		CompleteTerrainData alternative, boolean centerBiomesAgreed) {
 		if (completeTerrain == null || localApproval != null) throw new IllegalStateException("Invalid local approval");
 		if (alternative != null && !completeTerrain.sameTerrainAs(alternative)) throw new IllegalArgumentException("Peer terrain differs");
 		return new TerrainDensityResult(identity, completeTerrain, clientComputeNanos,
-			new LocalApproval(Objects.requireNonNull(current), Objects.requireNonNull(applied),alternative));
+			new LocalApproval(Objects.requireNonNull(current), Objects.requireNonNull(applied),alternative,centerBiomesAgreed), centerAuditAuthority);
+	}
+	/** Attach only after comparison with an independently generated FULL original server body. */
+	public TerrainDensityResult withServerAuditApproval(CompleteTerrainData expected, java.util.function.BooleanSupplier current) {
+		if (completeTerrain == null || completeTerrain.centerBiomes() == null || centerAuditAuthority != null
+			|| expected == null || !expected.equals(completeTerrain)) throw new IllegalArgumentException("No independent full biome audit");
+		return new TerrainDensityResult(identity, completeTerrain, clientComputeNanos, localApproval, Objects.requireNonNull(current));
 	}
 	public boolean hasPeerBiomeAlternative() { return localApproval != null && localApproval.alternative != null; }
 	/** Server prewrite input check only. Never manufactures or replaces a digest. */
@@ -121,7 +139,11 @@ public final class TerrainDensityResult {
 		throw new IllegalArgumentException("Complete terrain biome window differs from authoritative chunks");
 	}
 	public boolean hasPeerVerification() { return localApproval != null; }
-	public boolean authorityCurrent() { return localApproval == null || localApproval.current.getAsBoolean(); }
+	public boolean hasAgreedCenterBiomes() { return localApproval != null && localApproval.centerBiomesAgreed && authorityCurrent(); }
+	public boolean hasVerifiedCenterBiomes() { return completeTerrain != null && completeTerrain.centerBiomes() != null
+		&& authorityCurrent() && (centerAuditAuthority != null || localApproval != null && localApproval.centerBiomesAgreed); }
+	public boolean authorityCurrent() { return (localApproval == null || localApproval.current.getAsBoolean())
+		&& (centerAuditAuthority == null || centerAuditAuthority.getAsBoolean()); }
 	public void requireCurrentAuthority() {
 		if (!authorityCurrent()) throw new IllegalArgumentException("Remote peer authority expired");
 	}
@@ -132,8 +154,11 @@ public final class TerrainDensityResult {
 		final java.util.function.BooleanSupplier current;
 		final Runnable applied;
 		final CompleteTerrainData alternative;
+		final boolean centerBiomesAgreed;
 		final java.util.concurrent.atomic.AtomicBoolean reported = new java.util.concurrent.atomic.AtomicBoolean();
-		LocalApproval(java.util.function.BooleanSupplier current, Runnable applied, CompleteTerrainData alternative) { this.current = current; this.applied = applied; this.alternative=alternative; }
+		LocalApproval(java.util.function.BooleanSupplier current, Runnable applied, CompleteTerrainData alternative, boolean centerBiomesAgreed) {
+			this.current = current; this.applied = applied; this.alternative=alternative; this.centerBiomesAgreed=centerBiomesAgreed;
+		}
 	}
 	public CompleteTerrainData completeTerrain() {
 		if (completeTerrain == null) throw new IllegalStateException("Not a complete terrain result");

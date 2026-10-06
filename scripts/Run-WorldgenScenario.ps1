@@ -28,6 +28,8 @@ param(
     [ValidateSet('grid','surface','density','block','decisions','complete')][string]$RemoteWorkKind='grid',
     [ValidateSet('server','peer')][string]$CompleteVerification='server',
     [ValidateSet('inline','decoder')][string]$SectionPreparation='inline',
+    [ValidateSet('off','ready')][string]$RemoteBiomes='off',
+    [switch]$BiomeDigest,
     [ValidateSet('off','serial','parallel')][string]$FeatureBackend='off',
     [switch]$DecorationDigest,
     [switch]$FeatureFixture,
@@ -219,6 +221,8 @@ try {
     $remoteCommand += ' -RemoteWorkKind '+$RemoteWorkKind
     $remoteCommand += ' -CompleteVerification '+$CompleteVerification
     $remoteCommand += ' -SectionPreparation '+$SectionPreparation
+    $remoteCommand += ' -RemoteBiomes '+$RemoteBiomes
+    if($BiomeDigest){$remoteCommand += ' -BiomeDigest'}
     $remoteCommand += ' -FeatureBackend '+$FeatureBackend
     if($DecorationDigest){$remoteCommand += ' -DecorationDigest'}
     if($FeatureFixture){$remoteCommand += ' -FeatureFixture'}
@@ -315,6 +319,8 @@ try {
     $result.remote_work_kind = $RemoteWorkKind
     $result.complete_verification = $CompleteVerification
     $result.section_preparation = $SectionPreparation
+    $result.remote_biomes = $RemoteBiomes
+    $result.biome_digest = [bool]$BiomeDigest
     $result.feature_backend = $FeatureBackend
     $result.decoration_digest = [bool]$DecorationDigest
     $result.feature_fixture = [bool]$FeatureFixture

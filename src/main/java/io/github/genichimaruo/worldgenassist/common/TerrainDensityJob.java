@@ -15,7 +15,8 @@ public record TerrainDensityJob(
 	int cellWidth,
 	int cellHeight,
 	TerrainWorkKind workKind,
-	TerrainBeardifierData shaping
+	TerrainBeardifierData shaping,
+	boolean earlyBiomes
 ) {
 	public static final int CHUNK_SIDE = 16;
 	public static final int MAX_HEIGHT = 384;
@@ -37,6 +38,7 @@ public record TerrainDensityJob(
 		Objects.requireNonNull(noiseSettings, "noiseSettings");
 		Objects.requireNonNull(workKind, "workKind");
 		Objects.requireNonNull(shaping, "shaping");
+		if (earlyBiomes && workKind != TerrainWorkKind.COMPLETE_TERRAIN) throw new IllegalArgumentException("Early biomes require complete terrain");
 		if (workKind != TerrainWorkKind.COMPLETE_TERRAIN && !shaping.empty()) throw new IllegalArgumentException("Shaping is only complete terrain input");
 		if (workKind != TerrainWorkKind.DENSITY && (cellWidth != 1 || cellHeight != 1)) {
 			throw new IllegalArgumentException("Surface fields require block-aligned job geometry");
@@ -67,6 +69,10 @@ public record TerrainDensityJob(
 			&& (height % 8 != 0 || Math.floorMod(minY, 8) != 0)) {
 			throw new IllegalArgumentException("Terrain grid must align to vanilla's vertical cells");
 		}
+	}
+	public TerrainDensityJob(TerrainJobIdentity identity, long worldSeed, boolean generateStructures,
+		Identifier noiseSettings, int minY, int height, int cellWidth, int cellHeight, TerrainWorkKind workKind, TerrainBeardifierData shaping) {
+		this(identity, worldSeed, generateStructures, noiseSettings, minY, height, cellWidth, cellHeight, workKind, shaping, false);
 	}
 
 	public int sampleCount() {

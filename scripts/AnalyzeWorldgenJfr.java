@@ -17,6 +17,11 @@ public class AnalyzeWorldgenJfr {
         new Group("ore vein rule", n -> n.startsWith("net.minecraft.world.level.levelgen.material.rule.OreVeinRule")),
         new Group("density samplers", n -> n.startsWith("net.minecraft.world.level.levelgen.densityfunction.")),
         new Group("biome selection", n -> n.startsWith("net.minecraft.world.level.biome.")),
+        new Group("original biome stage", n -> n.equals("net.minecraft.world.level.chunk.ChunkGenerator.doCreateBiomes")),
+        new Group("early biome application", n -> n.startsWith("io.github.genichimaruo.worldgenassist.server.EarlyBiomeApplicator.")
+            || n.startsWith("io.github.genichimaruo.worldgenassist.server.EarlyBiomeApplicator$")),
+        new Group("center biome capture", n -> n.equals("io.github.genichimaruo.worldgenassist.common.CompleteBiomeData.capture")),
+        new Group("section preparation", n -> n.startsWith("io.github.genichimaruo.worldgenassist.common.CompleteTerrainSectionStates.")),
         new Group("aquifers", n -> n.startsWith("net.minecraft.world.level.levelgen.Aquifer$")),
         new Group("features", n -> n.equals("net.minecraft.world.level.chunk.ChunkGenerator.applyBiomeDecoration")),
         new Group("carvers", n -> n.equals("net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator.generateCarvers")),

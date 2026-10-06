@@ -56,6 +56,7 @@ final class WorldgenPayloadCodecs {
 		buffer.writeByte(job.workKind().ordinal());
 		if (job.workKind() == TerrainWorkKind.COMPLETE_TERRAIN) {
 			byte[] shaping = job.shaping().encode(); buffer.writeVarInt(shaping.length); buffer.writeBytes(shaping);
+			buffer.writeBoolean(job.earlyBiomes());
 		}
 	}
 
@@ -79,7 +80,7 @@ final class WorldgenPayloadCodecs {
 		byte[] encoded = new byte[length]; buffer.readBytes(encoded);
 		var shaping = io.github.genichimaruo.worldgenassist.common.TerrainBeardifierData.decode(encoded);
 		return new TerrainDensityJob(base.identity(), base.worldSeed(), base.generateStructures(), base.noiseSettings(),
-			base.minY(), base.height(), base.cellWidth(), base.cellHeight(), base.workKind(), shaping);
+			base.minY(), base.height(), base.cellWidth(), base.cellHeight(), base.workKind(), shaping, buffer.readBoolean());
 	}
 
 	static void writeResult(RegistryFriendlyByteBuf buffer, TerrainDensityResultEnvelope result) {

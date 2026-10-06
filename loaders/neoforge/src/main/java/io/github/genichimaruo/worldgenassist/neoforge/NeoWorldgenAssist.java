@@ -48,11 +48,14 @@ public final class NeoWorldgenAssist implements WorldgenLoaderHooks {
         modBus.addListener(this::registerNetwork);
     }
     private void registerNetwork(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("3");
+        var registrar = event.registrar("4");
         registrar.playToServer(WorkerHelloPayload.TYPE, WorkerHelloPayload.CODEC,
             (payload, context) -> context.reply(remote().handleHello(((ServerPlayer) context.player()).getUUID(), payload)));
         registrar.playToServer(TerrainJobResultPayload.TYPE, TerrainJobResultPayload.CODEC,
             (payload, context) -> remote().handleResult(((ServerPlayer) context.player()).getUUID(), payload));
+        registrar.playToServer(io.github.genichimaruo.worldgenassist.network.TerrainBiomeResultPayload.TYPE,
+            io.github.genichimaruo.worldgenassist.network.TerrainBiomeResultPayload.CODEC,
+            (payload, context) -> remote().handleBiomeResult(((ServerPlayer) context.player()).getUUID(), payload));
         registrar.playToServer(TerrainJobFailurePayload.TYPE, TerrainJobFailurePayload.CODEC,
             (payload, context) -> remote().handleFailure(((ServerPlayer) context.player()).getUUID(), payload));
         registrar.playBidirectional(SettingsPayload.TYPE, SettingsPayload.CODEC,

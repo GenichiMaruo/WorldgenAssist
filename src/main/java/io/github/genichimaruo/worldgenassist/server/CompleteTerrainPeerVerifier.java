@@ -22,6 +22,7 @@ final class CompleteTerrainPeerVerifier {
 			|| !a.identity().protocolVersion().equals(b.identity().protocolVersion())
 			|| a.worldSeed() != b.worldSeed() || a.generateStructures() != b.generateStructures()
 			|| !a.shaping().equals(b.shaping())
+			|| a.earlyBiomes() != b.earlyBiomes()
 			|| !a.noiseSettings().equals(b.noiseSettings()) || a.minY() != b.minY() || a.height() != b.height()
 			|| a.cellWidth() != b.cellWidth() || a.cellHeight() != b.cellHeight()) {
 			throw new IllegalArgumentException("Peer assignments are not independent matching terrain work");
@@ -38,13 +39,15 @@ final class CompleteTerrainPeerVerifier {
 					throw new RemoteDensityValidator.RemoteDensityValidationException("Independent peer whole-terrain mismatch: "
 						+ CompleteTerrainDifference.describe(first.completeTerrain(),second.completeTerrain()));
 				}
+				boolean centerAgreed = first.completeTerrain().centerBiomes() != null
+					&& first.completeTerrain().centerBiomes().equals(second.completeTerrain().centerBiomes());
 				if (!java.util.Arrays.equals(first.completeTerrain().biomeWindowDigest(),second.completeTerrain().biomeWindowDigest())) {
 					io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
 						"[CAWG] job.peer_biome_choice_pending primary={} peer={} chunk={},{}",
 						a.identity().jobId(),b.identity().jobId(),a.identity().chunkX(),a.identity().chunkZ());
-					return first.withLocalApproval(current,applied,second.completeTerrain());
+					return first.withLocalApproval(current,applied,second.completeTerrain(),centerAgreed);
 				}
-				return first.withLocalApproval(current,applied);
+				return first.withLocalApproval(current,applied,null,centerAgreed);
 			} catch (RemoteDensityValidator.RemoteDensityValidationException error) {
 				io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.warn(
 					"[CAWG] job.peer_terrain_difference primary={} peer={} chunk={},{} reason={}",

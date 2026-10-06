@@ -66,6 +66,10 @@ public final class RemoteDensityResultCache {
 		Entry value = entries.remove(Objects.requireNonNull(key));
 		return value == null ? Optional.empty() : Optional.of(value.result());
 	}
+	/** Earlier BIOMES consumption keeps the complete reply for TERRAIN, with its original TTL. */
+	public synchronized Optional<TerrainDensityResult> peekResult(Key key) {
+		return available(key) ? Optional.of(entries.get(key).result()) : Optional.empty();
+	}
 	public synchronized void removeMatching(java.util.function.Predicate<Key> predicate) {
 		entries.keySet().removeIf(predicate);
 	}

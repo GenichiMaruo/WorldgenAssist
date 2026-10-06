@@ -97,8 +97,11 @@ final class ForgeResultAssemblerTest {
         short[][] offsets=new short[24][];
         for(int i=0;i<offsets.length;i++)offsets[i]=new short[0];
         offsets[0]=new short[]{12,1,12};
+        byte[][] biomePalettes=new byte[24][];java.util.Arrays.setAll(biomePalettes,i->new byte[]{0});
+        var biomes=new io.github.genichimaruo.worldgenassist.common.CompleteBiomeData(-64,384,
+            java.util.List.of("minecraft:plains"),biomePalettes,new byte[1536]);
         var data=new io.github.genichimaruo.worldgenassist.common.CompleteTerrainData(-64,384,new byte[98304],
-            new short[256],new short[256],offsets,new byte[32]);
+            new short[256],new short[256],offsets,new byte[32],biomes);
         byte[] raw=data.encode();
         byte[] encoded=java.nio.ByteBuffer.allocate(raw.length+4).putInt(raw.length).put(raw).array();
         var source=new TerrainDensityResultEnvelope(result().identity(),98304,TerrainDensityResultEnvelope.Encoding.COMPLETE_TERRAIN,encoded,1,2);
