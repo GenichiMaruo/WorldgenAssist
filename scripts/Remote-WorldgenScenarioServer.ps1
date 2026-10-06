@@ -273,8 +273,11 @@ function Warm-AssistedOwners {
     }
 }
 function Get-TickStatistics([string]$Text, [double]$CpuMilliseconds, [double]$WallMilliseconds) {
-    $ticks = @([regex]::Matches($Text, 'tick\.complete .*elapsed_ms=(?<elapsed>\d+(?:\.\d+)?).*noise_completed=(?<complete>\d+).*noise_failed=(?<failed>\d+).*local_fallbacks_delta=(?<fallback>\d+)') | ForEach-Object {
-        [pscustomobject]@{ elapsed=[double]$_.Groups['elapsed'].Value; complete=[long]$_.Groups['complete'].Value; failed=[long]$_.Groups['failed'].Value; fallback=[long]$_.Groups['fallback'].Value }
+    # Java's Double.toString uses scientific notation for short durations.
+    # Consume the whole token; accepting its mantissa alone inflates microseconds.
+    $number='-?\d+(?:\.\d+)?(?:[Ee][+-]?\d+)?(?=\s|$)'
+    $ticks = @([regex]::Matches($Text, ('tick\.complete .*elapsed_ms=(?<elapsed>'+$number+').*noise_completed=(?<complete>\d+).*noise_failed=(?<failed>\d+).*local_fallbacks_delta=(?<fallback>\d+)')) | ForEach-Object {
+        [pscustomobject]@{ elapsed=[double]::Parse($_.Groups['elapsed'].Value,[Globalization.CultureInfo]::InvariantCulture); complete=[long]$_.Groups['complete'].Value; failed=[long]$_.Groups['failed'].Value; fallback=[long]$_.Groups['fallback'].Value }
     })
     $values = @($ticks | ForEach-Object { $_.elapsed } | Sort-Object)
     $mean = if ($values.Count) { ($values | Measure-Object -Average).Average } else { $null }
@@ -283,11 +286,12 @@ function Get-TickStatistics([string]$Text, [double]$CpuMilliseconds, [double]$Wa
     $failed = if ($ticks.Count) { ($ticks | Measure-Object failed -Sum).Sum } else { 0 }
     $fallback = if ($ticks.Count) { ($ticks | Measure-Object fallback -Sum).Sum } else { 0 }
     function Mean-LogValue([string]$Pattern) {
-        $samples=@([regex]::Matches($Text,$Pattern) | ForEach-Object {[double]$_.Groups['value'].Value})
+        $samples=@([regex]::Matches($Text,$Pattern) | ForEach-Object {[double]::Parse($_.Groups['value'].Value,[Globalization.CultureInfo]::InvariantCulture)})
         if($samples.Count){return [Math]::Round([double](($samples|Measure-Object -Average).Average),6)}
         return $null
     }
     $resultReceived='job\.result_received .*'
+    $value='(?<value>'+$number+')'
     $attempted=$completed+$failed
     [ordered]@{
         server_cpu_ms=[Math]::Round($CpuMilliseconds,3); server_wall_ms=[Math]::Round($WallMilliseconds,3)
@@ -295,21 +299,21 @@ function Get-TickStatistics([string]$Text, [double]$CpuMilliseconds, [double]$Wa
         throughput_tasks_per_second=if($WallMilliseconds -gt 0){$completed*1000.0/$WallMilliseconds}else{$null}
         attempted_tasks=$attempted; completed_tasks=$completed
         timeouts=@([regex]::Matches($Text,'job\.timeout ')).Count; fallbacks=$fallback; failed_tasks=$failed
-        client_compute_mean_ms=Mean-LogValue ($resultReceived+'client_compute_ms=(?<value>-?\d+(?:\.\d+)?)')
-        client_encode_mean_ms=Mean-LogValue ($resultReceived+'client_encode_ms=(?<value>-?\d+(?:\.\d+)?)')
-        rtt_mean_ms=Mean-LogValue ($resultReceived+'rtt_ms=(?<value>-?\d+(?:\.\d+)?)')
-        server_decode_mean_ms=Mean-LogValue ($resultReceived+'server_decode_ms=(?<value>-?\d+(?:\.\d+)?)')
+        client_compute_mean_ms=Mean-LogValue ($resultReceived+'client_compute_ms='+$value)
+        client_encode_mean_ms=Mean-LogValue ($resultReceived+'client_encode_ms='+$value)
+        rtt_mean_ms=Mean-LogValue ($resultReceived+'rtt_ms='+$value)
+        server_decode_mean_ms=Mean-LogValue ($resultReceived+'server_decode_ms='+$value)
         encoded_bytes_mean=Mean-LogValue ($resultReceived+'encoded_bytes=(?<value>\d+)')
-        validation_mean_ms=Mean-LogValue 'job\.validation_complete .*validation_ms=(?<value>-?\d+(?:\.\d+)?)'
-        apply_mean_ms=Mean-LogValue 'job\.complete .*apply_ms=(?<value>-?\d+(?:\.\d+)?)'
-        remote_total_mean_ms=Mean-LogValue 'job\.complete .*total_ms=(?<value>-?\d+(?:\.\d+)?)'
-        validation_prepare_mean_ms=Mean-LogValue 'job\.validation_ready .*prepare_ms=(?<value>-?\d+(?:\.\d+)?)'
-        validation_compare_mean_ms=Mean-LogValue 'job\.validation_complete .*compare_ms=(?<value>-?\d+(?:\.\d+)?)'
-        decode_queue_mean_ms=Mean-LogValue 'job\.result_decoded .*decode_queue_ms=(?<value>-?\d+(?:\.\d+)?)'
-        registration_mean_ms=Mean-LogValue 'job\.registered .*registration_ms=(?<value>-?\d+(?:\.\d+)?)'
-        request_queue_mean_ms=Mean-LogValue 'job\.request_dispatch .*request_queue_ms=(?<value>-?\d+(?:\.\d+)?)'
-        ingress_queue_mean_ms=Mean-LogValue 'job\.result_ingress .*ingress_queue_ms=(?<value>-?\d+(?:\.\d+)?)'
-        result_claim_mean_ms=Mean-LogValue 'job\.result_ingress .*claim_ms=(?<value>-?\d+(?:\.\d+)?)'
+        validation_mean_ms=Mean-LogValue ('job\.validation_complete .*validation_ms='+$value)
+        apply_mean_ms=Mean-LogValue ('job\.complete .*apply_ms='+$value)
+        remote_total_mean_ms=Mean-LogValue ('job\.complete .*total_ms='+$value)
+        validation_prepare_mean_ms=Mean-LogValue ('job\.validation_ready .*prepare_ms='+$value)
+        validation_compare_mean_ms=Mean-LogValue ('job\.validation_complete .*compare_ms='+$value)
+        decode_queue_mean_ms=Mean-LogValue ('job\.result_decoded .*decode_queue_ms='+$value)
+        registration_mean_ms=Mean-LogValue ('job\.registered .*registration_ms='+$value)
+        request_queue_mean_ms=Mean-LogValue ('job\.request_dispatch .*request_queue_ms='+$value)
+        ingress_queue_mean_ms=Mean-LogValue ('job\.result_ingress .*ingress_queue_ms='+$value)
+        result_claim_mean_ms=Mean-LogValue ('job\.result_ingress .*claim_ms='+$value)
         network_ingress_count=if($QuietRemoteTrace){$null}else{@([regex]::Matches($Text,'job\.result_ingress .*path=network\b')).Count}
         request_batch_count=@([regex]::Matches($Text,'jobs\.batch_sent ')).Count
         prefetch_sent=@([regex]::Matches($Text,'job\.sent .*source=prefetch\b')).Count

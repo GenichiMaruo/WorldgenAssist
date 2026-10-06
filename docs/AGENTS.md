@@ -1,5 +1,52 @@
 # Repository agent instructions
 
+## Numeric gate101639-700 completed (measurement correction only)
+
+Single offline batch/session39872 exits0:one focused whole-token/culture/
+malformed/missing/microsecond control passes;12 measured windows from both
+dev.15 execution orders/both conditions processed. Old committed c0d8ede and
+corrected collectors read EXACT SAME closed marker windows;original frozen
+logs/performance JSON hashes unchanged. All old same-window duration means
+also equal the retained published means in these runs. New worlds/builds/
+SSH/JUnit0. Initial Git ownership preflight failure101615-832 stays recorded.
+
+Old comparison means3.33..3.86ms were incorrect: corrected0.000596..0.001168ms.
+Total validation including independent server preparation/audits:
+assisted-first2.027714/0.664264/1.215093ms;
+vanilla-first2.090941/0.725123/1.873308ms.
+Application remains5.871810/4.872990/6.047382ms and
+6.263553/5.218358/6.806802ms. Registration~0.008ms,request queue~0.34..0.59ms,
+RTT~63..72ms/client compute~17.6..19.3ms unchanged. These are event means,
+not disjoint CPU durations or a critical-path decomposition;RTT includes queues.
+FULL/receipt/CPU/tick measurements and confirmed gains are unaffected.
+
+Source bug: Java scientific notation9.0E-4 was parsed as9,not0.0009.
+Correction consumes the exponent/whole token with invariant culture. It does
+NOT reduce actual runtime or change verification policy. Evidence:
+test-artifacts/scenario-metric-gate-20261006-101639-700/summary.json.
+Next investigate reducing authoritative block-application work rather than
+assuming tiny comparisons are expensive. Production f074234/dev.15 remains
+unchanged;beta/substantial acceleration still pending.
+
+## Historical scenario numeric parser correction prepared (UNRUN then)
+
+Found concrete measurement bug in Remote-WorldgenScenarioServer:
+duration regex omitted Java scientific exponents;actual validation_ms=9.0E-4
+was read as9ms instead of0.0009ms. Collector now consumes whole decimal/exponent
+tokens with invariant culture and rejects malformed token prefixes. All duration
+metrics/tick elapsed use that parser. NO production/world generation/verification
+policy change;dev.15 JARs remain identical. FULL/receipt/CPU are not derived from
+these duration regexes,so their confirmed gains are unaffected.
+
+After ALL edits,one offline Run-ScenarioMetricGate batch:one focused numeric
+control covering scientific/plain/invalid/missing tokens and nondecimal locale;
+then old committed c0d8ede versus corrected collector on the EXACT SAME closed
+measured windows of both dev.15 orders/both conditions. Preserve original logs/
+performance JSON and record hashes separately. Live original offsets may include
+adjacent events,so do not silently overwrite or equate them to marker windows.
+No Minecraft/world/SSH/build/JUnit rerun. All correction verification UNRUN.
+Next choose performance hypothesis only after real costs are known.
+
 ## Dev.15 confirmation222510-653 completed (reproducible moderate gain)
 
 One sequential batch/session26427 exits0: reverse performance/coverage and
