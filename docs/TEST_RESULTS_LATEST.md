@@ -1,5 +1,66 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## Dev23 ordinary saved-state/light followup011147 passes
+
+Closed ordinary-saved-safety-20261007-011147-936 exits0,all3 offline steps pass,
+issues empty. Reused exact raw copies from failed010802 coordinate expectation
+only after original parent/world/inventory/source/hash identities match; failed
+player result NOT reused. First failed summary remains retained. Correct original
+/tp +0.5 X/Z expectations verified primary26.2/exact26.3; no tolerance/health/
+position/world edits. ZERO fresh remote transfers/JUnit/MOD builds/game runs;
+3 offline readers compile with exact original26.3 runtime hashes.
+
+Both current dev23 parallel-FEATURES remoteOFF/ON ordinary creative worlds pass
+own-block original light recomputation:each50 interior/162 halo/10649600 values,
+BLOCK/SKY/changedchunks/saved15-below-source witnesses all0. All4 saved players
+exact last centered X/Z,Y150/Health20/DeathTime0/creative/flyingtrue,recorded
+deaths0/damage0; raw files/source/JAR/classpath unchanged. This is current narrow
+saved-world evidence,NOT proof of old light failure cause/fix or everyview32
+chunk. Flying states do NOT prove landing/mining/placing/survival/reload safety.
+No production/Mixin/protocol14/native5/default/version23 change. Next ordinary
+interaction proof;publicalpha7 unchanged,no beta/full completion. Goalactive.
+Following UNRUN headings retain historical preparation. See ORDINARY_SAVED_SAFETY.
+
+## Ordinary saved-state batch010802 closed: coordinate assertion corrected
+
+First offline13928 exits1 ONLY saved-player expected integer X/Z versus actual
+original /tp +0.5 centering. All4 actual saves Y150/Health20/DeathTime0/creative/
+flyingtrue/deaths0/damage0; no new fall observed. Compile/hash/copy before-after
+steps pass; lighting NOTRUN. Failed summary/raw copies retained,not relabeled.
+
+Primary26.2 and exact26.3 WorldCoordinate/Vec3Argument/WorldCoordinates confirm
+integer absolute X/Z +0.5 including negatives; GameType preserves spectator
+flying when changed to creative. Correct ONLY offline coordinator exact targets,
+not player/terrain/health/tolerance. Add strict -ReuseSavedRoot: only exact
+closed18-step coordinate failure, unchanged original source/JAR/reader/runtime,
+all6 raw copies per condition hash/bytes/source-world match. Re-read ALL4
+players with corrected expectations and run still-unrun lighting once in ONE
+offline batch after all edits. ZERO fresh remote transfers/games/MOD builds/
+JUnit; helper compilation only. ALL followup verification UNRUN. No landing/
+survival/continuous-trace/old-light-cause/beta claim. Goal active.
+
+## Dev23 ordinary saved-world safety batch prepared; UNRUN
+
+After closed reverse confirmation003107-976/9cc21da, add ONLY offline coordinator
+Run-OrdinarySavedSafetyGate and original-NBT SavedPlayerInspector263; production/
+JAR/protocol14/native5/defaults/version23 unchanged. All source/harness edits
+complete BEFORE one sequential offline batch. Exact parent frozen inventory/
+3current-retained artifacts and original26.3 runtime classpath identities checked.
+Reuse one unchanged SavedLighting263Test method only after its exact XML plus
+reader/test/digest dependencies match historical165556-107; that historical
+overall lighting failure remains FAILED. ZERO new JUnit/MOD builds/game runs.
+
+Read/hash/copy ONLY two stopped reverse-order E-worlds after verifying no owned
+server live; all6 saved inputs per condition match before/after and local hashes.
+Original saved light recomputation:50 interior/162 halo chunks/10649600 values
+per condition, unchanged original inspector; all4 player NBT + death/damage stats
+through original bounded NbtIo. Compile offline helpers only with existing exact
+runtime; no Gradle/game/world mutation, healing or artificial floor. Final
+positions must match last targets and normal Y range,fullhealth/DeathTime0/
+creative/deaths0/damage0. This is final saved-state/recorded-stat evidence, NOT
+survival interactions or continuous movement tracing. ALL new verification
+UNRUN;no beta/old-failure-cause claim. See ORDINARY_SAVED_SAFETY.md. Goalactive.
+
 ## Dev23 opposite-order confirmation completed: reproducible assistance gain
 
 Closed authoritative-biome-confirmation-20261007-003107-976/session78734 exits0;
