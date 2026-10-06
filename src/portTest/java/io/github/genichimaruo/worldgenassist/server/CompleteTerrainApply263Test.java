@@ -69,14 +69,29 @@ class CompleteTerrainApply263Test {
 		}
 		try { CompleteTerrainApplicator.writeBlocks(data, states, plan, actual); }
 		finally { for (int i = actual.length - 1; i >= 0; i--) actual[i].release(); }
+		LevelChunkSection[] bulk = new LevelChunkSection[actual.length];
+		for (int i = 0; i < bulk.length; i++) bulk[i] = expected[i].copy();
+		var stateObjects = java.util.Arrays.stream(bulk).map(LevelChunkSection::getStates).toArray();
+		var biomeObjects = java.util.Arrays.stream(bulk).map(LevelChunkSection::getBiomes).toArray();
+		byte[][] packed = CompleteTerrainApplicator.packBlocks(data, states);
+		CompleteTerrainApplicator.readBlocks(packed, bulk);
+		assertThrows(IllegalArgumentException.class, () -> CompleteTerrainApplicator.readBlocks(new byte[0][], bulk));
+		for (int i = 0; i < bulk.length; i++) {
+			assertSame(stateObjects[i], bulk[i].getStates()); assertSame(biomeObjects[i], bulk[i].getBiomes());
+			assertSame(plains, bulk[i].getNoiseBiome(3, 3, 3));
+		}
 		for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) for (int y = height - 1; y >= 0; y--) {
 			BlockState state = states[data.choice((z * 16 + x) * height + y)];
 			if (state != Blocks.AIR.defaultBlockState()) expected[y / 16].setBlockState(x, y & 15, z, state);
 			assertSame(state, actual[y / 16].getBlockState(x, y & 15, z));
+			assertSame(state, bulk[y / 16].getBlockState(x, y & 15, z));
 		}
 		for (String name : new String[]{"nonEmptyBlockCount", "fluidCount", "tickingBlockCount", "tickingFluidCount"}) {
 			var field = LevelChunkSection.class.getDeclaredField(name); field.setAccessible(true);
-			for (int i = 0; i < actual.length; i++) assertEquals(field.getShort(expected[i]), field.getShort(actual[i]), name + "/" + i);
+			for (int i = 0; i < actual.length; i++) {
+				assertEquals(field.getShort(expected[i]), field.getShort(actual[i]), name + "/" + i);
+				assertEquals(field.getShort(expected[i]), field.getShort(bulk[i]), "bulk/" + name + "/" + i);
+			}
 		}
 		for (boolean corruptSurface : new boolean[]{true, false}) {
 			short[] badSurface = surface.clone(), badFloor = floor.clone();

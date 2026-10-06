@@ -5,7 +5,7 @@ param([switch]$Execute,[switch]$LocalOnly,[ValidateRange(2,32)][int]$ViewDistanc
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
     [ValidateSet('wide','deep')][string]$WindowProfile='wide',
     [ValidateSet('vanilla-first','assisted-first')][string]$ConditionOrder='vanilla-first',
-    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation','complete-peer','complete-shaping','complete-biome-choice','complete-application','complete-prefetch-index')][string]$TestProfile='transport',
+    [ValidateSet('transport','scheduling','prefetch','admission','capacity','complete','complete-timing','complete-biomes','complete-capacity','complete-preparation','complete-peer','complete-shaping','complete-biome-choice','complete-application','complete-prefetch-index','complete-packed-application')][string]$TestProfile='transport',
     [string]$ReuseBuildEvidence,[string]$ReuseCorrectnessEvidence)
 # Finish all implementation first; affected units/builds/runtime/performance are sequential.
 Set-StrictMode -Version Latest
@@ -56,7 +56,11 @@ if($TestProfile -eq 'complete-preparation'){
         'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedReplyBypassesBlockedPreparationWithoutReleasingItsRemoteSlot',
         'io.github.genichimaruo.worldgenassist.server.RemotePreparation263Test.preparedCancellationAndFailuresReleaseOnceAndIgnoreLateReplies');$expectedTests=4
 }
-$verification=if($TestProfile -in @('complete-peer','complete-shaping','complete-biome-choice','complete-application','complete-prefetch-index')){'peer'}else{'server'}
+$verification=if($TestProfile -in @('complete-peer','complete-shaping','complete-biome-choice','complete-application','complete-prefetch-index','complete-packed-application')){'peer'}else{'server'}
+if($TestProfile -eq 'complete-packed-application'){
+    if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Packed application requires fresh affected build and correctness evidence'}
+    $selections=@('io.github.genichimaruo.worldgenassist.server.CompleteTerrainApply263Test.boundedColumnsPreserveEveryVoxelAndSectionCountAndRejectWrongHeights');$expectedTests=1
+}
 if($TestProfile -eq 'complete-prefetch-index'){
     if($RemoteWorkKind -ne 'complete' -or $RemoteApplicationProfile -ne 'overlap' -or $WindowProfile -ne 'deep' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence){throw 'Indexed complete prefetch requires fresh affected build and overlap correctness evidence'}
     $selections=@('io.github.genichimaruo.worldgenassist.server.GenerationPrefetch263Test.cachedOrderingStillExpiresReassignsAndBalancesAfterEveryRemoval',
@@ -154,6 +158,9 @@ try{
         $steps+=[ordered]@{name='original-unit-build-evidence';status='REUSED';root=$priorRoot}
     }else{
     $arguments=@('/d','/c',(Join-Path $workspace 'gradlew.bat'),'test','--rerun-tasks')
+    # This profile runs inside a second redirected process. On Windows an idle
+    # persistent daemon can retain that ancestor's pipe after the gate exits.
+    if($TestProfile -eq 'complete-packed-application'){$arguments+='--no-daemon'}
     foreach($selection in $selections){$arguments+=@('--tests',$selection)}
     $arguments+='build'
     $steps+=Step 'unit-build' "$env:SystemRoot\System32\cmd.exe" $arguments 1800
@@ -168,6 +175,7 @@ try{
     if($junit.tests -ne $expectedTests -or $junit.failures -or $junit.errors -or $junit.skipped){throw 'Affected JUnit evidence incomplete'}
     foreach($loader in @('forge','neoforge')){
         $nativeArgs=@('/d','/c',(Join-Path $workspace 'gradlew.bat'),'-p',(Join-Path $workspace "loaders/$loader"))
+        if($TestProfile -eq 'complete-packed-application'){$nativeArgs+='--no-daemon'}
         if($loader -eq 'forge' -and $TestProfile -in @('transport','complete')){
             $nativeArgs+=@('test','--tests','io.github.genichimaruo.worldgenassist.forge.ForgeResultAssemblerTest.reassemblesOutOfOrderAndDuplicateFragments','--tests','io.github.genichimaruo.worldgenassist.forge.ForgeResultAssemblerTest.fullTerrainPackedAndFloatFragmentsRemainBoundedAndRoundTrip','build')
             if($TestProfile -eq 'complete'){$nativeArgs=$nativeArgs[0..($nativeArgs.Length-2)]+@('--tests','io.github.genichimaruo.worldgenassist.forge.ForgeResultAssemblerTest.completeTerrainVariableRawFragmentsPreserveMetadata','build')}
@@ -257,6 +265,9 @@ try{
         if($comparison.status -ne 'COMPLETE' -or $comparison.issues.Count -ne 0 -or
             $comparison.correctness_pairs.Count -ne 1 -or $comparison.correctness_pairs[0].status -ne 'PASS'){throw 'Correctness comparison incomplete'}
         $log=Get-Content -LiteralPath (Join-Path $correct 'assisted/remote-evidence/latest.log') -Raw
+        if($TestProfile -eq 'complete-packed-application' -and $log -notmatch 'terrain\.bulk_applied chunk=-?\d+,-?\d+ sections=24 blocks=98304'){
+            throw 'Runtime did not actually use original-format packed section application'
+        }
         if($TestProfile -in @('prefetch','complete-prefetch-index') -and $log -notmatch 'scheduler\.summary .*task_hints=[1-9][0-9]*'){
             throw 'Runtime did not exercise early Minecraft terrain-task observation'
         }

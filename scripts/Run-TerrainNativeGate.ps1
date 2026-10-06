@@ -129,6 +129,10 @@ try {
         }
         $assistedLog=Join-Path $root "$loader/assisted/latest.log"
         $text=Get-Content -LiteralPath $assistedLog -Raw
+        if($prior.test_profile -eq 'complete-packed-application' -and
+            $text -notmatch 'terrain\.bulk_applied chunk=-?\d+,-?\d+ sections=24 blocks=98304'){
+            throw "$loader did not actually use original-format packed section application"
+        }
         if($prior.test_profile -eq 'complete-prefetch-index' -and
             $text -notmatch 'prefetch\.policy lookahead=0 capacity=8192 hint_retention_ms=180000 dispatch_limit=128'){
             throw "$loader did not exercise the indexed native32-job complete hint policy"

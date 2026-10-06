@@ -1,5 +1,102 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## Dev.16 packed gate103141-722 completed (no demonstrated incremental gain)
+
+One sequential batch/session3647 exits0:exactly1 affected existing method
+(0 failures/errors/skips),3 builds,physical1813 shared format2 noise digests/
+0 mismatch,actual complete applications711/758 and distinct peers696/642.
+Required applied-1005,2000 and1000,-2005 match original. Actual bulk route
+exercised. Fresh native110603-994 all6 steps pass:Forge1987/Neo1954 shared,
+0 differences;ALL90/24 postmarker actual applications present/equal,both owners
+use peers (Forge14/34,Neo1/4),shaping12/1 incidental. Native localview4/
+owner16/global32/basewait1s correctness only. Neo10 of82 premarker warmup
+applications lack original counterparts;outside targeted postmarker parity,
+not claimed fully verified. No unchanged tests rerun;publicalpha7 unchanged.
+
+Exact dev.16 hashes FabricCB54BF86BD6C33012FC471D62E36482655D184C0A5E350DAE99240DF7BF7176D;
+Forge2E094484C830501537E75915C1EDDD0B43F567408738BD1BC78B816A208A8DA1;
+Neo4362F1F3119AFE9D13225A11D0248988702574D14B5FEE73C01FAD4AF3A420AB.
+Same-artifact weak E-server/two same-strong-PC clients,4workers/client,
+ordinary view32,FEATURES off/capture off,assisted-first,warm1/3same relocations.
+10658 tasks and3461 receipts/owner/repeat,0failed tasks/job timeouts/quarantines/
+terrain differences/apply rejects,clean stops/frozen source+artifacts.
+FULL97.284510/108.358822/107.306983s off,85.314926/104.385767/98.037085s on.
+Receipt102.699225/114.933983/113.466624s off,90.010076/110.713088/102.887989s on.
+CPU403468.750/452921.875/422531.250ms off,318453.125/316296.875/323562.500ms on.
+SAME-repeat median ratios FULL-8.64%,receipt-9.32%,CPU-23.42%,all3 improve;
+tickp95+6.91%,all3 higher. FULL gains3.67..12.30%. Not ratio-of-marginal-medians.
+This is useful assistance versus off,NOT proof packed application beats dev.15:
+different JAR/run from dev.15;application6.118664/4.461125/6.416479ms is mixed
+versus prior same-order5.871810/4.872990/6.047382ms. No substantial/beta claim.
+
+One AFTER-batch offline analysis of EXISTING logs/JFR (no new world/build/test):
+actual complete8526/9762/8982 of10658 (80.00/91.59/84.27%),
+direct5184/6336/5231,cache3286/3386/3701,prefetch joins56/40/50;
+early share39.20/35.10/41.76%. Audit events377/186/362 are another population.
+Exact repeat2 JFR17910 computational samples/1218 truncated;features30.97%,
+biome selection12.10%,remote management8.72%,applicator.prepare5.33%.
+Inclusive categories overlap,not CPU duration/critical path;missing top150
+methods are not0. Preparation may offset avoided writes;do not claim a cause
+without a same-artifact switch comparison. One initial compact arithmetic query
+had a PowerShell pipeline parse error before output;corrected query succeeds.
+Runtime/unit gates unchanged. Evidence csb-20261006-103559-752/u/analysis/.
+
+Physical gate103142-439 actually finished10:56:56 with success/no issues,then
+outer coordinator awaited redirected EOF despite child exit. Read-only process/
+daemon logs proved only this batch's two Gradle daemons27752/13780(start10:31:43/
+10:32:02) idle. Normal gradlew --stop stopped exactly2;EOF released and native
+gate proceeded without rerunning any units/build/world/performance. Final
+parent remains success. AFTER completed batch only its future build-launch
+profile now adds--no-daemon to all3 builds,preventing retained ancestor pipes.
+This harness-only repair changes no production/JAR identity;original copies
+and measured evidence retain pre-repair harness identity. Syntax check only.
+
+Next: preserve dev.15 reproducible baseline;do not treat packed route as a
+proven improvement. A controlled opt-in switch/less allocation or earlier
+preparation may establish its value;ordinary saved fast-profile/client window
+usability also remains needed. All following implementation-time UNRUN text is
+historical. Goal remains active;public release/beta unchanged.
+
+## Historical dev.16 original-format bulk application (implemented; verification UNRUN then)
+
+Hypothesis from corrected dev.15 metrics:comparison<0.0012ms versus whole
+application~4.9..6.8ms. Existing JFR writeBlocks inclusive3.05/4.16% where
+listed;missing top150 entries are not0. Samples overlap,not wall savings.
+Reduce per-block palette lookup/previous-state/counter updates by server-owned
+packed section states. Protocol12/fixed50-state payload/domain remains identical.
+
+After every existing context/shape/current3x3 biome/height/empty-target check,
+build server-only section local palettes/4096 indices from ALL immutable choices.
+Use original Strategy index,PalettedContainer.unpack/write;preflight EVERY buffer
+through original target recreate/read before any world write. Final authority
+check remains after all allocations. Actual apply calls original live states
+read (its own original lock) and original recalcBlockCounts for each section.
+Keep live section/state-container/biome object identities;WG heights/ordered
+postprocessing/markUnsaved remain. No sections from clients,no block registry
+IDs on remote wire,no new Mixin/copied generation code/authority reduction.
+Exact ProtoChunk/LevelChunkSection/PalettedContainer and exclusively canonical
+AIR palettes only;custom or noncanonical/unused entries keep prior writer.
+Never vanilla retry after partial write. Bulk route logs only after completion.
+
+Primary26.2/Fabric26.3/Forge66.0.3/Neo26.3.0.13-beta original Strategy index is
+(y<<4|z)<<4|x;stock block palette singleton0/otherwise>=4bits (fixed domain<=50/
+6bits). Original read owns locks and checks raw lengths;write supplies its own
+registry IDs. Native original recount retains loader-specific semantics (Neo
+isEmpty vs primary isAir);do not copy primary counters/native constructor.
+Production0.1.0-alpha.8-dev.16+mc26.3;publicalpha7 unchanged.
+
+ALL edits before one Run-PackedApplicationGate -Execute batch:exactly ONE
+existing application method expanded to compare all98304 voxels/four counts
+against exhaustive original writes,live state/biome identities and current
+edge/height cases. Three builds,small physical two-owner original/assisted
+terrain parity with actual bulk use,then naturally weak E-server view32
+assisted-first/off-on,warm1/3same relocations (FEATURES off/capture off,4workers).
+Then fresh Forge/Neo two-owner pairs/view4 correctness only,actual bulk use/
+all shared and postmarker applied digests/both-owner peers. No unchanged queue/
+biome/peer/wire/JUnit suites. Every dev.16 test/build/runtime/speed is UNRUN.
+Do not assert quicker/beta until completed evidence;extra preflight packing
+can outweigh avoided writes and must be measured.
+
 ## Numeric gate101639-700 completed (measurement correction only)
 
 Single offline batch/session39872 exits0:one focused whole-token/culture/
