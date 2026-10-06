@@ -1,5 +1,30 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## Offline lighting diagnosis164020-135 (not a new runtime pass)
+
+Latest same-dev19-JAR remoteON BOTH FEATURESoff/parallel164636-518 completes/
+session94515exit0:FULL-4.9954%,receipt-4.8922%,all3faster;CPU+1.7530%,tickp95
++5.0281%,all3higher. All10658tasks/3461receipts/owner/noerror/cleanstops/same
+coordinates/currentFabrichash. Actual10082features/repeat,parallel4004/3853/
+4996overlaps/peak2,allR8/init/pointconflicts0. This is modest incremental speed
+versus current client assistance,not a remote-OFF comparison/new light/native
+proof/beta. Full numbers/sourceidentity in SAVED_LIGHTING_DIAGNOSIS.md. Next
+one offline exactrepeat2 JFR/completecoverage89698 now completes;no runtime/test
+reruns. Totalcompleteoff8466/9433/8843 vsparallel8270/9502/8835;no clearcoverage
+gain. JFR18772/19035computational samples/truncated1189/278,FEATURES29.61/
+30.96%,OreFeature.place8.66/8.63% inclusive,categories overlap/notCPUdurations.
+Nextone-worker regional scheduling hypothesis remains unimplemented/unmeasured.
+
+Session85434 exits0; original lighting invariant remains FAILED20SKY/2chunks,
+candidate parallel/assisted0 of10,649,600 values each. Original12 saved15 values
+lie below own original direct source height,first witness under oak leaves at
+24191,80,-40155/source83,saved15/recomputed12,present raw SkyLight field. All6
+region hashes unchanged; no repaired/normalized saved values. This identifies
+actual stored inconsistency,NOT historical timing cause or beta. JUnit/MODbuild/
+newgame/SSH0. Initialsandbox163950failed Gradle access before helper output.
+Current productiondev19/JARs unchanged. Off/parallel same-current-JAR remoteON
+BOTH performance-only comparison now complete;see SAVED_LIGHTING_DIAGNOSIS.md.
+
 ## Dev.19 gate154217-052 completed: no end-to-end gain
 
 ONE sequential session51372 exits0;exactly1 affected method (0 failures/errors/

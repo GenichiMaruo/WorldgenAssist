@@ -1,5 +1,20 @@
 # Validation matrix
 
+## Scoped saved lighting diagnosis and comparison complete
+
+Run-SavedLightingDiagnosis checks exact retained stopped worlds/region hashes
+from165556-107,then one original-code offline helper sequence. Zero JUnit/MOD
+builds/new games/SSH. Requires unchanged original20SKY/2chunks and candidate0
+counts; metadata success is not a lighting pass.164020-135 completes/85434exit0,
+all raw hashes preserved,12 original saved15-below-source witnesses;cause timing
+still unproved. Initial sandbox163950 failed before helper run. Next ONE exact
+current-dev19 artifact off/parallel remoteON performance-only pair requires same
+10658 tasks/3461 receipts/owner,currentroutes/errorchecks/actualnonconflicting
+overlaps.164636-518/session94515 completes:FULL-4.9954%/receipt-4.8922%,3/3
+faster;CPU+1.7530%/tickp95+5.0281%,3/3higher,allconflicts0. Offline89698
+coverage/exactrepeat2JFR completes. Zero unchanged JUnit/build reruns,no new
+light/native parity assertion. See SAVED_LIGHTING_DIAGNOSIS.md.
+
 ## Dev.19 gate154217-052 completed: no end-to-end gain
 
 ONE sequential session51372 exits0;exactly1 affected method (0 failures/errors/

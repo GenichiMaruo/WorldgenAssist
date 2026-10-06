@@ -1,5 +1,32 @@
 # Repository agent instructions
 
+## Current saved-light diagnosis and feature comparison complete
+
+Offline164020-135/session85434 completes with unchanged original20SKY/2chunks
+failure and both candidate0;12 original saved15 values contradict own original
+source height under oak leaves. All raw region hashes retained. This proves
+inconsistent saved values,NOT historical timing cause or beta. Initial sandbox
+attempt163950-886 failed Gradle access before analysis; retained. No production
+change/JUnit/MOD builds/games/SSH. See SAVED_LIGHTING_DIAGNOSIS.md.
+Next ONE Run-FeatureAssistComparison current-dev19 same-JAR remoteON BOTH,
+FEATURESoff/parallel ordinary weak E/view32/warm1/3repeat performance-only pair.
+Reuse exact completed build evidence,zero unchanged JUnit/build reruns. Require
+frozen inputs/artifacts,actual peer/audit use,10658 tasks/3461 receipts/owner,
+nonconflicting parallel intervals,CPU/ticks/cleanstop/error checks. This adds no
+current decoration/light/native proof;prior dev9 fixture identity remains.
+164636-518/session94515 now completes:FULL-4.9954%/receipt-4.8922%,3/3faster;
+CPU+1.7530%/tickp95+5.0281%,3/3higher. Same10082featurebodies/repeat,parallel
+4004/3853/4996overlaps/peak2,allR8/init/pointconflicts0. Modest incremental
+gain,not major/universal/remote-OFF/beta proof. Runtime/JAR/source frozen.
+ONE offline stopped-log coverage/exactrepeat2 JFR analysis89698 now completes,
+zero newgames/JUnit/MODbuild/SSH. Actualcomplete8466/9433/8843 vs8270/9502/8835,
+no clear coveragegain;features29.61/30.96%,OreFeature.place8.66/8.63% inclusive,
+categoriesoverlap/truncate,notCPUduration/criticalpath. WorldGenRegion read-like
+getBlockEntity installs data/getHeight may prime maps and structure pieces are
+mutable;do not narrowR8 based on read/read labels. Nextone-worker regional
+option is a hypothesis only,unimplemented/unmeasured;retain all guards. Goal
+active;no beta/default promotion.
+
 ## Dev.19 gate154217-052 completed: no end-to-end gain
 
 ONE sequential session51372 exits0;exactly1 affected method (0 failures/errors/

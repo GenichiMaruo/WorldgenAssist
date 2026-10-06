@@ -1,5 +1,28 @@
 # World Generation Pipeline Notes
 
+## Saved lighting source diagnosis completed; timing remains unproved
+
+Original INITIALIZE_LIGHT calls chunk.initializeLightSources then attaches the
+engine before its original asynchronous initialization; LIGHT later propagates
+these sources. Recomputing direct source height from own saved blocks gives a
+separate saved15-below-source invariant. It can identify stale/inconsistent
+values but cannot prove which historical stage produced them. New offline
+helper preserves original comparison/failure.164020-135 confirms12 old original
+saved15-below-source witnesses under oak leaves;all20 prior differences remain.
+ProtoChunk updates sources/checkBlock only after persisted INITIALIZE_LIGHT;
+source capture->asynchronous status publication is a possible vulnerable window,
+not an observed historical witness. Existing replacement retains original
+publication before conflict ownership release. Next current same-JAR off/
+parallel remoteON performance-only164636-518 completes,3/3 faster FULL-4.9954%/
+receipt-4.8922%,CPU+1.7530%/tickp95+5.0281%. Offline89698 exactrepeat2JFR and
+all-repeatcoverage completes;actualcoverageoff8466/9433/8843 vs8270/9502/8835,
+not a clear offload increase. Do not weakenR8 conflicts from
+direct-call scans or equate old fixtures/current performance to beta safety.
+Read-like WorldGenRegion.getBlockEntity installs lazily loaded data;getHeight
+can prime absent maps;StructureStart has mutable pieces/afterPlace. A one-worker
+regional option might reduce contention while retaining all ownership and
+publication guards,but is unimplemented/unmeasured. See diagnosis document.
+
 ## Dev.19 gate154217-052 completed: no end-to-end gain
 
 ONE sequential session51372 exits0;exactly1 affected method (0 failures/errors/

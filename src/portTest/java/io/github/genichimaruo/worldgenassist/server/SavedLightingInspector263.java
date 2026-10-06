@@ -11,6 +11,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.IdMapper;
 import net.minecraft.core.SectionPos;
@@ -98,20 +99,30 @@ public final class SavedLightingInspector263 {
 			drain(engine);
 			for (var chunk : ordered) engine.propagateLightSources(chunk.getPos());
 			drain(engine);
-			long blockDifferences = 0, skyDifferences = 0, values = 0; int changedChunks = 0;
+			long blockDifferences = 0, skyDifferences = 0, values = 0, fullSkyBelowSource = 0; int changedChunks = 0;
+			var savedViews = new HashMap<ChunkPos,SavedLightView263>();
+			for (var pos : chunks.keySet()) {
+				var allocatedSky = java.util.stream.IntStream.rangeClosed(-5,20).filter(y -> engine.getLayerListener(LightLayer.SKY).getDataLayerData(SectionPos.of(pos,y)) != null).boxed().toList();
+				savedViews.put(pos,new SavedLightView263(source,pos,saved.get(pos),allocatedSky));
+			}
 			var examples = new ArrayList<Map<String,Object>>(); var mutable = new BlockPos.MutableBlockPos();
 			for (var center : centers) for (int z = -TARGET_RADIUS; z <= TARGET_RADIUS; z++) for (int x = -TARGET_RADIUS; x <= TARGET_RADIUS; x++) {
 				var pos = new ChunkPos(center.x()+x,center.z()+z);
-				var allocatedSky = java.util.stream.IntStream.rangeClosed(-5,20).filter(y -> engine.getLayerListener(LightLayer.SKY).getDataLayerData(SectionPos.of(pos,y)) != null).boxed().toList();
-				var view = new SavedLightView263(source,pos,saved.get(pos),allocatedSky); boolean changed = false;
+				var view = savedViews.get(pos); boolean changed = false;
 				for (int y = MIN_Y-16; y < MIN_Y+HEIGHT+16; y++) for (int dz = 0; dz < 16; dz++) for (int dx = 0; dx < 16; dx++) {
 					mutable.set(pos.getMinBlockX()+dx,y,pos.getMinBlockZ()+dz);
 					for (var layer : List.of(LightLayer.BLOCK,LightLayer.SKY)) {
 						int actual = layer == LightLayer.BLOCK ? view.block(mutable) : view.sky(mutable);
 						int expected = engine.getLayerListener(layer).getLightValue(mutable); values++;
+						// Independent original source-height invariant: lateral propagation always loses >=1.
+						if (layer == LightLayer.SKY && actual == 15 && y < chunks.get(pos).getSkyLightSources().getLowestSourceY(dx,dz)) fullSkyBelowSource++;
 						if (actual != expected) {
 							changed = true; if (layer == LightLayer.BLOCK) blockDifferences++; else skyDifferences++;
-							if (examples.size() < 20) examples.add(Map.of("chunk",pos.x()+","+pos.z(),"x",mutable.getX(),"y",y,"z",mutable.getZ(),"layer",layer.name(),"saved",actual,"recomputed",expected));
+							if (examples.size() < 20) {
+								var example = new TreeMap<String,Object>();
+								example.putAll(Map.of("chunk",pos.x()+","+pos.z(),"x",mutable.getX(),"y",y,"z",mutable.getZ(),"layer",layer.name(),"saved",actual,"recomputed",expected));
+								example.put("source_evidence",sourceEvidence(mutable,source,chunks,saved,savedViews,engine)); examples.add(example);
+							}
 						}
 					}
 				}
@@ -121,12 +132,38 @@ public final class SavedLightingInspector263 {
 			var report = new TreeMap<String,Object>(); report.put("case",entry.getKey()); report.put("success",equal);
 			report.put("halo_chunks",chunks.size()); report.put("required_chunks",50); report.put("compared_values",values);
 			report.put("changed_chunks",changedChunks); report.put("block_differences",blockDifferences); report.put("sky_differences",skyDifferences); report.put("examples",examples); reports.add(report);
+			report.put("saved_full_sky_below_original_source",fullSkyBelowSource);
 			System.out.println("SAVED_LIGHTING_CASE name="+entry.getKey()+" success="+equal+" changed_chunks="+changedChunks);
 		}
 		var result = Map.of("schema","worldgen-assist.saved-lighting-invariant.v1","success",success,"cases",reports,
 			"scope","Original game lighting recomputed from each world's own 162 saved FULL halo chunks; every sky/block value including exterior sections in 50 interior FULL chunks. Saved original storage reads, no repair; not cross-world feature equality or general gameplay proof.");
 		Files.writeString(output,new GsonBuilder().setPrettyPrinting().create().toJson(result)+System.lineSeparator());
 		if (!success) throw new IllegalStateException("saved lighting differs from original recomputation: "+output);
+	}
+	private static Map<String,Object> sourceEvidence(BlockPos pos, Source source, Map<ChunkPos,ProtoChunk> chunks,
+		Map<ChunkPos,CompoundTag> saved, Map<ChunkPos,SavedLightView263> views, LevelLightEngine engine) {
+		var chunkPos = ChunkPos.containing(pos); var chunk = chunks.get(chunkPos);
+		int lowest = chunk.getSkyLightSources().getLowestSourceY(pos.getX() & 15,pos.getZ() & 15);
+		boolean present = false;
+		for (var entry : saved.get(chunkPos).getListOrEmpty("sections")) {
+			var section = (CompoundTag)entry;
+			if (section.getByte("Y").orElseThrow() == SectionPos.blockToSectionCoord(pos.getY()) && section.getByteArray("SkyLight").isPresent()) present = true;
+		}
+		var neighbors = new ArrayList<Map<String,Object>>();
+		for (var direction : Direction.values()) {
+			var neighbor = pos.relative(direction); var view = views.get(ChunkPos.containing(neighbor));
+			if (view == null) throw new IllegalStateException("diagnostic interior neighbor outside retained halo");
+			neighbors.add(Map.of("direction",direction.name(),"state",source.getBlockState(neighbor).toString(),
+				"saved_sky",view.sky(neighbor),"recomputed_sky",engine.getLayerListener(LightLayer.SKY).getLightValue(neighbor)));
+		}
+		var column = new ArrayList<Map<String,Object>>();
+		for (int y = pos.getY(); y <= Math.min(MIN_Y+HEIGHT-1,pos.getY()+32); y++) {
+			var at = new BlockPos(pos.getX(),y,pos.getZ()); var state = source.getBlockState(at);
+			if (!state.isAir()) column.add(Map.of("y",y,"state",state.toString(),"light_dampening",state.getLightDampening()));
+		}
+		return Map.of("lowest_original_sky_source_y",lowest,"saved_sky_array_present",present,
+			"state",source.getBlockState(pos).toString(),"neighbors",neighbors,"non_air_column_first_33",column,
+			"halo_margin_blocks",(HALO_RADIUS-TARGET_RADIUS)*16);
 	}
 	private static void drain(LevelLightEngine engine) {
 		int passes = 0;

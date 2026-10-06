@@ -1,5 +1,24 @@
 # Mixin Targets
 
+## Saved lighting source diagnosis completed (no new Mixin)
+
+Primary26.2/target26.3 ChunkSkyLightSources.fillFrom uses original dampening/
+occlusion edges for direct vertical source height. SkyLightEngine propagation
+uses LightEngine.getOpacity=max(1,dampening); only vertical sources may be15.
+Offline metadata counts saved15 below original source height,retains raw-array
+presence/own blocks/six neighbors. Original propagation/reader unchanged; no
+production target added.164020-135 retains original20SKY failure;12 saved15
+below source83/other heights are real own-block inconsistencies,not proven
+historical source timing. Both old candidate0. Current-dev19 performance-only
+off/parallel164636-518 completes,uses existing original FEATURES/INIT hooks and
+R8/point footprints unchanged:FULL-4.9954%/receipt-4.8922% (3/3faster),CPU+
+1.7530%/tickp95+5.0281%(3/3higher),allactualfootprintconflicts0. Offline89698
+JFR/coverage completes;no clear coverage gain. No new live light/native parity
+proof. See diagnosis document. WorldGenRegion.getBlockEntity may materialize/
+install a block entity and getHeight may prime an absent heightmap;nominal
+read/read overlap alone does NOT justify reducing R8. Shared StructureStart
+pieces/afterPlace are mutable too. Nextone-worker regional option unimplemented.
+
 ## Dev.19 gate154217-052 completed: no end-to-end gain
 
 ONE sequential session51372 exits0;exactly1 affected method (0 failures/errors/
