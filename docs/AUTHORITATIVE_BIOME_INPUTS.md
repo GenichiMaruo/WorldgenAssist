@@ -1,5 +1,77 @@
 # Authoritative biome inputs for actual terrain assignments
 
+## Opposite-order confirmation complete (2026-10-07)
+
+`authoritative-biome-confirmation-20261007-003107-976`/session78734 exits0;
+all four sequential steps pass, issues empty. The exact production/test/build
+inventory, four original affected-method XML results, all16 parent steps,
+three current/retained dev23 JAR hashes and every882 four-stage comparison
+were checked before reuse. Runtime/helpers unchanged; only post-stopped JFR
+analysis groups and the new coordinator differ. ZERO fresh JUnit, MOD builds,
+correctness fixtures or native games. Both new runtime conditions stop cleanly;
+inputs and all artifact hashes remain frozen.
+
+Natural weak E-host, two clients on the same stronger PC, view32, identical
+parallel FEATURES scheduler, warmup1/three same relocations; ASSISTED FIRST,
+then remoteOFF. Same task-coordinate hash as original231008-388:
+`0DC57CE29A8567861E7EC756E7EC8556AACC9A02A0912F0D5A371BB2CC4F886F`.
+New runtime source hash:
+`bdf901f36da69371ed67d8fb33c1474f2b871f9aacd7bce523a190aa77d3cbf5`.
+
+| New repeat | FULL OFF ms | FULL ON ms | Receipt OFF ms | Receipt ON ms |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 104179.935 | 80083.642 | 110296.8251 | 84641.0508 |
+| 2 | 122010.534 | 88790.370 | 128867.1746 | 93606.3459 |
+| 3 | 117955.229 | 97561.953 | 123926.9170 | 101857.7793 |
+
+New CPU OFF404406.250/460531.250/423937.500ms versus
+ON339656.250/345296.875/340093.750ms; tickp95 OFF12.2020/12.2413/11.5248ms
+versus ON13.6612/13.3618/12.1957ms. New pair ALL3 faster/lower CPU, ALL3
+higher tickp95. Each condition/repeat10658 completed tasks,3461 received chunks
+per owner;10082 FEATURES and light-init bodies,peak2,all three footprint-conflict
+counts0. Actual provided-input applications5407/6588/5519, original0; whole
+and independent-peer audit routes used. Failedtasks/timeouts/application rejects/
+quarantines0; ordinary fallback counts194 ON/419 OFF are a separate population.
+
+Combining ORIGINAL-FIRST and ASSISTED-FIRST yields median of SIX matched
+ratios: FULL **-20.9328922%**, receipt **-21.1982462%**, server CPU
+**-19.6260675%**; ALL6 improve. Tickp95 **+8.9484920%**, ALL6 higher.
+Six pairs reuse THREE coordinates; not six independent seeds, an isolated
+authoritative-input edit effect, a previous-JAR comparison or a universal gain.
+No percentages from older artifacts are added. Client whole-process average
+cores0.307/0.314 OFF versus1.577/1.639 ON include join/warmup, not per-repeat.
+
+Source and actual game-mode logs correct an earlier read-only interpretation:
+`gamemode spectator` at remote line276 belongs to Warm-AssistedOwners,
+not Start-Location. First warmup sets both CREATIVE; subsequent measurements
+retain creative and Start-Location only teleports. No fixture player pause in
+performance. This still does not prove survival mining/placing or all ordinary
+mixed-stage lighting consistency. Inspect stopped saved-player/light evidence
+next, then close ordinary gameplay gaps; old strict saved-light failure remains.
+Protocol14/native5/defaultOFF/version23/publicalpha7 unchanged; no beta claim.
+The following UNRUN preparation is retained historical context.
+
+## Opposite-order confirmation prepared; new execution UNRUN
+
+`Run-AuthoritativeBiomeConfirmation.ps1 -Execute -GateEvidence` references the
+closed231008-388 gate. It checks ALL original production/test/build inventory,
+each exact four-method XML, all16 passed steps, three current/retained JAR
+identities and each three-loader strict882 four-stage fixture proof. Original
+runtime/helper scripts must remain exact; only the post-stopped analysis groups
+and this new coordinator differ. No production, protocol, policy or version edit.
+Zero fresh units, MOD builds, correctness fixtures or native games.
+
+After all harness/docs edits, ONE sequential assisted-first then original pair,
+same23JAR/parallel scheduler/natural weak E-host/two same stronger clients/view32/
+warm1/3same relocations/JFR. Reuse the original current identity/authority checks,
+require exact task-coordinate hash across the original and both new conditions,
+10658 tasks/3461 receipts per owner/repeat,10082 feature/light bodies/peak2/no
+ownership conflicts, actual provided inputs in each assisted repeat, audits/
+distinct peers, no rejection/quarantine/failures/timeouts and clean shutdown.
+Raw source/JAR/recordings freeze during execution. Combine the six paired ratios
+with explicit order labels; six pairs reuse three coordinates, not independent
+seeds. No new mixed-stage light/gameplay safety proof and no beta claim.
+
 ## Completed dev23 batch: useful gain, further confirmation required
 
 `feature-pipeline-gate-20261006-231008-388`/session21220 exits0. Exactly four

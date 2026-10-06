@@ -1,5 +1,47 @@
 # World Generation Pipeline Notes
 
+## Dev23 opposite-order confirmation completed: reproducible assistance gain
+
+Closed authoritative-biome-confirmation-20261007-003107-976/session78734 exits0;
+all4 sequential steps pass, no issues, source/JAR identities frozen. SAME23JAR
+assisted-first then remoteOFF, BOTH parallel FEATURES, natural weak E-server,
+two same stronger-PC clients/view32/warm1/3same relocations. Exact original
+production/test/build inventory,4 affected-method XML/all16 passed parent steps/
+3 current-retained artifacts/three-loader882 four-stage proofs reused; ZERO
+fresh JUnit/MOD builds/correctness/native. Same coordinate SHA256
+0DC57CE29A8567861E7EC756E7EC8556AACC9A02A0912F0D5A371BB2CC4F886F.
+
+Both execution orders combined: median of SIX matched ratios FULL-20.9329%,
+receipt-21.1982%,server CPU-19.6261%;ALL6 improve. Tickp95+8.9485%,ALL6 higher
+(assisted12.196..13.661ms). Six pairs reuse THREE coordinates, not independent
+seeds or an isolated input-edit/previous-JAR effect. New pair all10658tasks/
+3461receipts per owner/repeat,10082FEATURES/light bodies/peak2/all footprint
+conflicts0;actual provided-input applications5407/6588/5519,peer and audits used,
+failedtasks/timeouts/rejections/quarantine0,cleanstop. No defaults/version change.
+
+Measured players are CREATIVE: Warm-AssistedOwners uses spectator only during
+onboarding; first warmup sets all creative and later Start-Location only teleports.
+Actual game-mode logs confirm this. Not survival, mining/placing, or a general
+ordinary mixed-stage lighting proof. Prior saved-light failure stays retained.
+Next inspect stopped ordinary-world player/light evidence, then close gameplay
+stability gaps. Publicalpha7 unchanged;goal active/no beta. Following prepared
+UNRUN headings are historical records; see AUTHORITATIVE_BIOME_INPUTS.md.
+
+## Dev23 reverse-order performance confirmation prepared; UNRUN
+
+New Run-AuthoritativeBiomeConfirmation verifies original231008-388 exact full
+production/test/build inventory,4method XML/all16steps/3current-retainedJARs and
+allthree-loader882four-stage proofs;original runtime/collector scripts unchanged.
+Only post-stopped analyzer groups/new coordinator differ. Production/protocol14/
+native5/defaults/version23 unchanged. ZERO fresh units/builds/correctness/native.
+After all harness/docs edits ONE assisted-first/original natural weak E-view32
+pair,sameparallel scheduler/two same strong-PC clients/warm1/3same relocations/
+JFR. Actual coordinate hash must match original;10658tasks/3461receipts/owner,
+10082feature/light/peak2/no conflicts and provided-input/peer/audit use/errors/
+cleanstop/frozen identity checks retained. Combine six paired ratios explicitly;
+three reused coordinates,not six independent seeds. All reverse verification
+UNRUN;no new ordinary lighting/gameplay safety or beta claim. Goalactive.
+
 ## Dev23 gate231008-388 complete: current assistance gain, not beta
 
 One sequential session21220 exits0:exactly4 affected methods/0 failures/errors/
