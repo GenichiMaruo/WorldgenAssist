@@ -129,6 +129,10 @@ try {
         }
         $assistedLog=Join-Path $root "$loader/assisted/latest.log"
         $text=Get-Content -LiteralPath $assistedLog -Raw
+        if($prior.test_profile -eq 'complete-prefetch-index' -and
+            $text -notmatch 'prefetch\.policy lookahead=0 capacity=8192 hint_retention_ms=180000 dispatch_limit=128'){
+            throw "$loader did not exercise the indexed native32-job complete hint policy"
+        }
         $expectedHint=if($prior.remote_work_kind -eq 'complete'){'(?:terrain_stage|task_dependency)'}elseif($prior.test_profile -in @('admission','capacity')){'terrain_stage'}else{'task_dependency'}
         if($text -notmatch ('job\.sent .*hint='+$expectedHint+' candidate_age_ms=')){throw "$loader did not dispatch actual $expectedHint hints"}
         $comparisonArguments=@('-File',(Join-Path $PSScriptRoot 'Compare-LocalLoaderDigests.ps1'),

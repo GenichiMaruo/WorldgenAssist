@@ -1,5 +1,65 @@
 # Mixin Targets
 
+## Dev.15 confirmation222510-653 completed (reproducible moderate gain)
+
+One sequential batch/session26427 exits0: reverse performance/coverage and
+fresh Forge/NeoForge original-assisted pairs all pass. Unchanged production
+f074234 and all3 exact dev.15 JAR hashes match gate214617-776; its5 successful
+method XMLs/build evidence retained,not rerun. Publicalpha7 unchanged.
+
+Same weak E-server/two clients on one stronger PC,view32,4workers/client,
+FEATURES off/capture off,warm1/3identical relocations,now vanilla-first.
+10658 tasks and3461 receipts/owner/repeat;0failed tasks/job timeouts/quarantines/
+terrain differences/apply rejects,clean stops. FULL99.374207/111.283994/
+106.076971s off,84.105120/98.873131/97.395035s on.
+Paired medians FULL-11.15%,receipt-10.91%,CPU-23.75%,3/3 improved;
+tickp95+3.92%,all3 higher. Both execution orders combined: FULL-11.36%,
+receipt-11.74%,CPU-25.56%,6/6 improved;tickp95+3.10%,all6 higher.
+Six pairs repeat the SAME three coordinates,not six independent seeds.
+This is reproducibility in this environment/profile,not universal/default
+performance,beta or causal before-after attribution to the dev.15 edit.
+Reverse actual complete coverage8580/9690/8859 of10658;direct5181/6192/5096,
+cache3339/3453/3721,prefetch joins60/45/42. Early share39.62/36.10/42.48%.
+
+Fresh native gate224555-143 passes6 steps: Forge1971/Neo1954 shared format2
+noise digests,0 differences;18/27 postmarker actual complete applications ALL
+present/equal in original,both owners use distinct peers. Forge shaping1.
+Actual native8192 hints/180s retention/prefix128 exercised. Local view4/owner16/
+global32/basewait1s correctness only,no native speed claim. Neo25 premarker
+warmup applications lack original coordinate counterparts; they are explicitly
+outside targeted postmarker parity,not asserted verified. No unit/build rerun.
+
+Rare LIVE biome-only recovery now observed once in reverse measured3:
+chunk-2011,3041,primaryb9d4bf7c-0692-4519-acf0-d4eb869a4baf,
+peerdec10215-ea42-4ccb-86b1-6f6b48f55bc8;pending then choice_applied side=peer,
+peer_terrain_applied and complete98304 samples. Original whole terrain agrees;
+the current authoritative server3x3 biome digest selects the ORIGINAL peer
+payload before writes. Current dual epochs/final guards remain. Audited=false;
+raw capture off,so no independent full-original terrain proof for this witness.
+This demonstrates live mitigation,NOT the cause/fix of private biome history
+or the old exact failed coordinate. No normalization or weakened comparison.
+
+Evidence: test-artifacts/indexed-terrain-confirmation-20261005-222510-653/
+summary.json and both-order-summary.json;csb-20261005-222513-948/u/;
+terrain-native-gate-20261005-224555-143/. Next investigate actual remaining
+costs and usable explicit configuration. Historical UNRUN paragraphs below
+retain their original checkpoint identity and no longer describe current status.
+
+## Historical dev.15 confirmation batch prepared (UNRUN at that checkpoint)
+
+Run-IndexedTerrainConfirmation reuses gate214617-776's exact5 method XMLs,
+common/native source identity and all3 JAR hashes;no production change or new
+unit/build run. One sequential batch reverses the same weak E-server view32
+pair to vanilla-first,warm1/3identical relocations,then fresh local Forge and
+NeoForge two-owner original/assisted complete+peer pairs. Native view4/owner16/
+global32/basewait1s are correctness only;require actual8192-hint/180s/prefix128
+policy plus original dependency dispatch/both-owner peer applications and all
+shared/applied noise digests. Physical performance retains original FEATURES
+off/capture off and4 workers/client. All new runtime/reverse results UNRUN.
+No beta claim; prior failed/history identities stay. Finish harness edits before
+this one batch,then read compact results/all failures together. See
+[validation results](TEST_RESULTS_LATEST.md) for the retained original dev.15 proof.
+
 ## Dev.15 gate214617-776 completed (promising acceleration; not beta)
 
 Single sequential batch/session38614 exits0:exactly5 affected methods,0 failures/
