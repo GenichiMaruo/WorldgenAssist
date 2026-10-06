@@ -3,6 +3,7 @@ package io.github.genichimaruo.worldgenassist.server;
 import java.util.Objects;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 import io.github.genichimaruo.worldgenassist.common.CompleteTerrainData;
+import io.github.genichimaruo.worldgenassist.common.CompleteTerrainSectionStates;
 import io.github.genichimaruo.worldgenassist.common.CompleteTerrainPalette;
 import io.github.genichimaruo.worldgenassist.common.TerrainBiomeWindow;
 import io.github.genichimaruo.worldgenassist.common.TerrainDensityJob;
@@ -28,17 +29,9 @@ import net.minecraft.world.level.levelgen.blending.Blender;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import java.util.Set;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import io.netty.buffer.Unpooled;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.PalettedContainer;
-import net.minecraft.world.level.chunk.PalettedContainerRO;
-import net.minecraft.world.level.chunk.Strategy;
-import net.minecraft.world.level.block.Block;
 
 /** Called only after current owner/context/deadline validation by the manager. */
 public final class CompleteTerrainApplicator {
@@ -99,23 +92,19 @@ public final class CompleteTerrainApplicator {
 		short[] highestWrites = prepareColumns(data, surfaceStates, floorStates);
 		ShortArrayList[] offsets = new ShortArrayList[job.height() / 16];
 		for (int i = 0; i < offsets.length; i++) offsets[i] = new ShortArrayList(data.postProcessing(i));
-		byte[][] packed = null;
+		CompleteTerrainSectionStates packed = null;
+		boolean precomputed = data.hasPreparedSections();
 		// Keep every live section/container/biome object. Custom implementations and
 		// targets with even unused noncanonical AIR entries keep the original writer.
 		if (chunk.getClass() == ProtoChunk.class && Arrays.stream(chunk.getSections()).allMatch(section ->
 			section.getClass() == LevelChunkSection.class && section.getStates().getClass() == PalettedContainer.class
 			&& !section.getStates().maybeHas(block -> block != Blocks.AIR.defaultBlockState()))) {
-			packed = packBlocks(data, states);
+			packed = data.prepareSections();
 			// Original target strategy must decode each original-format buffer before
 			// any world mutation. This also checks lengths/global block registry IDs.
-			for (int i = 0; i < packed.length; i++) {
-				var buffer = new FriendlyByteBuf(Unpooled.wrappedBuffer(packed[i]));
-				try { chunk.getSection(i).getStates().recreate().read(buffer);
-					if (buffer.isReadable()) throw new IllegalArgumentException("Packed terrain has trailing state data");
-				} finally { buffer.release(); }
-			}
+			packed.preflight(chunk.getSections());
 		}
-		var prepared = new Prepared(chunk, data, states, highestWrites, packed, packHeights(surface, job.height()), packHeights(floor, job.height()), offsets,
+		var prepared = new Prepared(chunk, data, states, highestWrites, packed, precomputed, packHeights(surface, job.height()), packHeights(floor, job.height()), offsets,
 			result.hasPeerBiomeAlternative() ? () -> io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
 				"[CAWG] job.peer_biome_choice_applied id={} side={}",job.identity().jobId(),
 				java.security.MessageDigest.isEqual(expectedBiomes,result.completeTerrain().biomeWindowDigest()) ? "primary" : "peer") : () -> {});
@@ -159,43 +148,6 @@ public final class CompleteTerrainApplicator {
 		}
 	}
 
-	/** Server-owned palette/bits only, never a client-supplied section or registry ID. */
-	static byte[][] packBlocks(CompleteTerrainData data, BlockState[] states) {
-		Strategy<BlockState> strategy = Strategy.createForBlockStates(Block.BLOCK_STATE_REGISTRY);
-		byte[][] packed = new byte[data.height() / 16][];
-		for (int section = 0; section < packed.length; section++) {
-			int[] ids = new int[4096], codes = new int[states.length];
-			Arrays.fill(codes, -1);
-			List<BlockState> entries = new ArrayList<>();
-			for (int y = 0; y < 16; y++) for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
-				int code = data.choice((z * 16 + x) * data.height() + section * 16 + y);
-				if (codes[code] < 0) { codes[code] = entries.size(); entries.add(states[code]); }
-				ids[strategy.getIndex(x, y, z)] = codes[code];
-			}
-			// Source-verified stock block-state strategy: singleton0,otherwise >=4
-			// storage bits; fixed palette has at most50 entries (<=6 bits).
-			int bits = entries.size() == 1 ? 0 : Math.max(4, Mth.ceillog2(entries.size()));
-			var storage = bits == 0 ? Optional.<java.util.stream.LongStream>empty()
-				: Optional.of(Arrays.stream(new SimpleBitStorage(bits, 4096, ids).getRaw()));
-			var container = PalettedContainer.unpack(strategy,
-				new PalettedContainerRO.PackedData<>(List.copyOf(entries), storage, bits)).getOrThrow();
-			var buffer = new FriendlyByteBuf(Unpooled.buffer());
-			try { container.write(buffer); packed[section] = new byte[buffer.readableBytes()]; buffer.readBytes(packed[section]); }
-			finally { buffer.release(); }
-		}
-		return packed;
-	}
-	/** Generation thread only. Original read owns its lock; original recount owns all four counters. */
-	static void readBlocks(byte[][] packed, LevelChunkSection[] sections) {
-		if (packed.length != sections.length) throw new IllegalArgumentException("Packed terrain section geometry differs");
-		for (int i = 0; i < sections.length; i++) {
-			var buffer = new FriendlyByteBuf(Unpooled.wrappedBuffer(packed[i]));
-			try { sections[i].getStates().read(buffer); }
-			finally { buffer.release(); }
-			sections[i].recalcBlockCounts();
-		}
-	}
-
 	private static long[] packHeights(short[] heights, int height) {
 		SimpleBitStorage bits = new SimpleBitStorage(Mth.ceillog2(height + 1), 256);
 		for (int i = 0; i < heights.length; i++) bits.set(i, heights[i]);
@@ -207,16 +159,18 @@ public final class CompleteTerrainApplicator {
 		private final CompleteTerrainData data;
 		private final BlockState[] states;
 		private final short[] highestWrites;
-		private final byte[][] packed;
+		private final CompleteTerrainSectionStates packed;
+		private final boolean precomputed;
 		private final long[] surface, floor;
 		private final ShortArrayList[] offsets;
 		private final Runnable selected;
 		private boolean used;
-		private Prepared(ChunkAccess chunk, CompleteTerrainData data, BlockState[] states, short[] highestWrites, byte[][] packed,
+		private Prepared(ChunkAccess chunk, CompleteTerrainData data, BlockState[] states, short[] highestWrites, CompleteTerrainSectionStates packed, boolean precomputed,
 			long[] surface, long[] floor, ShortArrayList[] offsets, Runnable selected) {
 			this.chunk = chunk; this.data = data; this.states = states;
 			this.highestWrites = highestWrites;
 			this.packed = packed;
+			this.precomputed = precomputed;
 			this.surface = surface; this.floor = floor; this.offsets = offsets;
 			this.selected=selected;
 		}
@@ -225,7 +179,7 @@ public final class CompleteTerrainApplicator {
 			if (used) throw new IllegalStateException("Complete terrain already applied");
 			used = true;
 			if (packed != null) {
-				readBlocks(packed, chunk.getSections());
+				packed.apply(chunk.getSections());
 			} else {
 				int acquired = 0;
 				try {
@@ -241,8 +195,8 @@ public final class CompleteTerrainApplicator {
 			chunk.markUnsaved();
 			selected.run();
 			if (packed != null) io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
-				"[CAWG] terrain.bulk_applied chunk={},{} sections={} blocks={}",
-				chunk.getPos().x(), chunk.getPos().z(), packed.length, data.blockCount());
+				"[CAWG] terrain.bulk_applied chunk={},{} sections={} blocks={} preparation={}",
+				chunk.getPos().x(), chunk.getPos().z(), chunk.getSections().length, data.blockCount(), precomputed ? "decoder" : "inline");
 			return chunk;
 		}
 	}

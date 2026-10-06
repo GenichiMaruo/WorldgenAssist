@@ -27,6 +27,7 @@ param(
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
     [ValidateSet('grid','surface','density','block','decisions','complete')][string]$RemoteWorkKind='grid',
     [ValidateSet('server','peer')][string]$CompleteVerification='server',
+    [ValidateSet('inline','decoder')][string]$SectionPreparation='inline',
     [ValidateSet('off','serial','parallel')][string]$FeatureBackend='off',
     [switch]$DecorationDigest,
     [switch]$FeatureFixture,
@@ -217,6 +218,7 @@ try {
     $remoteCommand += ' -PrefetchLookahead '+$PrefetchLookahead
     $remoteCommand += ' -RemoteWorkKind '+$RemoteWorkKind
     $remoteCommand += ' -CompleteVerification '+$CompleteVerification
+    $remoteCommand += ' -SectionPreparation '+$SectionPreparation
     $remoteCommand += ' -FeatureBackend '+$FeatureBackend
     if($DecorationDigest){$remoteCommand += ' -DecorationDigest'}
     if($FeatureFixture){$remoteCommand += ' -FeatureFixture'}
@@ -312,6 +314,7 @@ try {
     $result.prefetch_lookahead = $PrefetchLookahead
     $result.remote_work_kind = $RemoteWorkKind
     $result.complete_verification = $CompleteVerification
+    $result.section_preparation = $SectionPreparation
     $result.feature_backend = $FeatureBackend
     $result.decoration_digest = [bool]$DecorationDigest
     $result.feature_fixture = [bool]$FeatureFixture

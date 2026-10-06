@@ -73,9 +73,22 @@ class CompleteTerrainApply263Test {
 		for (int i = 0; i < bulk.length; i++) bulk[i] = expected[i].copy();
 		var stateObjects = java.util.Arrays.stream(bulk).map(LevelChunkSection::getStates).toArray();
 		var biomeObjects = java.util.Arrays.stream(bulk).map(LevelChunkSection::getBiomes).toArray();
-		byte[][] packed = CompleteTerrainApplicator.packBlocks(data, states);
-		CompleteTerrainApplicator.readBlocks(packed, bulk);
-		assertThrows(IllegalArgumentException.class, () -> CompleteTerrainApplicator.readBlocks(new byte[0][], bulk));
+		assertFalse(data.hasPreparedSections());
+		byte[] originalWire = data.encode();
+		var packed = data.prepareSections();
+		assertTrue(data.hasPreparedSections()); assertSame(packed, data.prepareSections());
+		assertArrayEquals(originalWire, data.encode());
+		assertFalse(CompleteTerrainData.decode(originalWire, -64, height).hasPreparedSections());
+		var computations = java.util.concurrent.Executors.newFixedThreadPool(2);
+		try {
+			var concurrent = CompleteTerrainData.decode(originalWire, -64, height);
+			var one = computations.submit(concurrent::prepareSections);
+			var two = computations.submit(concurrent::prepareSections);
+			assertSame(one.get(), two.get());
+		} finally { computations.shutdownNow(); }
+		packed.preflight(bulk); packed.apply(bulk);
+		assertThrows(IllegalArgumentException.class, () -> packed.preflight(new LevelChunkSection[0]));
+		assertThrows(IllegalArgumentException.class, () -> packed.apply(new LevelChunkSection[0]));
 		for (int i = 0; i < bulk.length; i++) {
 			assertSame(stateObjects[i], bulk[i].getStates()); assertSame(biomeObjects[i], bulk[i].getBiomes());
 			assertSame(plains, bulk[i].getNoiseBiome(3, 3, 3));

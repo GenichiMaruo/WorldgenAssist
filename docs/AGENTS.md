@@ -1,5 +1,87 @@
 # Repository agent instructions
 
+## Dev.17 gate113112-026 completed (early preparation not adopted)
+
+One sequential batch/session98359 exits0:ONE affected existing method,0 failures/
+errors/skips,all3 builds,physical1802 shared format2 noise digests/0 differences.
+Required actual applied-1005,2000 and1000,-2005 match original;actual complete
+ownerA733/ownerB718,both owners use peers,decoder-prepared path exercised.
+Build gate113112-712 passes all7 steps;performance deliberately skipped there.
+Fresh native runtime UNRUN;native builds alone are not runtime proof.
+FabricBF2E0D4EBF632EAB88C414869B44F927BEA38317F3F6E2A7D2AED97908827680;
+Forge9B0794C3E34B43E760F2A5F1836AFD0DD770217EDBC04BF3DB9AAA97FDA2A4D5;
+Neo5C10DDF00C4DB39EE02A2515436240EA68C5901AB6F9F2AB8A596C244EC8462E.
+
+Controlled SAME-JAR/source inline-first comparison with assistance ON in BOTH:
+ordinary natural weak E-server/two same-strong-PC clients,4workers/client,view32,
+owner32/global64/cache128/30s,FEATURES off/capture off,warm1/3same relocations.
+10658 tasks/3461 receipts per owner/repeat,coordinate hash0DC57CE29A8567861E7EC756E7EC8556AACC9A02A0912F0D5A371BB2CC4F886F.
+0failed tasks/timeouts/quarantines/terrain differences/apply rejects,clean stops.
+Whole-process bulk markers:inline35411/decoder0 versus inline0/decoder36111;
+these include warmup/onboarding and are NOT measured-interval counts.
+FULL inline87.907245/97.832126/100.852712s versus decoder88.220532/101.415311/100.777093s.
+Receipt inline92.666591/104.033511/105.120033s versus decoder93.336641/107.603035/105.723658s.
+CPU inline318687.500/316046.875/315375.000ms versus decoder313046.875/320156.250/326062.500ms.
+Paired medians:FULL+0.36%(only1/3 lower),receipt+0.72%(0/3 lower),CPU+1.30%
+(1/3 lower),tickp95+1.65%(all3 higher). Application-10.69%(all3 lower):
+5.486261/4.537027/6.045670ms versus4.899858/3.587005/5.544980ms.
+Decode mean includes moved preparation:0.195544/0.188303/0.195717ms versus
+0.717575/0.734280/0.762294ms. No end-to-end gain;default early preparation stays
+FALSE. Not compared with remote-OFF;do not attach previous~11% general gains
+to this new artifact. One order/three coordinates only,no beta/speed claim.
+
+One AFTER-batch offline sequence91098 exits0:existing stopped logs/recordings
+only,coverage plus exact repeat2 JFR for both conditions;no new Minecraft/test/
+MOD-build/SSH run. Complete coverage inline8432/9863/8819(79.11/92.54/82.75%)
+versus decoder8650/9814/8934(81.16/92.08/83.82%),all outside-window0.
+Ready cache inline3395/3438/3496 versus decoder3453/3375/3682;pending prefetch
+joins48/31/39 versus37/42/55. Early shares remain~35..42%,not a clear increase.
+JFR inline17732samples/1120truncated,decoder18287/1158;features30.33/29.59%,
+biome11.60/11.92%,remote management9.47/13.59% inclusive. Decoder pure section
+prepare898samples/4.91%. Categories overlap,not durations/critical-path proof;
+methods missing top150 are not0. The moved work remains server CPU work,and
+source presently prepares BOTH primary and verification-peer replies even when
+only one original terrain body will be applied. This is a concrete next lead,
+not a measured attribution of the small whole-run difference. Next avoid useless
+peer preparation or remove actual remaining server computation,then reassess
+larger feature/biome bottlenecks. Goal remains active;publicalpha7 unchanged.
+Evidence:prepared-sections-gate-20261006-113112-026/summary.json plus each
+condition analysis/. Following implementation-time UNRUN text is HISTORY.
+
+## Dev.17 early server section preparation (implemented; verification UNRUN)
+
+Hypothesis: dev.16 did not demonstrate incremental gain; pack/prepare still
+occupied generation workers. Opt-in WORLDGEN_ASSIST_REMOTE_PREPARE_SECTIONS=true
+(or worldgen_assist.remote.prepare_sections) moves ONLY pure fixed-domain
+original section serialization to the existing two bounded decoder workers,
+before result readiness. Default false retains inline preparation. No live
+chunk/biome/section/ticket/authority access; no new executor or network turn.
+The decoded immutable data owns one safely published immutable representation;
+no global cache, serialized attachment, mutable buffer escape or added approval.
+Memory lives only with the already bounded pending/results cache. Duplicate
+callers compute once. Peer alternatives each retain original data; every current
+owner/epoch/audit/domain/shape/3x3 biome/height/empty-target/final authority check
+and original target-strategy preflight remains at application. No partial-write
+fallback. Original live state/biome objects,locks,recount and offsets remain.
+
+Packing reuses scratch indices/codes per invocation and preallocates the
+original getSerializedSize. Generated26.2,Fabric26.3,Forge66.0.3 and exact
+Neo26.3.0.13-beta sources confirm SimpleBitStorage copies int[] and original
+serialized sizing. Protocol12 unchanged;no Mixin target/new copied generation.
+Production0.1.0-alpha.8-dev.17+mc26.3;publicalpha7 unchanged.
+
+ALL edits before ONE sequential Run-PreparedSectionsGate -Execute batch:
+exactly ONE existing exhaustive application method expanded for pure memoization,
+concurrent callers,unchanged wire/no decoded attachment,all98304 voxels/four
+counts,object identities and geometry. Three builds,small physical original/
+decoder-prepared two-owner parity,then BOTH assistance-enabled inline versus
+decoder view32 on natural weak E-server,two clients on same stronger PC,4workers,
+owner32/global64/cache128/30s,FEATURES off/capture off,warm1/3same relocations.
+Same JAR/source/coordinates,actual each path required;this isolates scheduling
+from general remote-on/off gains. Native fresh runtime UNRUN,not implied by
+builds. All dev.17 tests/runtime/performance UNRUN;no speed/beta claim.
+Previous dev.16 completed results below retain their original identity.
+
 ## Dev.16 packed gate103141-722 completed (no demonstrated incremental gain)
 
 One sequential batch/session3647 exits0:exactly1 affected existing method

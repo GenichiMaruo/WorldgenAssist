@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$Execute,[switch]$LocalOnly,[ValidateRange(2,32)][int]$ViewDistance=32,
+param([switch]$Execute,[switch]$LocalOnly,[switch]$SkipPerformance,[ValidateSet('inline','decoder')][string]$SectionPreparation='inline',[ValidateRange(2,32)][int]$ViewDistance=32,
     [ValidateSet('block','decisions','complete')][string]$RemoteWorkKind='block',
     [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='overlap',
     [ValidateRange(0,64)][int]$PrefetchLookahead=0,
@@ -11,6 +11,8 @@ param([switch]$Execute,[switch]$LocalOnly,[ValidateRange(2,32)][int]$ViewDistanc
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $workspace=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+if(($SkipPerformance -or $SectionPreparation -eq 'decoder') -and ($TestProfile -ne 'complete-packed-application' -or $ReuseBuildEvidence -or $ReuseCorrectnessEvidence)){throw 'Section preparation experiment requires fresh packed-application evidence'}
+if($SectionPreparation -eq 'decoder' -and -not $SkipPerformance){throw 'Decoder preparation speed is evaluated by the same-artifact controlled gate'}
 if($ReuseCorrectnessEvidence -and (-not $ReuseBuildEvidence -or $LocalOnly)){throw 'Correctness reuse requires matching saved build evidence and the performance batch'}
 $selections=@(
     'io.github.genichimaruo.worldgenassist.server.BlockDensity263Test',
@@ -252,7 +254,7 @@ try{
         $cases=@()
         foreach($mode in @('vanilla','assisted')){
             $directory=Join-Path $correct $mode
-            $steps+=Step "correctness-$mode" $pwsh @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-WorldgenScenario.ps1'),'-RemoteHost','gen1c@100.103.102.109','-RemoteRoot','E:/WorldgenAssist/port26.3','-Dimension','overworld','-Mode',$mode,'-Players','2','-Purpose','correctness','-CacheEntries','128','-Prediction','false','-ValidationCells','8','-Seed','8675309','-ServerLogicalProcessors','0','-ServerJvmProcessors','0','-CorrectnessDemandWaitMs','100','-NoiseBackend','cooperative','-WindowProfile',$WindowProfile,'-RemoteApplicationProfile',$RemoteApplicationProfile,'-PrefetchLookahead',[string]$PrefetchLookahead,'-RemoteWorkKind',$RemoteWorkKind,'-CompleteVerification',$verification,'-OutputRoot',$directory) 1200
+            $steps+=Step "correctness-$mode" $pwsh @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-WorldgenScenario.ps1'),'-RemoteHost','gen1c@100.103.102.109','-RemoteRoot','E:/WorldgenAssist/port26.3','-Dimension','overworld','-Mode',$mode,'-Players','2','-Purpose','correctness','-CacheEntries','128','-Prediction','false','-ValidationCells','8','-Seed','8675309','-ServerLogicalProcessors','0','-ServerJvmProcessors','0','-CorrectnessDemandWaitMs','100','-NoiseBackend','cooperative','-WindowProfile',$WindowProfile,'-RemoteApplicationProfile',$RemoteApplicationProfile,'-PrefetchLookahead',[string]$PrefetchLookahead,'-RemoteWorkKind',$RemoteWorkKind,'-CompleteVerification',$verification,'-OutputRoot',$directory,'-SectionPreparation',$SectionPreparation) 1200
             if($steps[-1].status -ne 'PASSED'){throw "Affected runtime failed: $mode"}
             $result=Get-Content -LiteralPath (Join-Path $directory 'scenario-result.json') -Raw|ConvertFrom-Json
             if(-not $result.success -or -not $result.cleanup_safe -or $result.artifact_sha256 -ne $hash){throw 'Runtime cleanup/artifact mismatch'}
@@ -265,6 +267,7 @@ try{
         if($comparison.status -ne 'COMPLETE' -or $comparison.issues.Count -ne 0 -or
             $comparison.correctness_pairs.Count -ne 1 -or $comparison.correctness_pairs[0].status -ne 'PASS'){throw 'Correctness comparison incomplete'}
         $log=Get-Content -LiteralPath (Join-Path $correct 'assisted/remote-evidence/latest.log') -Raw
+        if($SectionPreparation -eq 'decoder' -and $log -notmatch 'terrain\.bulk_applied .*preparation=decoder'){throw 'Decoder-prepared application not exercised'}
         if($TestProfile -eq 'complete-packed-application' -and $log -notmatch 'terrain\.bulk_applied chunk=-?\d+,-?\d+ sections=24 blocks=98304'){
             throw 'Runtime did not actually use original-format packed section application'
         }
@@ -340,6 +343,7 @@ try{
         }
         [IO.File]::WriteAllText((Join-Path $root 'block-density-use.json'),($use|ConvertTo-Json))
         $lock.Dispose();$lock=$null
+        if(-not $SkipPerformance){
         $steps+=Step 'performance-pair' $pwsh @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $PSScriptRoot 'Run-ConstrainedServerBenchmark.ps1'),'-Execute','-PhysicalServer','-ServerFlightRecording','-ViewDistance',[string]$ViewDistance,'-MeasureFullView','-QuietRemoteTrace','-AssistedNoiseBackend','cooperative','-VanillaNoiseBackend','cooperative','-WindowProfile',$WindowProfile,'-ConditionOrder',$ConditionOrder,'-RemoteApplicationProfile',$RemoteApplicationProfile,'-PrefetchLookahead',[string]$PrefetchLookahead,'-RemoteWorkKind',$RemoteWorkKind,'-CompleteVerification',$verification) 7200
         $output=Get-Content -LiteralPath (Join-Path $root 'performance-pair-out.log') -Raw
         $match=[regex]::Match($output,'CONSTRAINED_SERVER_BENCHMARK status=COMPLETE summary=(?<path>[^\r\n]+)')
@@ -347,6 +351,7 @@ try{
         $performancePath=$match.Groups['path'].Value.Trim()
         $performance=Get-Content -LiteralPath $performancePath -Raw|ConvertFrom-Json
         if($performance.status -ne 'COMPLETE' -or $performance.artifact_sha256 -ne $hash){throw 'Performance identity mismatch'}
+        }
     }
 }catch{$issues.Add($_.Exception.ToString())}
 finally{

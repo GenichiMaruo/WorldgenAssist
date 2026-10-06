@@ -18,6 +18,8 @@ public final class CompleteTerrainData {
 	private final short[] floorHeights;
 	private final short[][] postProcessing;
 	private final byte[] biomeWindowDigest;
+	// Pure derived representation only. Never serialized or used as approval.
+	private volatile CompleteTerrainSectionStates sectionStates;
 
 	public CompleteTerrainData(int minY, int height, byte[] choices, short[] surfaceHeights,
 		short[] floorHeights, short[][] postProcessing, byte[] biomeWindowDigest) {
@@ -64,6 +66,16 @@ public final class CompleteTerrainData {
 	public short[] floorHeights() { return floorHeights.clone(); }
 	public short[] postProcessing(int section) { return postProcessing[section].clone(); }
 	public byte[] biomeWindowDigest() { return biomeWindowDigest.clone(); }
+	public boolean hasPreparedSections() { return sectionStates != null; }
+	/** Server decoder or generation worker; bounded by the result's existing lifetime. */
+	public CompleteTerrainSectionStates prepareSections() {
+		CompleteTerrainSectionStates prepared = sectionStates;
+		if (prepared != null) return prepared;
+		synchronized (this) {
+			if (sectionStates == null) sectionStates = CompleteTerrainSectionStates.prepare(this);
+			return sectionStates;
+		}
+	}
 
 	public byte[] encode() {
 		int length = 48 + choices.length + 1024 + postProcessing.length * 4;

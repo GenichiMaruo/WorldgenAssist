@@ -76,6 +76,8 @@ public final class RemoteWorldgenManager {
 	private final SecureRandom validationRandom = new SecureRandom();
 	private final CompleteTerrainAuditPolicy<CompleteAuditContext> completeAudits;
 	private final boolean peerVerification = CompleteTerrainVerificationMode.peerRequested();
+	private final boolean prepareSectionsOnDecoder = Boolean.parseBoolean(System.getProperty(
+		"worldgen_assist.remote.prepare_sections", System.getenv("WORLDGEN_ASSIST_REMOTE_PREPARE_SECTIONS")));
 	/** Only the owned validation executor computes; lifecycle mutations use resultStateLock. */
 	private final Map<CompleteAuditContext, io.github.genichimaruo.worldgenassist.common.PrivateTerrainComputer> completeAuditComputers = new java.util.HashMap<>();
 	private long predictionTicks;
@@ -926,6 +928,11 @@ public final class RemoteWorldgenManager {
 		try {
 			if (!currentConnection.getAsBoolean()) throw new java.util.concurrent.CancellationException("Obsolete connection");
 			TerrainDensityResult result = envelope.decode();
+			// Pure server-owned buffers only; no world access or authority here.
+			// Still on the existing bounded decoder, before readiness is published.
+			if (result.hasCompleteTerrain() && prepareSectionsOnDecoder) {
+				result.completeTerrain().prepareSections();
+			}
 			if (!currentConnection.getAsBoolean()) throw new java.util.concurrent.CancellationException("Obsolete connection");
 			long decodeNanos = System.nanoTime() - startedNanos;
 			transferMetrics.put(
