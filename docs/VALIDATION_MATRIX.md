@@ -1,5 +1,27 @@
 # Validation matrix
 
+## Dev.20 selected batch complete,one-worker speed hypothesis rejected
+
+171927-610/session42610 completes success/issues[],exactly2affected methods,
+3builds,physical/both-native strict882 four-stage pairs. Same-JAR remoteON BOTH
+parallel2/guarded1 ordinary weak E/view32/3same repeats:paired FULL+12.6514%,
+receipt+12.5380%,all3slower;CPU-3.6514%,tickp95-4.2286%. See
+GUARDED_FEATURE_EXPERIMENT.md. No unrelated broad tests,source/JARs frozen.
+Next fast-body/late status-publication fix requires only affected queue/lifecycle
+methods plus fresh original/assisted fixtures for the new ChunkStep hook;do not
+reuse these phased successes as publication-race proof. UNRUN below is history.
+
+## Dev.20 guarded profile (ALL verification UNRUN)
+
+Run-FeaturePipelineGate -Execute -RegionalSingleWorker selects exactly2 existing
+affected methods and3fresh loader builds,only original/guarded physical and both
+native strict882 four-stage pairs,then SAME-JAR parallel/guarded assistanceON
+BOTH view32naturalweakE/4clientworkers/warm1/3/JFR. It excludes unchanged8
+feature/decoration/weighted methods and allfragment/wire suites. Fixtures do
+not prove ordinary mixed-stage safety/beta;nativeview4 is not speed proof.
+Retain all actualroutes/shaping/conflicts/receipts/source/hash/error gates. See
+GUARDED_FEATURE_EXPERIMENT.md;finish all edits before this ONE batch.
+
 ## Scoped saved lighting diagnosis and comparison complete
 
 Run-SavedLightingDiagnosis checks exact retained stopped worlds/region hashes

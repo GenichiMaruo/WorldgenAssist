@@ -1,5 +1,28 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## Dev.20 complete171927-610: no waiting-time improvement
+
+ONE session42610 exits0/issues[].Exactly2affected methods (0fail/errors/skips),
+3fresh builds,physical and BOTH native ALL882 NOISE/decoration/saved structures/
+savedlight equal;actual both-owner peer/shaped applications. Same newJAR remote
+ON BOTH/view32 natural weak E-server/warm1/3same repeats:guarded1 versusparallel2
+paired FULL+12.6514%,receipt+12.5380%,all3slower;CPU-3.6514%(2/3lower),tickp95
+-4.2286%(all3lower). Tasks10658/receipts3461owner/repeat;0failed/timeouts,
+0regional conflicts,cleanstops/frozen inputs. See GUARDED_FEATURE_EXPERIMENT.md
+for raw values/hashes/limits. No beta/default/release;old lighting20 fail remains.
+Fast body/late original status callback race found by source inspection is NOT
+eliminated by these phased fixtures. Next targeted publication fix;UNRUN below history.
+
+## Dev.20 guarded experiment (implemented,verification UNRUN)
+
+New optional one-worker regional scheduling retains all parallel R8/point/
+FIFO/async-publication guards. It addresses possible contention from dev19's
+measured+1.7530%CPU/+5.0281%tick tradeoff,not a proven cause/fix. Exactly2
+existing affected methods/3builds/fresh physical/native strict882 pairs and
+same-JAR remoteON BOTH parallel/guarded view32performance are ALL UNRUN.
+Previous dev19 hashes/evidence remain their original identity;do not relabel
+them for dev20. See GUARDED_FEATURE_EXPERIMENT.md. No beta/publication claim.
+
 ## Offline lighting diagnosis164020-135 (not a new runtime pass)
 
 Latest same-dev19-JAR remoteON BOTH FEATURESoff/parallel164636-518 completes/

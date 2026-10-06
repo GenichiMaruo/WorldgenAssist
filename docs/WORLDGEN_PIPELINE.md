@@ -1,5 +1,28 @@
 # World Generation Pipeline Notes
 
+## Dev.20 result: single worker loses useful overlap
+
+Completed171927-610 retains strict physical/both-native882 four-stage equality.
+Same-JAR remoteON BOTH guarded1 versusparallel2:paired FULL+12.6514%/receipt
++12.5380%,all3slower;CPU-3.6514%(2/3lower),tickp95-4.2286%(all3lower).
+All10082FEATURES bodies/repeat;parallel peak2/overlaps3163/3916/4943 versus
+guarded peak1/nooverlap,all regional conflicts0. Not causal CPU-time proof.
+Keepparallel speed candidate/defaultOFF. Source verifies fast body may complete
+before original ChunkStep.apply installs status thenApply;next hold ownership
+until full original publication,without blocking execution permits or narrowing
+R8. Historical lighting20 fail retained. See GUARDED_FEATURE_EXPERIMENT.md.
+Following implementation-time UNRUN headings are history.
+
+## Dev.20 regional single CPU worker (verification UNRUN)
+
+Optional guarded keeps parallel's original R8 FEATURES/point INITIALIZE_LIGHT
+conflicts while executing one body at a time. Pending original light futures
+retain footprint/capacity and publish original status before ownership release;
+idle CPU permits may execute disjoint original work. No response wait/newtask/
+ticket/remote-stage/verification change. Hypothesis only:less contention may
+retain off-dispatcher overlap benefit. See GUARDED_FEATURE_EXPERIMENT.md for
+the single minimal affected-test/build/correctness/performance batch,allUNRUN.
+
 ## Saved lighting source diagnosis completed; timing remains unproved
 
 Original INITIALIZE_LIGHT calls chunk.initializeLightSources then attaches the

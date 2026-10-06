@@ -30,7 +30,7 @@ param(
     [ValidateSet('inline','decoder')][string]$SectionPreparation='inline',
     [ValidateSet('off','ready')][string]$RemoteBiomes='off',
     [switch]$BiomeDigest,
-    [ValidateSet('off','serial','parallel')][string]$FeatureBackend='off',
+    [ValidateSet('off','serial','guarded','parallel')][string]$FeatureBackend='off',
     [switch]$DecorationDigest,
     [switch]$FeatureFixture,
     [string]$FeatureReplayFile,

@@ -1,5 +1,25 @@
 # Mixin Targets
 
+## Dev.20 verification complete; next publication gap verified
+
+Batch171927-610 succeeds:2methods,3builds,physical/both native ALL882 four-stage
+fixtures equal. One worker is slower (paired FULL+12.6514%/receipt+12.5380%).
+No new game target in dev20. Primary26.2 and exact Fabric/Forge/Neo26.3
+ChunkStep.apply all call task.doWork THEN install completeChunkGeneration
+thenApply. Queue body can finish before that installation;current synchronous
+completion alone cannot guarantee persisted-status publication. Future fix must
+retain original callback/profiler and ownership until original applied future,
+including fixture replay. See GUARDED_FEATURE_EXPERIMENT.md. UNRUN below history.
+
+## Dev.20 guarded worker (UNRUN; no new game target)
+
+FeatureStageConfig.GUARDED uses one original-body worker and exactly the existing
+parallel stock R8 FEATURES/point INITIALIZE_LIGHT predicate. Dispatcher hooks/
+task bodies/futures/status-publication/owned async lifecycle remain unchanged.
+All loader branches share common code;existing fixture targets/Neo selector
+unchanged. TWO affected methods/three builds/fresh physical/native strict882
+pairs plus same-JAR2-versus1-worker performance are UNRUN. See experiment doc.
+
 ## Saved lighting source diagnosis completed (no new Mixin)
 
 Primary26.2/target26.3 ChunkSkyLightSources.fillFrom uses original dampening/

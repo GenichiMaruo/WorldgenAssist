@@ -16,7 +16,7 @@ param(
     [ValidateRange(2,10)][int]$ViewDistance=4,
     [ValidateSet('ready','overlap')][string]$RemoteApplicationProfile='ready',
     [switch]$StructuralShaping,
-    [ValidateSet('off','serial','parallel')][string]$FeatureBackend='off',
+    [ValidateSet('off','serial','guarded','parallel')][string]$FeatureBackend='off',
     [switch]$DecorationDigest,
     [switch]$FeatureFixture,
     [string]$FeatureReplayFile

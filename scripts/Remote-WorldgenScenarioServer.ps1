@@ -29,7 +29,7 @@ param(
     [ValidateSet('inline','decoder')][string]$SectionPreparation='inline',
     [ValidateSet('off','ready')][string]$RemoteBiomes='off',
     [switch]$BiomeDigest,
-    [ValidateSet('off','serial','parallel')][string]$FeatureBackend='off',
+    [ValidateSet('off','serial','guarded','parallel')][string]$FeatureBackend='off',
     [switch]$DecorationDigest,
     [switch]$FeatureFixture,
     [string]$FeatureReplaySha256
@@ -413,7 +413,7 @@ try {
     $start.EnvironmentVariables['WORLDGEN_ASSIST_FEATURE_FIXTURE']=([bool]$FeatureFixture).ToString().ToLowerInvariant()
     $start.EnvironmentVariables['WORLDGEN_ASSIST_FEATURE_REPLAY']=$featureReplay
     if($featureReplay){Copy-Item -LiteralPath $featureReplay -Destination (Join-Path $evidence 'feature-replay.json')}
-    [ordered]@{mode=$FeatureBackend;workers=switch($FeatureBackend){'serial'{1} 'parallel'{2} default{0}};capacity=128;message_reservation=18;decoration_digest=[bool]$DecorationDigest} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'feature-backend-config.json')
+    [ordered]@{mode=$FeatureBackend;workers=switch($FeatureBackend){'serial'{1} 'guarded'{1} 'parallel'{2} default{0}};capacity=128;message_reservation=18;decoration_digest=[bool]$DecorationDigest} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'feature-backend-config.json')
     foreach($setting in @('WORLDGEN_ASSIST_LOCAL_WORKERS','WORLDGEN_ASSIST_LOCAL_QUEUE_PER_WORKER')){$start.EnvironmentVariables.Remove($setting)}
     $assisted = $Mode -eq 'assisted'
     $start.EnvironmentVariables['WORLDGEN_ASSIST_REMOTE'] = if($assisted){'true'}else{'false'}

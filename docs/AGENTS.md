@@ -1,5 +1,32 @@
 # Repository agent instructions
 
+## Dev.20 batch171927-610 complete; one worker rejected for speed
+
+Session42610 exits0,2affected existing methods/3builds,physical and BOTH native
+ALL882 four-stage fixtures equal,both-owner peer/shaping use. SAME-JAR remoteON
+BOTH parallel2/guarded1 ordinary weak E/view32/3same repeats:paired FULL+12.6514%,
+receipt+12.5380%,0/3faster;CPU-3.6514%(2/3 lower),tickp95-4.2286%(3/3 lower).
+All10658 tasks/3461receipts per owner/repeat;0failed/timeouts/ownershipconflicts,
+cleanstop/frozen inputs. See GUARDED_FEATURE_EXPERIMENT.md. Keepparallel speed
+candidate/defaultOFF. Do not promote weaker CPU to waiting-time gain/beta.
+Verified original ChunkStep.apply installs status thenApply AFTER task returns;
+fast body may release queue ownership before callback installation. Next close
+this gap with full-original-stage publication,not copied status/profiler logic.
+Passing phased882 fixture does not eliminate that race;old saved-light20 fail
+retained,not a proven historical cause. Following UNRUN heading is history.
+
+## Dev.20 guarded regional single worker (verification UNRUN)
+
+See GUARDED_FEATURE_EXPERIMENT.md. Optional feature_backend=guarded keeps the
+original R8/point ownership/publication/FIFO/capacity128 and only one executing
+CPU body;async futures retain ownership without occupying the worker. Existing
+off/serial/parallel/defaults,protocol13/native4 and all remote/audit/peer guards
+unchanged. All edits before ONE Run-FeaturePipelineGate -RegionalSingleWorker
+-Execute:2 affected existing methods,3fresh builds,small physical and both native
+strict882 four-stage original/guarded-assisted pairs,then same-JAR remoteON BOTH
+parallel2/guarded1 ordinary weak E/view32/warm1/3 repeats/JFR. No unchanged broad
+tests. All dev20 verification UNRUN;no speed/default/beta/publication claim.
+
 ## Current saved-light diagnosis and feature comparison complete
 
 Offline164020-135/session85434 completes with unchanged original20SKY/2chunks

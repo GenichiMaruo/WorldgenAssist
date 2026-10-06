@@ -25,6 +25,11 @@ class FeatureStage263Test {
 		assertEquals(FeatureStageConfig.OFF, FeatureStageConfig.parse("unknown"));
 		assertEquals(1, FeatureStageConfig.parse(" SERIAL ").workers());
 		assertEquals(2, FeatureStageConfig.parse("parallel").workers());
+		assertEquals(1, FeatureStageConfig.parse(" GUARDED ").workers());
+		assertTrue(FeatureStageConfig.GUARDED.usesRegionalOwnership());
+		assertTrue(FeatureStageConfig.PARALLEL.usesRegionalOwnership());
+		assertFalse(FeatureStageConfig.SERIAL.usesRegionalOwnership());
+		assertFalse(FeatureStageConfig.OFF.usesRegionalOwnership());
 		var features = ChunkPyramid.GENERATION_PYRAMID.getStepTo(ChunkStatus.FEATURES);
 		assertEquals(8, features.directDependencies().getRadius());
 		assertEquals(1, features.blockStateWriteRadius());
@@ -53,7 +58,10 @@ class FeatureStage263Test {
 	}
 
 	@Test void disjointWorkOverlapsWhileConflictingPendingJobsKeepFifo() throws Exception {
-		var queue = new FeatureStageQueue(2, 8, "CAWG-Test-Features-");
+		for (int workers : List.of(1,2)) checkDisjointOwnership(workers);
+	}
+	private void checkDisjointOwnership(int workers) throws Exception {
+		var queue = new FeatureStageQueue(workers, 8, "CAWG-Test-Features-");
 		var a = new CompletableFuture<String>(); var b = new CompletableFuture<String>();
 		var c = new CompletableFuture<String>(); var d = new CompletableFuture<String>();
 		var enteredA = new CountDownLatch(1); var enteredB = new CountDownLatch(1);
@@ -68,7 +76,7 @@ class FeatureStage263Test {
 			await(enteredC); // Both bodies entered while A's future is still incomplete.
 			var resultE = queue.submitAsync(FeatureStageQueue.Footprint.region(80, 0, 0), () -> { enteredE.countDown(); return e; });
 			await(enteredE); // Neither incomplete A nor C consumes an idle CPU permit.
-			assertEquals(3, queue.snapshot().active()); assertTrue(queue.snapshot().peakExecuting() <= 2);
+			assertEquals(3, queue.snapshot().active()); assertTrue(queue.snapshot().peakExecuting() <= workers);
 			var resultD = queue.submitAsync(region(16), () -> { enteredD.countDown(); return d; });
 			c.complete("c"); assertEquals("c", resultC.get(5, TimeUnit.SECONDS));
 			assertEquals(1, enteredB.getCount()); assertEquals(1, enteredD.getCount());

@@ -93,7 +93,7 @@ public final class FeatureStageDispatcher implements TaskScheduler<Runnable> {
 			});
 		};
 		FeatureStageConfig config = FeatureStageConfig.current();
-		var footprint = config == FeatureStageConfig.PARALLEL && step.targetStatus() == ChunkStatus.INITIALIZE_LIGHT
+		var footprint = config.usesRegionalOwnership() && step.targetStatus() == ChunkStatus.INITIALIZE_LIGHT
 			&& step.directDependencies().getRadius() == 0 && step.blockStateWriteRadius() == -1
 			? FeatureStageQueue.Footprint.region(chunk.getPos().x(), chunk.getPos().z(), 0)
 			: FeatureStageQueue.Footprint.serial();
@@ -110,7 +110,7 @@ public final class FeatureStageDispatcher implements TaskScheduler<Runnable> {
 		return submitFixture(footprint, body);
 	}
 	private static FeatureStageQueue.Footprint footprint(WorldGenContext context, ChunkStep step, ChunkAccess chunk, FeatureStageConfig config) {
-		if (config == FeatureStageConfig.PARALLEL && context.generator().getClass() == NoiseBasedChunkGenerator.class
+		if (config.usesRegionalOwnership() && context.generator().getClass() == NoiseBasedChunkGenerator.class
 			&& context.level().dimension().equals(net.minecraft.world.level.Level.OVERWORLD)
 			&& step.targetStatus() == ChunkStatus.FEATURES && step.blockStateWriteRadius() == 1
 			&& step.directDependencies().getRadius() == 8) {

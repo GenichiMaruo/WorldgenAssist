@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$Execute,[switch]$LocalOnly,[string]$ResumeNeoOriginalRoot)
+param([switch]$Execute,[switch]$LocalOnly,[string]$ResumeNeoOriginalRoot,[switch]$RegionalSingleWorker)
 # Finish implementation first. One lock, ten affected methods, three builds,
 # fresh targeted correctness, then exactly three controlled performance runs.
 Set-StrictMode -Version Latest
@@ -14,8 +14,18 @@ $functional=@(
     @{name='assisted';mode='assisted';backend='parallel'}
 )
 $conditions=@($functional[0],$functional[2],$functional[3])
+$expectedMethods=10;$testSelectors=$classes
+if($RegionalSingleWorker){
+    if($ResumeNeoOriginalRoot){throw 'One-worker profile requires fresh affected evidence'}
+    $classes=@('io.github.genichimaruo.worldgenassist.server.FeatureStage263Test')
+    $featureClass=$classes[0]
+    $testSelectors=@("${featureClass}.stockBurstAndAccessFootprintMatchTheAdmissionReservation","${featureClass}.disjointWorkOverlapsWhileConflictingPendingJobsKeepFifo")
+    $expectedMethods=2
+    $functional=@(@{name='original';mode='vanilla';backend='off'},@{name='assisted';mode='assisted';backend='guarded'})
+    $conditions=@(@{name='parallel';mode='assisted';backend='parallel'},@{name='guarded';mode='assisted';backend='guarded'})
+}
 if(-not $Execute){
-    [ordered]@{tests=$classes;expected_methods=10;builds=@('fabric','forge','neoforge');physical_correctness=$functional;feature_fixture='Participants precede demand, frozen ticks,1682 original terrains before recorded/replayed1458 features before1458 light initializations, all1250 snapshots before original SPAWN; unchanged882 compared. Controlled phases, not ordinary mixed-stage coverage';native_correctness='Same phased recorded/replayed two-owner original/parallel-assisted pair per native loader, view4 functional only. Neo monster-room list order fixed only inside scoped feature body, original weights/random selector preserved';performance=$conditions;view_distance=32;warmups=1;repeats=3;remote_host='gen1c@100.103.102.109';remote_root='E:/WorldgenAssist/port26.3';cpu_limits=0;sequence='All implementation before one sequential batch; correctness failure prevents performance'}|ConvertTo-Json -Depth 6
+    [ordered]@{tests=$testSelectors;expected_methods=$expectedMethods;builds=@('fabric','forge','neoforge');physical_correctness=$functional;feature_fixture='Participants precede demand, frozen ticks,1682 original terrains before recorded/replayed1458 features before1458 light initializations, all1250 snapshots before original SPAWN; unchanged882 compared. Controlled phases, not ordinary mixed-stage coverage';native_correctness='Same phased recorded/replayed two-owner original/assisted pair per native loader, view4 functional only. Neo monster-room list order fixed only inside scoped feature body, original weights/random selector preserved';performance=$conditions;view_distance=32;warmups=1;repeats=3;remote_host='gen1c@100.103.102.109';remote_root='E:/WorldgenAssist/port26.3';cpu_limits=0;sequence='All implementation before one sequential batch; correctness failure prevents performance'}|ConvertTo-Json -Depth 6
     exit 0
 }
 New-Item -ItemType Directory -Force -Path $base|Out-Null
@@ -66,6 +76,7 @@ function Check-Physical([string]$Case,[object]$Condition,[bool]$Digest){
     if($result.server_logical_processors -ne 0 -or $result.server_jvm_processors -ne 0 -or $result.remote_work_kind -ne 'complete' -or $result.complete_verification -ne 'peer' -or $result.source_manifest_before_sha256 -ne $result.source_manifest_after_sha256){throw 'Physical authority/CPU/source profile mismatch'}
     $config=Get-Content -LiteralPath (Join-Path $Case 'remote-evidence/feature-backend-config.json') -Raw|ConvertFrom-Json
     if($config.mode -ne $Condition.backend -or [bool]$config.decoration_digest -ne $Digest -or $config.capacity -ne 128 -or $config.message_reservation -ne 18){throw 'Observed feature configuration differs'}
+    if($Condition.backend -eq 'guarded' -and $config.workers -ne 1){throw 'Actual single guarded worker missing'}
     $backend=Get-Content -LiteralPath (Join-Path $Case 'remote-evidence/noise-backend-config.json') -Raw|ConvertFrom-Json
     $window=Get-Content -LiteralPath (Join-Path $Case 'remote-evidence/pipeline-window-config.json') -Raw|ConvertFrom-Json
     $application=Get-Content -LiteralPath (Join-Path $Case 'remote-evidence/remote-application-config.json') -Raw|ConvertFrom-Json
@@ -146,8 +157,8 @@ try{
         }
         Write-Host "FEATURE_PIPELINE_REUSE root=$ResumeNeoOriginalRoot identity=unchanged_except_coordinator"
     }else{
-    $args=@('/d','/c',(Join-Path $workspace 'gradlew.bat'),'test','--rerun-tasks')
-    foreach($class in $classes){$args+=@('--tests',$class)}
+    $args=@('/d','/c',(Join-Path $workspace 'gradlew.bat'),'test','--no-daemon')
+    foreach($selector in $testSelectors){$args+=@('--tests',$selector)}
     Step 'affected-unit-fabric-build' "$env:SystemRoot\System32\cmd.exe" ($args+@('build'))
     $junit=[ordered]@{tests=0;failures=0;errors=0;skipped=0}
     foreach($class in $classes){
@@ -155,10 +166,10 @@ try{
         [xml]$xml=Get-Content -LiteralPath $file
         foreach($key in @('tests','failures','errors','skipped')){$junit[$key]+=[int]$xml.testsuite.GetAttribute($key)}
     }
-    if($junit.tests -ne 10 -or $junit.failures -or $junit.errors -or $junit.skipped){throw 'Affected ten-method evidence incomplete'}
-    foreach($loader in @('forge','neoforge')){Step "$loader-build" "$env:SystemRoot\System32\cmd.exe" @('/d','/c',(Join-Path $workspace 'gradlew.bat'),'-p',(Join-Path $workspace "loaders/$loader"),'build','-x','test')}
+    if($junit.tests -ne $expectedMethods -or $junit.failures -or $junit.errors -or $junit.skipped){throw 'Affected selected-method evidence incomplete'}
+    foreach($loader in @('forge','neoforge')){Step "$loader-build" "$env:SystemRoot\System32\cmd.exe" @('/d','/c',(Join-Path $workspace 'gradlew.bat'),'-p',(Join-Path $workspace "loaders/$loader"),'build','-x','test','--no-daemon')}
     }
-    if($junit.tests -ne 10 -or $junit.failures -or $junit.errors -or $junit.skipped){throw 'Affected ten-method evidence incomplete'}
+    if($junit.tests -ne $expectedMethods -or $junit.failures -or $junit.errors -or $junit.skipped){throw 'Affected selected-method evidence incomplete'}
     foreach($loader in @('fabric','forge','neoforge')){
         $artifact=& (Join-Path $PSScriptRoot 'Get-WorldgenArtifact.ps1') -Loader $loader
         if($resume){
@@ -187,9 +198,9 @@ try{
             $null=Check-Physical $case $condition $true
             if($condition.name -eq 'original'){$null=Write-FeatureReplay (Join-Path $case 'remote-evidence/latest.log') (Join-Path $root 'feature-replay.json')}
         }
-        foreach($name in @('serial','parallel','assisted')){
+        foreach($name in @($functional|Where-Object name -ne 'original'|ForEach-Object {$_.name})){
             $args=@('-BaselineRoot',(Join-Path $root 'correctness/original'),'-CandidateRoot',(Join-Path $root "correctness/$name"),'-OutputRoot',(Join-Path $root "correctness/compare-$name"))
-            if($name -ne 'serial'){$args+='-RequireParallel'}
+            if($name -ne 'serial' -and -not $RegionalSingleWorker){$args+='-RequireParallel'}
             Script-Step "decoration-$name" 'Compare-DecorationSnapshots.ps1' $args 300
         }
         }else{
@@ -218,7 +229,7 @@ try{
             $built=@($artifacts|Where-Object loader -eq $loader)[0]
             $target=Evidence-Child (Join-Path $mods ([IO.Path]::GetFileName($built.path)))
             Copy-Item -LiteralPath $built.path -Destination $target;$deployed.Add($target)
-            foreach($condition in @($functional[0],$functional[3])){
+            foreach($condition in @($functional|Where-Object {$_.name -in @('original','assisted')})){
                 $case=if($resume -and $condition.name -eq 'original'){Join-Path $ResumeNeoOriginalRoot "native/$loader/original"}else{Join-Path $root "native/$loader/$($condition.name)"}
                 $fixtureArgs=@('-FeatureFixture')
                 if($condition.name -ne 'original'){$fixtureArgs+=@('-FeatureReplayFile',(Join-Path $root "native/$loader/feature-replay.json"))}
@@ -235,12 +246,15 @@ try{
                     $null=Write-FeatureReplay (Join-Path $case 'latest.log') (Join-Path $root "native/$loader/feature-replay.json")
                 }
             }
-            Script-Step "$loader-decoration" 'Compare-DecorationSnapshots.ps1' @('-BaselineRoot',$nativeOriginalRoot,'-CandidateRoot',(Join-Path $root "native/$loader/assisted"),'-OutputRoot',(Join-Path $root "native/$loader/comparison"),'-RequireParallel') 300
+            $compareArgs=@('-BaselineRoot',$nativeOriginalRoot,'-CandidateRoot',(Join-Path $root "native/$loader/assisted"),'-OutputRoot',(Join-Path $root "native/$loader/comparison"))
+            if(-not $RegionalSingleWorker){$compareArgs+='-RequireParallel'}
+            Script-Step "$loader-decoration" 'Compare-DecorationSnapshots.ps1' $compareArgs 300
             $use+=Check-Assistance (Join-Path $root "native/$loader/assisted") $true
         }
         foreach($condition in $conditions){
             $case=Join-Path $root ('performance/'+$condition.name)
-            Script-Step ('performance-'+$condition.name) 'Run-WorldgenScenario.ps1' ($common+@('-Mode',$condition.mode,'-Purpose','performance','-Prediction','true','-FeatureBackend',$condition.backend,'-OutputRoot',$case,'-ViewDistance','32','-MeasureFullView','-QuietRemoteTrace','-WarmupRuns','1','-MeasuredRepeats','3')) 4200
+            $recordingArgs=if($RegionalSingleWorker){@('-ServerFlightRecording')}else{@()}
+            Script-Step ('performance-'+$condition.name) 'Run-WorldgenScenario.ps1' ($common+@('-Mode',$condition.mode,'-Purpose','performance','-Prediction','true','-FeatureBackend',$condition.backend,'-OutputRoot',$case,'-ViewDistance','32','-MeasureFullView','-QuietRemoteTrace','-WarmupRuns','1','-MeasuredRepeats','3')+$recordingArgs) 4200
             $result=Check-Physical $case $condition $false
             if($result.performance.warmup_runs -ne 1 -or $result.performance.measured_repeats -ne 3){throw 'Performance repetition profile differs'}
             $log=Get-Content -LiteralPath (Join-Path $case 'remote-evidence/latest.log') -Raw
@@ -250,11 +264,13 @@ try{
                 if(-not $window.Success){throw 'Feature measured-window markers missing'}
                 $interval=Get-FeatureIntervalEvidence $window.Groups['body'].Value
                 if(-not $interval.bodies -or -not $interval.light_initializations -or $interval.conflicting_pairs -or ($condition.backend -ne 'off' -and ($interval.feature_light_conflicting_pairs -or $interval.light_light_conflicting_pairs)) -or ($condition.backend -eq 'parallel' -and -not $interval.overlapping_pairs)){throw 'Feature/light execution/independence coverage missing'}
+                if($condition.backend -eq 'guarded' -and ($interval.overlapping_pairs -or $interval.peak_bodies -ne 1)){throw 'Single-worker body execution bound differs'}
                 $repeats+=[ordered]@{repeat=$repeat;features=$interval}
             }
             $performance+=[ordered]@{condition=$condition.name;mode=$condition.mode;feature_backend=$condition.backend;result=(Join-Path $case 'scenario-result.json');repeats=$repeats}
         }
-        foreach($comparison in @(@{name='scheduler';baseline='original';candidate='parallel'},@{name='client';baseline='parallel';candidate='assisted'},@{name='combined';baseline='original';candidate='assisted'})){
+        $pairs=if($RegionalSingleWorker){@(@{name='one-worker';baseline='parallel';candidate='guarded'})}else{@(@{name='scheduler';baseline='original';candidate='parallel'},@{name='client';baseline='parallel';candidate='assisted'},@{name='combined';baseline='original';candidate='assisted'})}
+        foreach($comparison in $pairs){
             $compareRoot=Join-Path $root ('performance/compare-'+$comparison.name);New-Item -ItemType Directory -Path $compareRoot|Out-Null
             $plan=@($conditions|Where-Object {$_.name -in @($comparison.baseline,$comparison.candidate)}|ForEach-Object {@{id=$_.name;purpose='performance';dimension='overworld';mode=$_.mode;feature_backend=$_.backend;players=2;cache_entries=128;prediction=$true;validation_cells=8}})
             @{runtime_and_performance_cases=$plan}|ConvertTo-Json -Depth 6|Set-Content -LiteralPath (Join-Path $compareRoot 'matrix-plan.json')
@@ -270,7 +286,7 @@ finally{
     if($before){try{$after=Manifest;[IO.File]::WriteAllLines((Join-Path $root 'source-manifest-after.sha256'),$after);if(($before-join "`n") -cne ($after-join "`n")){$issues.Add('Source/harness changed during batch')}}catch{$issues.Add("Final manifest: $_")}}
     if($lock){$lock.Dispose()}
     $env:JAVA_HOME=$savedJava;$env:Path=$savedPath
-    $summary=[ordered]@{schema='worldgen-assist.feature-pipeline-gate.v1';success=($issues.Count -eq 0);root=$root;reuse_parent=$ResumeNeoOriginalRoot;local_only=[bool]$LocalOnly;junit=$junit;artifacts=$artifacts;steps=@($steps);assistance_use=$use;performance=$performance;issues=@($issues);beta_claim=$false;scope='Focused experimental stock Overworld scheduler; targeted pre-SPAWN decoration, saved structures and light, three performance conditions; not general mod compatibility or final gameplay-state proof'}
+    $summary=[ordered]@{schema='worldgen-assist.feature-pipeline-gate.v1';success=($issues.Count -eq 0);root=$root;reuse_parent=$ResumeNeoOriginalRoot;regional_single_worker=[bool]$RegionalSingleWorker;local_only=[bool]$LocalOnly;junit=$junit;artifacts=$artifacts;steps=@($steps);assistance_use=$use;performance=$performance;issues=@($issues);beta_claim=$false;scope='Focused experimental stock Overworld scheduler; targeted pre-SPAWN decoration, saved structures and light; regional-single-worker profile has only2 affected methods and2 assisted performance conditions. Not general mod compatibility or final gameplay-state proof'}
     $summary|ConvertTo-Json -Depth 12|Set-Content -LiteralPath (Join-Path $root 'summary.json') -Encoding utf8
     Write-Output "FEATURE_PIPELINE_GATE success=$($summary.success) summary=$(Join-Path $root 'summary.json')"
 }
