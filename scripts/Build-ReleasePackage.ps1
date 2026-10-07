@@ -40,19 +40,39 @@ if($CandidateVersion -eq '0.1.0-alpha.6-dev.12+mc26.3'){
         }else{(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash}
         if($actual -ne $expected){throw "Candidate production source changed: $relative"}
     }
+}elseif($CandidateVersion -eq '0.1.0-alpha.8-dev.23+mc26.3'){
+    if($candidate.schema -ne 'worldgen-assist.feature-pipeline-gate.v1' -or
+       -not $candidate.authoritative_biome_inputs -or $candidate.local_only -or
+       $candidate.junit.tests -ne 4 -or $candidate.issues.Count -or
+       $candidate.steps.Count -ne 16 -or @($candidate.steps|Where-Object {-not $_.success -or $_.exit_code -ne 0 -or $_.timed_out}).Count){
+        throw 'Expected closed successful dev23 four-method/three-loader gate'
+    }
+    foreach($line in Get-Content -LiteralPath (Join-Path $candidateRoot 'source-manifest-before.sha256')){
+        if($line -notmatch '^([A-F0-9]{64})  (src/.+|build\.gradle|settings\.gradle|gradle\.properties|loaders/[^/]+/(?:src/.+|build\.gradle))$'){continue}
+        $expected=$Matches[1];$relative=$Matches[2];$path=Join-Path $workspace $relative
+        $actual=if($relative -eq 'gradle.properties'){
+            $normalized=[regex]::Replace([IO.File]::ReadAllText($path),'(?m)^mod_version='+[regex]::Escape($ExpectedVersion)+'(?=\r?$)',('mod_version='+$CandidateVersion))
+            [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($normalized)))
+        }else{(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash}
+        if($actual -ne $expected){throw "Candidate production source changed: $relative"}
+    }
 }else{throw 'Unsupported release candidate identity'}
 New-Item -ItemType Directory -Force -Path $releaseRoot,(Join-Path $releaseRoot 'candidate'),(Join-Path $releaseRoot 'assets')|Out-Null
 $candidateManifest=@()
 foreach($loader in @('fabric','forge','neoforge')){
     $name='worldgen-assist'+$(if($loader -ne 'fabric'){'-'+$loader})+'-'+$CandidateVersion+'.jar'
     $path=Join-Path $candidateRoot $name
-    $expected=if($loader -eq 'fabric'){$candidate.artifact_sha256}else{
+    $expected=if($CandidateVersion -eq '0.1.0-alpha.8-dev.23+mc26.3'){
+        $matching=@($candidate.artifacts|Where-Object loader -eq $loader)
+        if($matching.Count -ne 1 -or $matching[0].version -ne $CandidateVersion){throw 'Ambiguous candidate artifact'}
+        $matching[0].sha256
+    }elseif($loader -eq 'fabric'){$candidate.artifact_sha256}else{
         @($candidate.native_artifacts|Where-Object loader -eq $loader)[0].sha256
     }
     if((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $expected){throw "Candidate hash mismatch: $loader"}
     Copy-Item -LiteralPath $path -Destination (Join-Path $releaseRoot "candidate/$loader.jar")
     $sourcePath=Join-Path $candidateRoot ($name -replace '\.jar$','-sources.jar')
-    if(-not(Test-Path -LiteralPath $sourcePath) -and $CandidateVersion -eq '0.1.0-alpha.7-dev.16+mc26.3'){
+    if(-not(Test-Path -LiteralPath $sourcePath) -and $CandidateVersion -in @('0.1.0-alpha.7-dev.16+mc26.3','0.1.0-alpha.8-dev.23+mc26.3')){
         $buildRoot=if($loader -eq 'fabric'){$workspace}else{Join-Path $workspace "loaders/$loader"}
         $sourcePath=Join-Path $buildRoot ('build/libs/'+($name -replace '\.jar$','-sources.jar'))
     }
@@ -69,7 +89,7 @@ try{
     foreach($loader in @('fabric','forge','neoforge')){
         $artifact=& (Join-Path $PSScriptRoot 'Get-WorldgenArtifact.ps1') -Loader $loader
         if($artifact.Version -ne $ExpectedVersion){throw 'Release metadata differs from requested version'}
-        $arguments=@('assemble','-x','test','--console=plain')
+        $arguments=@('assemble','-x','test','--console=plain','--no-daemon')
         if($loader -ne 'fabric'){$arguments=@('-p',(Join-Path $workspace "loaders/$loader"))+$arguments}
         $log=Join-Path $releaseRoot "build-$loader.log"
         & (Join-Path $workspace 'gradlew.bat') @arguments *> $log

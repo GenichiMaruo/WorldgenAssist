@@ -1,5 +1,24 @@
 # Repository agent instructions
 
+## Alpha.8 release packaging passes; publication UNRUN
+
+User authorizes a new alpha and commits. Version0.1.0-alpha.8+mc26.3 retains
+tested dev23 production/protocol14/native5/defaultOFF. Build-ReleasePackage
+adds exact closed231008 four-method/16-step gate identity, production manifest
+normalizing ONLY mod_version, retained artifact hashes and sequential no-daemon
+builds. Every runtime entry except loader version metadata and every source
+entry MUST match dev23 before publication. No new units or game matrix.
+Six paired ratios/three reused coordinates and Fabric ordinary230655 evidence
+retain original hashes/scopes. New native ordinary harness is UNRUN/uncommitted
+and excluded from release, as is unrelated .vscode. Goal stays active/not beta.
+Prepare EN/JA guides, notes, verification/checksums; commit/push/new annotated
+tag/draft prerelease/uploaded byte verification/publication/CF acceptance.
+Closed release-alpha8-20261008 three-build batch exits0: ALL Fabric250/Forge244/
+Neo238 classes/Mixins/other resources and all source entries match dev23;
+only exact loader version metadata differs. No new units or Minecraft runs.
+Release hashes/scope in releases/v0.1.0-alpha.8+mc26.3-verification.md.
+Older publicalpha7 assets/tags immutable. Publication/CF acceptance still UNRUN.
+
 ## Ordinary Fabric survival/input/saved-light gate230655 passes
 
 Closed ordinary-gameplay-gate-20261007-230655-166/session50927 exits0,ALL25

@@ -2,7 +2,83 @@
 
 [English](INSTALL.md) | [日本語](INSTALL.ja.md) · [Overview](../README.md)
 
-## Minecraft 26.3 alpha.7
+## Minecraft 26.3 alpha.8
+
+Use Minecraft **26.3**, Java **25** (tested 25.0.4), and Fabric **0.19.5**
+with Fabric API **0.161.0+26.3**, Forge **66.0.3**, or NeoForge **26.3.0.13-beta**.
+Download your loader's JAR from [alpha.8](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.8%2Bmc26.3).
+Replace older WorldgenAssist JARs on the server and all participating clients.
+**Protocol14/native channel5 requires updating both sides together.**
+
+| Loader | Install this JAR |
+| --- | --- |
+| Fabric | `worldgen-assist-0.1.0-alpha.8+mc26.3.jar` |
+| Forge | `worldgen-assist-forge-0.1.0-alpha.8+mc26.3.jar` |
+| NeoForge | `worldgen-assist-neoforge-0.1.0-alpha.8+mc26.3.jar` |
+
+Source JARs are for developers. Remote assistance remains off by default.
+Use trusted participants and a backed-up test world. Raw-seed disclosure is
+explicit; seed secrecy and protection against colluding clients are unresolved.
+Complete terrain targets eligible vanilla Overworld contexts; arbitrary
+generators are unsupported. Read the [release verification](releases/v0.1.0-alpha.8+mc26.3-verification.md).
+
+### Alpha.8 measured profile
+
+Before starting the server, set these environment values in PowerShell.
+This opts into seed disclosure and experimental parallel FEATURES:
+
+```powershell
+$env:WORLDGEN_ASSIST_REMOTE='true'
+$env:WORLDGEN_ASSIST_REMOTE_SEED_DISCLOSURE='trusted_raw'
+$env:WORLDGEN_ASSIST_NOISE_BACKEND='cooperative'
+$env:WORLDGEN_ASSIST_FEATURE_BACKEND='parallel'
+$env:WORLDGEN_ASSIST_REMOTE_WORK_KIND='complete'
+$env:WORLDGEN_ASSIST_REMOTE_ALLOW_COMPLETE_TERRAIN='true'
+$env:WORLDGEN_ASSIST_REMOTE_COMPLETE_VERIFICATION='peer'
+$env:WORLDGEN_ASSIST_REMOTE_AUTHORITATIVE_BIOMES='true'
+$env:WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT='64'
+$env:WORLDGEN_ASSIST_REMOTE_OWNER_WINDOW='32'
+$env:WORLDGEN_ASSIST_REMOTE_CACHE_ENTRIES='128'
+$env:WORLDGEN_ASSIST_REMOTE_PREDICTION='true'
+$env:WORLDGEN_ASSIST_REMOTE_VALIDATION_SAMPLE_CELLS='8'
+$env:WORLDGEN_ASSIST_REMOTE_TIMEOUT_MS='30000'
+$env:WORLDGEN_ASSIST_REMOTE_PREFETCH='true'
+$env:WORLDGEN_ASSIST_REMOTE_PREPARE_VALIDATION='true'
+$env:WORLDGEN_ASSIST_REMOTE_ADAPTIVE_DEMAND_WAIT='true'
+$env:WORLDGEN_ASSIST_REMOTE_DEMAND_WAIT_MS='100'
+$env:WORLDGEN_ASSIST_REMOTE_READY_SURFACE_ONLY='false'
+$env:WORLDGEN_ASSIST_REMOTE_PREFETCH_LOOKAHEAD='0'
+$env:WORLDGEN_ASSIST_REMOTE_PREPARE_SECTIONS='false'
+$env:WORLDGEN_ASSIST_REMOTE_ALLOW_REMOTE_BIOMES='false'
+```
+
+Set server `view-distance=32`, `simulation-distance=3`, and client render
+distance32. Measured heap sizes: server6GB, each client4GB. For EACH client,
+enable participation in Options → WorldgenAssist, set environment
+`WORLDGEN_ASSIST_CLIENT_JOB_WINDOW='32'`, and use JVM arguments
+`-Dworldgen_assist.client.worker_threads=4 -Dworldgen_assist.client.reuse_context=true`.
+Reconnect after changing participation. Saved operator server policy applies on
+restart; JVM overrides take priority. Remove experimental overrides to restore
+ordinary defaults.
+
+Two clients sharing a stronger PC assisted a separate weaker server with no
+CPU/JVM processor restrictions. Both comparison conditions used identical
+cooperative NOISE and parallel FEATURES. Across both execution orders/six paired
+ratios reusing three coordinates: FULL **20.93% shorter**, receipt **21.20%
+shorter**, CPU **19.63% lower**, all six improve; tick p95 **8.95% higher**.
+Receipt is not rendered completion. These are this profile's results, not an
+alpha.7 comparison or a general guarantee.
+
+Generation/decoration/saved structures/light match across all three loaders'
+bounded fixtures. Basic peaceful survival landing/mining/placing/reconnect and
+stopped saved state/light pass on **Fabric only**. Native ordinary gameplay,
+server restart, continuous exploration/combat/hazards and long sessions remain
+unverified; this release remains alpha. First two full server audits and later
+private1/8 (server) or1/64 with eligible independent peer/full agreement remain.
+Final domain/owner/epochs/current biome/shaping checks retain server authority.
+Pending demand waits are asynchronous100ms/adaptive max200ms; task deadline30s.
+
+## Historical Minecraft 26.3 alpha.7
 
 Use Java25(tested25.0.4) and Minecraft26.3. Choose Fabric0.19.5 + API0.161.0+26.3,
 Forge66.0.3 or NeoForge26.3.0.13-beta. Download the matching distribution JAR

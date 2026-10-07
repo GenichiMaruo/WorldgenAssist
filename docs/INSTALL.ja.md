@@ -2,7 +2,78 @@
 
 [English](INSTALL.md) | [日本語](INSTALL.ja.md) · [MOD の概要](../README.ja.md)
 
-## Minecraft 26.3 alpha.7
+## Minecraft 26.3 alpha.8
+
+Minecraft **26.3**、Java **25**（検証25.0.4）と、Fabric **0.19.5** +
+Fabric API **0.161.0+26.3**、Forge **66.0.3**、NeoForge **26.3.0.13-beta** の
+いずれかを使います。[alpha.8](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.8%2Bmc26.3)
+から対応JARを取得し、サーバーと参加クライアントの旧MODを同時に置き換えます。
+**プロトコル14／ネイティブ通信5**のため、両側を同じ版に揃えてください。
+
+| ローダー | 導入するJAR |
+| --- | --- |
+| Fabric | `worldgen-assist-0.1.0-alpha.8+mc26.3.jar` |
+| Forge | `worldgen-assist-forge-0.1.0-alpha.8+mc26.3.jar` |
+| NeoForge | `worldgen-assist-neoforge-0.1.0-alpha.8+mc26.3.jar` |
+
+ソースJARは開発者向けです。支援は既定で無効です。バックアップした試用ワールドと
+信頼できる参加者で利用してください。シード開示は明示設定で、秘匿や照合相手の共謀への
+対策は未解決です。完全地形モードは対象条件を満たすvanilla Overworld向けで、任意の
+独自生成器には対応しません。[検証記録](releases/v0.1.0-alpha.8+mc26.3-verification.md)を確認してください。
+
+### alpha.8で測定した設定
+
+サーバーを起動する前にPowerShellで次を設定します。
+シード開示と実験的なFEATURES並列実行を有効にする設定です。
+
+```powershell
+$env:WORLDGEN_ASSIST_REMOTE='true'
+$env:WORLDGEN_ASSIST_REMOTE_SEED_DISCLOSURE='trusted_raw'
+$env:WORLDGEN_ASSIST_NOISE_BACKEND='cooperative'
+$env:WORLDGEN_ASSIST_FEATURE_BACKEND='parallel'
+$env:WORLDGEN_ASSIST_REMOTE_WORK_KIND='complete'
+$env:WORLDGEN_ASSIST_REMOTE_ALLOW_COMPLETE_TERRAIN='true'
+$env:WORLDGEN_ASSIST_REMOTE_COMPLETE_VERIFICATION='peer'
+$env:WORLDGEN_ASSIST_REMOTE_AUTHORITATIVE_BIOMES='true'
+$env:WORLDGEN_ASSIST_REMOTE_MAX_IN_FLIGHT='64'
+$env:WORLDGEN_ASSIST_REMOTE_OWNER_WINDOW='32'
+$env:WORLDGEN_ASSIST_REMOTE_CACHE_ENTRIES='128'
+$env:WORLDGEN_ASSIST_REMOTE_PREDICTION='true'
+$env:WORLDGEN_ASSIST_REMOTE_VALIDATION_SAMPLE_CELLS='8'
+$env:WORLDGEN_ASSIST_REMOTE_TIMEOUT_MS='30000'
+$env:WORLDGEN_ASSIST_REMOTE_PREFETCH='true'
+$env:WORLDGEN_ASSIST_REMOTE_PREPARE_VALIDATION='true'
+$env:WORLDGEN_ASSIST_REMOTE_ADAPTIVE_DEMAND_WAIT='true'
+$env:WORLDGEN_ASSIST_REMOTE_DEMAND_WAIT_MS='100'
+$env:WORLDGEN_ASSIST_REMOTE_READY_SURFACE_ONLY='false'
+$env:WORLDGEN_ASSIST_REMOTE_PREFETCH_LOOKAHEAD='0'
+$env:WORLDGEN_ASSIST_REMOTE_PREPARE_SECTIONS='false'
+$env:WORLDGEN_ASSIST_REMOTE_ALLOW_REMOTE_BIOMES='false'
+```
+
+サーバーは `view-distance=32`、`simulation-distance=3`、クライアントの描画距離も32に
+設定します。測定時はサーバー6GB・各クライアント4GBのヒープです。各クライアントで
+設定 → WorldgenAssistの参加を有効にし、起動環境に
+`WORLDGEN_ASSIST_CLIENT_JOB_WINDOW='32'`、Java引数に
+`-Dworldgen_assist.client.worker_threads=4 -Dworldgen_assist.client.reuse_context=true`
+を設定します。参加設定は再接続後、保存した管理者のサーバー方針は再起動後に反映されます。
+Java引数による上書きが優先されます。実験用の上書きを外すと通常の既定値に戻ります。
+
+弱い別PCのサーバー（CPU/JVM制限なし）と強いPC上の2クライアントで測定しました。
+両条件とも同じcooperative NOISE／parallel FEATURESです。順序を逆にした比較を含む
+6組の比率の中央値で、完成 **20.93%短縮**・受信 **21.20%短縮**・CPU **19.63%減少**、
+全6組で改善。tick p95は **8.95%増加**しました。6組は同じ3座標を再利用しており、
+alpha.7との直接比較や一般的な保証ではありません。受信には描画完了を含みません。
+
+3ローダーの限定フィクスチャで地形・装飾・保存構造物・照明の一致を確認しました。
+通常の平和なサバイバルで着地・採掘・設置・再接続・停止後の保存と照明を確認したのは
+**Fabricのみ**です。ネイティブ版の通常プレイ、サーバー再起動、継続探索・戦闘・危険な
+環境・長時間運用は未検証のため、アルファを継続します。最初の2件の全計算確認、
+標準1/8／適格な別クライアントの全体照合がある場合1/64の秘密抽選は維持しています。
+結果の範囲・所有者・世代・現在のバイオームと構造物情報は最終反映時にも確認します。
+必要な結果の待機は非同期100ms／適応最大200ms、依頼全体の期限は30秒です。
+
+## 以前のMinecraft 26.3 alpha.7
 
 Minecraft26.3、Java25（検証25.0.4）と、Fabric0.19.5 + API0.161.0+26.3、
 Forge66.0.3、NeoForge26.3.0.13-betaのいずれかを使います。

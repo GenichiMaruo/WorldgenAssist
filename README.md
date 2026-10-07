@@ -18,17 +18,21 @@ state remain server-authoritative.
 
 ## Alpha status
 
-Current release **0.1.0-alpha.7+mc26.3**,Minecraft26.3/Java25,Fabric/Forge/NeoForge.
-Update the server and participating clients together: **protocol12**.
-Optional complete Overworld terrain now includes server-issued structure shaping
-and whole-output verification by a distinct trusted client. Features/structures/
-light/saving remain on the server; remote/seed/complete/peer choices stay explicit.
-On a naturally weaker server with two clients sharing a stronger PC at view32,
-same-region paired ratios improved FULL **2.24%**,receipt **1.74%**,server CPU
-**20.53%**,all3 repeats. This modest gain is **not beta or a general speedup**.
-All three loaders passed fresh affected terrain parity,including actual shaping
-and peer applications. See [installation](docs/INSTALL.md),[release notes](docs/releases/v0.1.0-alpha.7+mc26.3.md)
-and [exact verification scope](docs/releases/v0.1.0-alpha.7+mc26.3-verification.md).
+Current release **0.1.0-alpha.8+mc26.3**, Minecraft26.3/Java25, Fabric/Forge/NeoForge.
+Update server and participating clients together: **protocol14/native channel5**.
+Bounded indexed early demand, original-format application, guarded parallel
+FEATURES/light publication and immutable authoritative biome inputs improve
+explicit complete-terrain offload. Server authority/audits remain; remote and
+experimental policies stay off by default. On a weaker server/two clients sharing
+a stronger PC at view32, six paired ratios across both orders (three reused
+coordinates) improve FULL **20.93%**, receipt **21.20%**, CPU **19.63%**;
+tick p95 worsens **8.95%**. Not an alpha.7 comparison or a general guarantee.
+All three loaders pass882-coordinate terrain/decoration/saved structure/light
+fixtures. Basic survival interactions/reconnect/saved state/light pass on Fabric;
+native ordinary gameplay, server restart and long sessions remain unverified.
+This remains **alpha**. See [installation](docs/INSTALL.md),
+[release notes](docs/releases/v0.1.0-alpha.8+mc26.3.md) and
+[exact verification scope](docs/releases/v0.1.0-alpha.8+mc26.3-verification.md).
 
 ### Historical alpha.6
 
