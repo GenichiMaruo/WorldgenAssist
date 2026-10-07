@@ -35,6 +35,8 @@ param(
     [switch]$DecorationDigest,
     [switch]$FeatureFixture,
     [string]$FeatureReplayFile,
+    [string]$GameplayProbeJar,
+    [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$GameplayProbeSha256,
     [string]$RemoteHost = 'gen1c@100.117.255.71',
     [string]$RemoteRoot = 'C:/Users/gen1c/AppData/Local/Temp/WorldgenAssist-20260909/port26.3'
 )
@@ -61,6 +63,13 @@ $predictionEnabled = [bool]::Parse($Prediction)
 . (Join-Path $PSScriptRoot 'WorldgenMeasurementRegion.ps1')
 . (Join-Path $PSScriptRoot 'WorldgenScenarioConsole.ps1')
 . (Join-Path $PSScriptRoot 'FeatureFixtureEvidence.ps1')
+. (Join-Path $PSScriptRoot 'WorldgenGameplayClient.ps1')
+$gameplayEnabled=-not [string]::IsNullOrWhiteSpace($GameplayProbeJar)
+$gameplayNonce=if($gameplayEnabled){[Guid]::NewGuid().ToString('N')}else{$null}
+if($gameplayEnabled){
+    $GameplayProbeJar=[IO.Path]::GetFullPath($GameplayProbeJar)
+    if(-not $GameplayProbeJar.StartsWith($testRoot,[StringComparison]::OrdinalIgnoreCase) -or $Dimension -ne 'overworld' -or $Players -ne 2 -or $Purpose -ne 'performance' -or -not $MeasureFullView -or $ViewDistance -ne 32 -or $Seed -ne 8675309 -or $Movement -ne 'relocation' -or $FeatureFixture -or $WarmupRuns -ne 1 -or $MeasuredRepeats -ne 1 -or (Get-FileHash -LiteralPath $GameplayProbeJar).Hash -ne $GameplayProbeSha256){throw 'Exact bounded public gameplay probe requires its owned hashed test JAR'}
+}
 $replay=$null
 if($FeatureFixture -and (-not $DecorationDigest -or $Purpose -ne 'correctness' -or $Dimension -ne 'overworld' -or $Players -ne 2 -or $Seed -ne 8675309 -or $ViewDistance -gt 10)){throw 'Bounded two-owner diagnostic fixture required'}
 if($FeatureReplayFile){
@@ -76,6 +85,7 @@ $clientLoad = @()
 $legacyServer=$RemoteHost -eq 'gen1c@100.117.255.71' -and $RemoteRoot -eq 'C:/Users/gen1c/AppData/Local/Temp/WorldgenAssist-20260909/port26.3'
 $physicalServer=$RemoteHost -eq 'gen1c@100.103.102.109' -and $RemoteRoot -eq 'E:/WorldgenAssist/port26.3'
 if(-not($legacyServer -or $physicalServer)){throw 'This fixture requires an explicitly authorized host/root pair'}
+if($gameplayEnabled -and -not $physicalServer){throw 'Gameplay probe requires the authorized weak E-drive server'}
 $remotePrefix=if($physicalServer){'$env:TEMP="E:/WorldgenAssist/temp";$env:TMP=$env:TEMP;'}else{''}
 if (-not $output.StartsWith($testRoot, [StringComparison]::OrdinalIgnoreCase) -or $output -eq $testRoot.TrimEnd([IO.Path]::DirectorySeparatorChar)) { throw 'OutputRoot must be a child of test-artifacts' }
 if ($predictionEnabled -and $CacheEntries -eq 0) { throw 'Prediction requires CacheEntries greater than zero' }
@@ -86,6 +96,7 @@ function Write-Utf8([string]$Path,[string]$Text) { [IO.File]::WriteAllText($Path
 function Write-Json([string]$Path,[object]$Value) { Write-Utf8 $Path ($Value | ConvertTo-Json -Depth 12) }
 function Get-Manifest {
     $files = @(Get-ChildItem -LiteralPath (Join-Path $workspace 'src') -File -Recurse)
+    $files+=Get-Item -LiteralPath (Join-Path $PSScriptRoot 'WorldgenGameplayClient.ps1'),(Join-Path $PSScriptRoot 'WorldgenGameplayServer.ps1')
     foreach($relative in @('build.gradle','settings.gradle','gradle.properties','scripts/Get-WorldgenArtifact.ps1','scripts/New-InstalledFixtureClient.ps1','scripts/New-TwoClientFixtureClient.ps1','scripts/Prepare-InstalledFixtureAssets.ps1','scripts/Run-WorldgenScenario.ps1','scripts/Remote-WorldgenScenarioServer.ps1','scripts/WorldgenMeasurementRegion.ps1','scripts/WorldgenScenarioConsole.ps1','scripts/FeatureFixtureEvidence.ps1')) { $files += Get-Item -LiteralPath (Join-Path $workspace $relative) }
     return @($files | Sort-Object FullName | ForEach-Object { $relative=$_.FullName.Substring($workspace.Length+1).Replace('\','/'); "$(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256 | Select-Object -ExpandProperty Hash)  $relative" })
 }
@@ -145,6 +156,11 @@ function Start-Client([string]$Name,[string]$Uuid,[int]$Index,[string]$AssetsRoo
     $environment=@{JAVA_HOME=$jdk;Path="$jdk\bin;$env:Path";WORLDGEN_ASSIST_REMOTE=if($Mode -eq 'assisted'){'true'}else{'false'};WORLDGEN_ASSIST_CLIENT_SEEDED_LEAF_PUBLIC_FIXTURE='false';WORLDGEN_ASSIST_CLIENT_SEEDED_LEAF_FIXTURE_FAULT='none';WORLDGEN_ASSIST_CLIENT_MEASURE_RECEIPT=if($Purpose -eq 'performance'){'true'}else{'false'}}
     $environment['WORLDGEN_ASSIST_CLIENT_REUSE_CONTEXT'] = if($PipelineProfile -eq 'current'){'false'}else{'true'}
     $environment['WORLDGEN_ASSIST_CLIENT_JOB_WINDOW'] = switch($WindowProfile){'deep'{'32'} 'wide'{'16'} default{'4'}}
+    if($gameplayEnabled){
+        Copy-Item -LiteralPath $GameplayProbeJar -Destination (Join-Path $profile 'client/mods/worldgen-gameplay-probe.jar')
+        $probeRoot=Join-Path $profile 'client/gameplay-probe';New-Item -ItemType Directory -Path $probeRoot|Out-Null
+        $environment['WORLDGEN_GAMEPLAY_PROBE_ROOT']=$probeRoot;$environment['WORLDGEN_GAMEPLAY_PROBE_NONCE']=$gameplayNonce;$environment['WORLDGEN_GAMEPLAY_PROBE_OWNER']=$Name
+    }
     $process=Start-Owned $launch.Executable $launch.Arguments $environment $launch.WorkingDirectory
     $capture=$null
     try {
@@ -189,6 +205,11 @@ try {
     Invoke-Remote ('New-Item -ItemType Directory -Force -Path "'+$RemoteRoot+'/mods","'+$RemoteRoot+'/retired-mods","'+$RemoteRoot+'/scenario-staging" | Out-Null')
     & scp.exe -q $artifact.Path $api $launcher (Join-Path $workspace 'run/eula.txt') (Join-Path $PSScriptRoot 'Remote-WorldgenScenarioServer.ps1') (Join-Path $PSScriptRoot 'WorldgenMeasurementRegion.ps1') (Join-Path $PSScriptRoot 'WorldgenScenarioConsole.ps1') ($RemoteHost + ':' + $RemoteRoot + '/scenario-staging/')
     if($LASTEXITCODE -ne 0){throw 'Remote scenario file transfer failed'}
+    if($gameplayEnabled){
+        & scp.exe -q (Join-Path $PSScriptRoot 'WorldgenGameplayServer.ps1') ($RemoteHost+':'+$RemoteRoot+'/scenario-staging/')
+        if($LASTEXITCODE -ne 0){throw 'Gameplay helper transfer failed'}
+        Invoke-Remote ('Copy-Item -LiteralPath "'+$RemoteRoot+'/scenario-staging/WorldgenGameplayServer.ps1" -Destination "'+$RemoteRoot+'/WorldgenGameplayServer.ps1" -Force')
+    }
     if($replay){
         Copy-Item -LiteralPath $replay.path -Destination (Join-Path $output 'feature-replay.json')
         & scp.exe -q $replay.path ($RemoteHost+':'+$RemoteRoot+'/scenario-staging/feature-replay.json')
@@ -228,6 +249,7 @@ try {
     $remoteCommand += ' -FeatureBackend '+$FeatureBackend
     if($DecorationDigest){$remoteCommand += ' -DecorationDigest'}
     if($FeatureFixture){$remoteCommand += ' -FeatureFixture'}
+    if($gameplayEnabled){$remoteCommand+=' -GameplayNonce '+$gameplayNonce}
     if($replay){$remoteCommand += ' -FeatureReplaySha256 '+$replay.sha256}
     # Process-scoped policy for our transferred helper; no machine/user policy change.
     $encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($remotePrefix+$remoteCommand));$server=Start-Owned 'ssh.exe' @('-o','BatchMode=yes','-o','ConnectTimeout=15',$RemoteHost,"powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -OutputFormat Text -EncodedCommand $encoded");$serverErr=$server.StandardError.ReadToEndAsync()
@@ -252,6 +274,7 @@ try {
     $scenarioSeconds=if($MeasureFullView){3600}elseif($Purpose -eq 'performance'){900}else{420}
     $deadline=[DateTime]::UtcNow.AddSeconds($scenarioSeconds)
     $receiptPending=$null
+    $gameplayPending=$null
     while(-not $server.HasExited){
         if($tunnel.HasExited){throw 'SSH tunnel exited during scenario'}
         foreach($client in $clients){if($client.process.HasExited){throw "Client exited during scenario: $($client.name) exit_code=$($client.process.ExitCode)"}}
@@ -261,6 +284,10 @@ try {
             if($null -ne $line){
                 $line|Add-Content -LiteralPath (Join-Path $output 'remote-runner.log')
                 if($line -match '^SERVER_RECEIPT_WAIT (\d+) (\d+)$'){$receiptPending=@{repeat=[int]$Matches[1];location=[int]$Matches[2]}}
+                if($line -match '^SERVER_GAMEPLAY_WAIT (scan|ground|mine|place|reconnect)$'){
+                    if(-not $gameplayEnabled -or $gameplayPending){throw 'Unexpected gameplay phase'}
+                    $gameplayPending=$Matches[1];Start-GameplayControl $gameplayPending $clients $gameplayNonce
+                }
                 $lineTask=$server.StandardOutput.ReadLineAsync()
             }
         }
@@ -277,6 +304,15 @@ try {
             if($allReceived){
                 Invoke-Remote ('Set-Content -LiteralPath "'+$RemoteRoot+'/evidence/'+$case+'/receipt-'+$receiptPending.repeat+'.ack" -Value "complete"')
                 $receiptPending=$null
+            }
+        }
+        if($gameplayPending){
+            $gameplayReport=Get-GameplayReports $gameplayPending $clients $gameplayNonce
+            if($null -ne $gameplayReport){
+                Write-Json (Join-Path $output ('gameplay-'+$gameplayPending+'.json')) $gameplayReport
+                $encodedReport=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($gameplayReport|ConvertTo-Json -Depth 8)))
+                Invoke-Remote ('[IO.File]::WriteAllBytes("'+$RemoteRoot+'/evidence/'+$case+'/gameplay-'+$gameplayPending+'.ack",[Convert]::FromBase64String("'+$encodedReport+'"))')
+                $gameplayPending=$null
             }
         }
         Start-Sleep -Milliseconds 1000
@@ -330,6 +366,16 @@ try {
     $result.feature_replay_sha256 = if($replay){$replay.sha256}else{'record'}
     $result.client_worker_threads = if($RemoteWorkKind -eq 'complete'){4}else{2}
     $result.client_peer_probe = [bool]$ClientPeerProbe
+    $result.gameplay_probe=$gameplayEnabled;$result.gameplay_nonce=$gameplayNonce;$result.gameplay_probe_sha256=$GameplayProbeSha256
+    if($gameplayEnabled){
+        $journalPath=Join-Path $output 'remote-evidence/gameplay-journal.json'
+        $result.gameplay_journal=if(Test-Path -LiteralPath $journalPath){Get-Content -LiteralPath $journalPath -Raw|ConvertFrom-Json}else{$null}
+        $gameplayIssues=@()
+        if((Get-FileHash -LiteralPath $GameplayProbeJar).Hash -ne $GameplayProbeSha256){$gameplayIssues+='Gameplay probe artifact changed'}
+        if($null -eq $result.gameplay_journal -or -not $result.gameplay_journal.success -or $result.gameplay_journal.nonce -ne $gameplayNonce -or ($result.gameplay_journal.phases.phase -join ';') -cne 'scan;ground;mine;place;reconnect'){$gameplayIssues+='Gameplay journal incomplete'}
+        $result.gameplay_issues=$gameplayIssues
+        if($gameplayIssues.Count){$result.success=$false;if($null -eq $failure){$failure=$gameplayIssues -join '; ';$result.failure=$failure}}
+    }
     if($Purpose -eq 'correctness'){$path=Join-Path $output 'remote-evidence/correctness.json';$result.correctness=if(Test-Path -LiteralPath $path){Get-Content -LiteralPath $path -Raw|ConvertFrom-Json}else{[ordered]@{required_applied_chunks=@();noise_digests=@()}}}else{$path=Join-Path $output 'remote-evidence/performance.json';$result.performance=if(Test-Path -LiteralPath $path){Get-Content -LiteralPath $path -Raw|ConvertFrom-Json}else{[ordered]@{warmup_runs=1;measured_repeats=3;measured=@()}}}
     $result.scenario_client_load=$clientLoad
     Write-Json (Join-Path $output 'scenario-result.json') $result

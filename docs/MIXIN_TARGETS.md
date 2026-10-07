@@ -1,5 +1,271 @@
 # Mixin Targets
 
+## Ordinary Fabric survival/input/saved-light gate230655 passes
+
+Closed ordinary-gameplay-gate-20261007-230655-166/session50927 exits0,ALL25
+sequential steps pass,issues empty,source/JAR/input identities frozen. Exact23
+Fabric MOD and weak E-server/view32/two same stronger-PC clients,warm1/measured1,
+remoteOFF/ON with identical parallel FEATURES;separate unshipped client-only
+probe SHA256 DF902BF74C2B7B4AA366E55274BA58EC7DA7EF2D22C7805CF637A38FA3794C57.
+ZERO new JUnit/WGA builds/native;retained4 affected-method/one lighting-reader
+XML,three exact artifacts and three-loader882 proofs verified before reuse.
+
+BOTH conditions/BOTH players pass all five scan/ground/mine/place/reconnect
+phases with original server natural/player/AIR/COBBLESTONE witnesses and actual
+lost/joined logs. Each original mining takes19 calls;stock quit before reconnect
+works. Clean stop,all12 copied saved files match remote before/after/local
+hashes. ALL4 final saved players exactly match their actual selected centered
+positions,Y71/69,Health20,DeathTime0/survival/onGround/nonflying,recorded deaths/
+damage0;ALL4 exact client-placed COBBLESTONE voxels persist. No fixture physics
+pause,healing,console-set floor/blocks or changed production physics.
+
+Each condition's original own-block light recomputation passes50 interior/
+162 halo/10649600 values:BLOCK/SKY/changedchunks/saved15-below-source all0.
+These are actual interaction centers,not every view32 chunk or a retroactive
+explanation/fix of historical lighting failures. Both measured10658 tasks/
+3461 required receipts per owner,failed tasks/timeouts0;10082 feature/light
+bodies,peak2 and all ownership conflicts0. Extra receipts OFF264/709,ON331/709
+are separate;exact required coverage retained. Coordinate SHA256
+D139FBF27C77456D89D44842E05022B9F2105A3460CADA9E20B29364677E7F5C
+matches the prior repeat1 set. Actual peer/audit/provided-biome inputs used.
+
+This closes Fabric basic peaceful survival landing/mining/placing/client
+reconnect and exact stopped saved-state/light gap. It does NOT establish
+native ordinary gameplay,server restart,continuous movement/combat/hazards or
+beta/full completion. ONE repeat is not new performance reproducibility or
+causal edit evidence;previous six paired ratios retain their exact identity.
+Production23/protocol14/native5/defaults/publicalpha7 unchanged. Failed earlier
+roots remain failed;following UNRUN preparation headings are history. Goalactive.
+
+## Cobblestone batch closed at controller mismatch; corrected before fresh pair
+
+Closed ordinary-gameplay-gate-20261007-225935-386/session39766 exits1,cleanup
+safe. Initial4build/preflight steps and original generation/scan/ground/mine
+pass. Both CLIENT place reports contain COBBLESTONE/Health20, but local
+WorldgenGameplayClient still expected DIRT and rejected them; no place ack
+reached remote,which subsequently timed out. Original failure is local
+"Actual client placed block missing",not an actual server placement verdict.
+No reconnect/assisted/saved success;failed evidence remains retained.
+
+Correct remaining local controller to EXACT minecraft:cobblestone,matching
+input/server/saved reader; no added acceptance or product change. All four
+placement validators now require that one block. ALL edits/docs before ONE
+fresh ordinary original/assisted/saved batch,strict unchanged23 identities,
+radius96/required3461/original quit and authoritative checks. ZERO new JUnit/
+WGA builds/native. New followup UNRUN;goalactive/not beta. Earlier headings
+are historical checkpoints.
+
+## Stock quit passes; grass conversion makes DIRT persistence probe unsuitable
+
+Closed ordinary-gameplay-gate-20261007-225014-958/session17477 exits1,cleanup
+safe. Both original actors pass client scan/ground/mine/place/reconnect reports;
+server confirms both initial DIRT placements,actual disconnected/later joined
+events and A final survival/Health20/onGround. Reconnect DIRT/A condition fails
+through SAME15s repeated checks; diagnostic observes GRASS_BLOCK. Original
+placing succeeded and block changed later. Assisted/saved checks remain UNRUN;
+whole failed verdict/raw files retained. Earlier cross-clock cause is unproved.
+
+Primary26.2/exact26.3 SpreadingSnowyBlock.randomTick and Blocks.GRASS_BLOCK
+registration confirm ordinary grass spreads onto adjacent base DIRT using
+random ticks. No per-tick trace retained,so observed change is consistent with
+that stock behavior,not exact historical cause proof. Exact DIRT persistence
+is unsuitable for this basic interaction check beside natural grass.
+
+Change ONLY unshipped input/server/saved reader to original COBBLESTONE item/
+voxel for placement/reconnect/clean-stopped exact witness. Retain original
+natural-floor scanning and mining,AIR witness,all player/death/damage/light
+checks;no randomTick disabling,terrain edits,changed physics or broadened block
+acceptance. WGA23/protocol14/native5/JARs/defaults untouched. ALL edits/docs
+BEFORE ONE fresh original/assisted gameplay/saved batch,0newJUnit/WGA builds/
+native. Corrected verification UNRUN;beta/full safety/new speed unproved.
+Following DIRT headings retain historical evidence. Goalactive.
+
+## Original placement witness fails; bounded authoritative observation corrected
+
+Closed ordinary-gameplay-gate-20261007-224022-886/session95001 exits1,cleanup
+safe. Compile/package/offline/preflight/original generation pass. Both client
+scan/ground/mine/place reports pass; server confirms both natural landings and
+AIR after mining. Server confirms A survival player state, but single-shot
+DIRT condition produces no marker; original failure is Assert-GameplayBlock
+place/A,NOT a reconnect failure. No reconnect/assisted/saved verdict. Client
+predicted DIRT is not authoritative placement proof. Failed raw root retained.
+
+The old assertion tested block state only ONCE,then waited for a marker that
+could never appear if that console check preceded authoritative interaction.
+Correct ONLY this test observer:reissue original read-only execute-if-block
+every500ms for SAME15s bound,require exact authoritative marker;on failure
+record bounded original AIR/grass/DIRT/stone/sand selectors plus SelectedItem/
+Pos. No write,healing,extended deadline,retry action,authority weakening or
+production change. A cross-clock race is a hypothesis,not a proven cause;
+persistent missing DIRT still FAILS. Saved exact DIRT checks remain required.
+
+ALL observer/docs edits BEFORE ONE fresh gameplay/saved batch;stock quit fix,
+radius96/exact3461 and strict23 sources/JARs retained. ZERO new JUnit/WGA builds/
+native. Corrected followup UNRUN; beta/new speed unproved. Goalactive.
+
+## Ordinary landing/mining/placing pass; stock quit before reconnect corrected
+
+Closed ordinary-gameplay-gate-20261007-222939-341/session60805 exits1,
+cleanup safe. Builds/preflight/original generation and both scan/ground/mine/
+place phases pass with original server witnesses. Both players survive natural
+landing at Y71/Y69,Health20/onGround/nonflying/survival; each original mining
+takes19 calls and AIR then DIRT are confirmed. Reconnect alone times out90s;
+assisted/saved verification UNRUN,whole batch FAILED and raw evidence retained.
+
+Actual server rejects BOTH replacement connections at22:35:11:server full;
+old connections persist until timeout22:35:31/32. Primary26.2/exact26.3
+ClientLevel.disconnect closes its network Connection, whereas
+ClientPacketListener.close only marks closed/clears level/telemetry.
+ConnectScreen's disconnectWithProgressScreen performs client teardown,not the
+network quit itself. Stock Minecraft.disconnectFromWorld first calls
+ClientLevel.disconnect,then teardown. Earlier test-driver omission left both
+old sessions occupying the original max-players2 slots.
+
+Correct ONLY unshipped test driver:stock disconnectFromWorld(DEFAULT_QUIT_MESSAGE),
+bounded1s grace then original ConnectScreen;no player-limit increase,permission/
+physics/network bypass or production change. Reports include current screen.
+ALL edits/docs BEFORE ONE fresh original/assisted gameplay/saved batch,
+same strict23 identities/required3461/radius96 and original server lost/joined
+witnesses. ZERO new JUnit/WGA builds/native. Followup UNRUN;no beta or new
+performance claim. Following headings retain historical scopes. Goal active.
+
+## Saved-site diagnosis passes; focused gameplay followup prepared
+
+Closed gameplay-site-diagnosis-20261007-222001-471 exits0, both offline steps
+pass, issues empty. Exact reused immutable raw from221302 remains unchanged:
+8356193 bytes/SHA256 FCDB4DC5DB72ABA178EA965BC4D6F958DA5C7CB54EABA57BA25A5B9DF7EE41FE.
+Original reader finds1024 FULL chunks,missing/nonFULL0,245760 columns,
+21174 dry supported patches;166042 top columns are water. Nearest B dry patch
+is80 blocks away:stand(-24272,69,40264),target(-24271,68,40264),grass/grass/dirt.
+This explains the64-block selector failure; it is not gameplay or beta proof.
+Disposable original reader adds3743 zero EOF padding bytes only;raw unchanged.
+ZERO new network transfers/games/JUnit/WGA builds. Failed roots remain failed.
+
+Current test-only selector now scans already-loaded columns within96 blocks;
+original server geometry bound97 includes the selected natural patch. No world
+edits or forced generation. Main new gate uses original exact required-view
+coordinate intersection3461 per owner; additional raw receipts are reported
+separately, never weaken required coverage. Explicit allowed harness delta now
+includes the two diagnostic scripts; production/test/build/JAR identities stay
+strict. Old test-only JAR reuse is forbidden after selector source changes.
+
+After ALL source/docs edits ONE fresh Run-OrdinaryGameplayGate -Execute:
+separate client-only input JAR/offline helpers, original/assisted weak E-server,
+two strong-PC clients/view32/warm1/measured1, scan/ground/mine/place/reconnect,
+original server witnesses, stopped saved player/placed voxel/light checks.
+ZERO new JUnit/WGA builds/native. New followup UNRUN; exact23 production and
+six prior speed pairs unchanged. Native ordinary play/beta remain unproved.
+Following preparation headings are historical records. Goal active.
+
+## Site copy passes; targeted receipt correction/offline reuse prepared
+
+221302-017 exits1: helper compile/remote before-copy-after4 steps pass,
+then incorrect all-receipts==3461 assertion. ActualB all3725,core-region1024;
+existing comparator correctly filters required view32 coordinates. Correct
+ONLY new diagnosis to exact required3461 intersection; extra receipts separate,
+not weakened coverage or changed original speed evidence. Source/B-region raw
+unchanged,inspection not run. Keep failed summary.
+
+Raw B-region8356193 bytes (not sector aligned). Primary26.2/exact26.3 original
+RegionFile.close pads EOF. New reader uses DISPOSABLE byte-identical copy,checks
+prefix unchanged/only zero EOF padding,keeps immutable raw intact. No chunk/
+terrain/light repair. -ReuseRawRoot221302 requires exact closed pre-inspection
+failure/all4steps/source except2 diagnostic edits/before-after SHA/localbytes.
+After ALL edits ONE offline helper compilation/read;0newtransfer/games/JUnit/
+WGA builds;no failed verdict reuse. New diagnosis UNRUN,goalactive/not beta.
+
+## B64 site failure closed; offline saved terrain diagnosis prepared
+
+215440-741/session55656 exits1,cleanupsafe. Builds/weak-host/both client starts
+pass; original generation/receipts complete. B visits16641 loaded columns but
+natural-floor0; actualY150/Health20/alive/flying,not a new observed fall. A scan
+valid grass/dirt at24191,71,-40190. No survival/assisted/saved safety verdict.
+Do not rerun generation blindly. Add ONLY Run-GameplaySiteDiagnosis and
+GameplaySiteInspector263; primary26.2/exact26.3 Heightmap confirm stored
+SimpleBitStorage ceillog2(384+1)/256,index x+z*16,firstAvailable=data-64.
+26.3 predicate uses BLOCKS_MOTION_IN_HEIGHTMAP tags; read STORED heights,do not
+recompute/unbind/normalize them or infer old predicate semantics.
+
+ALL diagnostic edits before ONE offline batch: exact closed B64 failure/source
+inventory except two additions/runtime23/JAR; no owned E-server live;hash/copy
+only B center r.-48.78.mca before/after; original RegionFile/NbtIo/paletted codec/
+stored heightmap/collision shapes within actual3461 receipt coordinates.
+Missing/nonFULL saves reported,chunk boundary columns excluded. Histogram and
+nearest dry supported patch diagnose test-site selection,NOT game/beta safety.
+0newgames/JUnit/WGA builds;compile ONE helper. All new diagnosis UNRUN.Goalactive.
+
+## Gameplay original generation completed; natural patch selector widened
+
+214209-023/session20132 exits1. Corrected test input starts/both actors join;
+original warmup/measured each10658 tasks,0failed/timeouts and full-view receipts
+finish. A scan succeeds; B finds no grass/dirt patch within16. B remains
+Y150/Health20/alive/creative/flying; no survival/assisted/saved pass. Failed
+result retained. This is test-site selection failure, not observed new fall.
+
+Permit14 named natural full solid ground blocks (soil/rock/sand/gravel), bounded
+loaded64-block scan; still require full collision/no fluids/support/air and
+exact original server natural IDs. Original iron PICKAXE,not instant break.
+Scan reports column counts. Saved lighting centered on EACH actual interaction
+patch per condition; copy original region files covering its exact9x9 halo,
+unchanged reader50/162/10649600 zero-difference gates. No product/source/JAR
+change or added worldgen tickets. ALL repairs/docs before ONE fresh test input/
+offline build + original/assisted/saved batch;0newJUnit/WGA/native. New corrected
+verification UNRUN; beta/full safety/new speed unproved. Goalactive.
+
+## Gameplay first runtime closed: test-only package error corrected
+
+213815-624/session68645 exits1: prior input JAR reuse/offline reader compile/
+weak E-host preflight pass; original clients crash at their first tick because
+helper GameplayProbe occupied the declared Mixin package (IllegalClassLoadError).
+Cleanup safe; no measured generation/gameplay/assisted/saved pass. Production23
+source/JAR unchanged. Both failures retained. Move ONLY2 test Mixins into .mixin
+subpackage/import helper; update separate test JAR config. Preserve original
+scenario failure instead of masking it with missing-journal validation.
+
+ALL repairs/docs before ONE fresh input-driver/offline compilation and ordinary
+Fabric pair/saved batch. Old test JAR cannot be reused after source changes;
+strict reuse support refuses it. ZERO new JUnit/WGA builds/native. All corrected
+runtime/saved verification UNRUN; no beta/new speed/physics-fix claim. Goalactive.
+
+## Ordinary gameplay first batch closed at offline weak host
+
+213332-493/session46104 exits1: test input driver compile/package and all3
+offline reader compilation pass. SSH preflight exit255 connection timeout;
+zero games/new JUnit/WGA builds. Source/JAR identities unchanged. Tailscale
+target GenPC-Sub Online=false; user confirms powered off, now booting.
+Failed batch remains FAILED, gameplay/saved proof UNRUN. Test JAR SHA256
+A8834F1F80D3079320930D1820C2084953D6851C5C6F6C97C9815D2B654DDD5F.
+
+After all coordinator/docs edits ONE -ReuseProbeRoot213332-493 followup:
+reuse ONLY two successful test-input build steps, exact closed4-step SSH
+failure/source inventory except coordinator/retained3 sources/JAR hash and
+production/runtime identities. Recompile3 offline readers; no duplicate test
+input build or new JUnit/WGA build. Fresh Fabric original/assisted ordinary
+gameplay pair and saved checks; failed runtime verdict never reused. Native
+ordinary safety/beta remain unproved. Goalactive; see ORDINARY_GAMEPLAY_PROBE.
+
+## Dev23 ordinary gameplay input gate implemented; verification UNRUN
+
+Separate unshipped Fabric CLIENT-ONLY test JAR drives standard survival landing,
+multi-tick shovel mining, ordinary dirt placement and original client reconnect.
+No production/JAR/version/protocol14/native5/default/authority change. Original
+26.2 then exact26.3 Minecraft.tick TAIL and MultiPlayerGameMode.stopDestroyBlock
+HEAD require1 verified; the latter holds ONLY the bounded owned virtual attack
+against unfocused-window release, never changes mining progress/permissions.
+Original continueDestroyBlock/useItemOn/ConnectScreen and server commands used.
+
+After ALL edits ONE Run-OrdinaryGameplayGate -Execute: strict unchanged
+production/test/build/runtime/JAR identities; retain4 successful methods,
+3 builds/three-loader882 proofs and six paired speed ratios. Compile/package
+ONLY separate test input driver plus offline readers. Fabric remoteOFF/ON,
+natural weak E-server/view32/two same stronger-PC clients/warm1/measured1.
+Five phases/both actors require client and original server witnesses; stopped
+saved NBT/death-damage stats/placed DIRT voxel and original own-block lighting
+50 interior/162 halo/10649600 values per condition. No fixture pause, healing,
+console-set blocks or altered physics. ALL new verification UNRUN. One repeat
+is not a new reproducibility/speed claim; native ordinary gameplay/server
+restart/continuous movement and beta remain unproved. See ORDINARY_GAMEPLAY_PROBE.
+
 ## Dev23 ordinary saved-state/light followup011147 passes
 
 Closed ordinary-saved-safety-20261007-011147-936 exits0,all3 offline steps pass,

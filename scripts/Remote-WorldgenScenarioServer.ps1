@@ -33,7 +33,8 @@ param(
     [ValidateSet('off','serial','guarded','parallel')][string]$FeatureBackend='off',
     [switch]$DecorationDigest,
     [switch]$FeatureFixture,
-    [string]$FeatureReplaySha256
+    [string]$FeatureReplaySha256,
+    [ValidatePattern('^[a-f0-9]{32}$')][string]$GameplayNonce
 )
 
 # Remote half of the all-dimension trusted-raw scenario.  It owns only the
@@ -50,6 +51,8 @@ $dedicated = if($resolved -eq [IO.Path]::GetFullPath('E:/WorldgenAssist/port26.3
 if ($resolved -ne [IO.Path]::GetFullPath((Join-Path $dedicated 'port26.3'))) {
     throw 'Root must be the dedicated WorldgenAssist 26.3 test child'
 }
+if($GameplayNonce -and ($resolved -ne [IO.Path]::GetFullPath('E:/WorldgenAssist/port26.3') -or $Dimension -ne 'overworld' -or $Players -ne 2 -or $Purpose -ne 'performance' -or $ViewDistance -ne 32 -or -not $MeasureFullView -or $FeatureFixture -or $Seed -ne 8675309 -or $WarmupRuns -ne 1 -or $MeasuredRepeats -ne 1 -or $Movement -ne 'relocation')){throw 'Only bounded weak E-server ordinary gameplay probe allowed'}
+if($GameplayNonce){. (Join-Path $PSScriptRoot 'WorldgenGameplayServer.ps1')}
 $javaExecutable = Join-Path $dedicated 'java25/bin/java.exe'
 if ($RemoteApplicationProfile -eq 'overlap' -and $PipelineProfile -ne 'prefetch') { throw 'Overlap measurement requires the bounded prefetch pipeline' }
 if (-not (Test-Path -LiteralPath $javaExecutable -PathType Leaf)) { throw 'Dedicated JDK 25 is missing' }
@@ -549,6 +552,7 @@ try {
         }
         [ordered]@{warmup_runs=$WarmupRuns;measured_repeats=$MeasuredRepeats;warmup=@($warm);measured=@($measured)} | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $evidence 'performance.json')
     }
+    if($GameplayNonce){Invoke-OrdinaryGameplay}
     # Generated 26.3 PlayerList.removeAll indexes a list that a synchronous
     # disconnect may shrink. Close these owned fixture clients individually
     # before stop, after every measurement and receipt has been recorded.
