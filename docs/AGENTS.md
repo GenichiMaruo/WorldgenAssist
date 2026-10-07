@@ -1,6 +1,6 @@
 # Repository agent instructions
 
-## Alpha.8 release packaging passes; publication UNRUN
+## Alpha.8 published; automatic CurseForge upload succeeds (2026-10-08 JST)
 
 User authorizes a new alpha and commits. Version0.1.0-alpha.8+mc26.3 retains
 tested dev23 production/protocol14/native5/defaultOFF. Build-ReleasePackage
@@ -17,7 +17,18 @@ Closed release-alpha8-20261008 three-build batch exits0: ALL Fabric250/Forge244/
 Neo238 classes/Mixins/other resources and all source entries match dev23;
 only exact loader version metadata differs. No new units or Minecraft runs.
 Release hashes/scope in releases/v0.1.0-alpha.8+mc26.3-verification.md.
-Older publicalpha7 assets/tags immutable. Publication/CF acceptance still UNRUN.
+Release commit1ace9f4a1b06c1e288625a64d4b04f1f1e1e9f53 and all prior
+progress pushed without force to main/mc26.3/feature branch; new annotated
+tagv0.1.0-alpha.8+mc26.3. Draft11assets re-downloaded and every byte hash
+matched before publication at2026-10-08 00:02:39 JST. Public prerelease:
+https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.8%2Bmc26.3
+Automatic CF run37641768372 ends success at00:02:59,verified3/uploaded3.
+Upload acceptance confirmed; moderation/public listing not independently checked.
+Evidence release-alpha8-20261008/build-verification.json,uploaded-verification.json,
+publication.json,curseforge-run.json/log. No additional tests/rebuild/reupload.
+Older assets/tags immutable. Published alpha8 and protocol14/native5 now current;
+historical publicalpha7 paragraphs below retain their checkpoint identities.
+Unrun native ordinary work stays local; production unchanged and goalactive.
 
 ## Ordinary Fabric survival/input/saved-light gate230655 passes
 
