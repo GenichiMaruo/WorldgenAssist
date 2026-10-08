@@ -56,13 +56,59 @@ if($CandidateVersion -eq '0.1.0-alpha.6-dev.12+mc26.3'){
         }else{(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash}
         if($actual -ne $expected){throw "Candidate production source changed: $relative"}
     }
+}elseif($CandidateVersion -eq '0.1.0-alpha.9-dev.2+mc26.3'){
+    if($ExpectedVersion -ne '0.1.0-alpha.9+mc26.3' -or
+       $candidate.schema -ne 'worldgen-assist.native-client-request-gate.v1' -or
+       $candidate.experiment -ne 'client_request' -or $candidate.junit.tests -ne 3 -or
+       $candidate.issues.Count -or $candidate.steps.Count -ne 5 -or
+       @($candidate.steps|Where-Object {-not $_.success -or $_.exit_code -ne 0 -or $_.timed_out}).Count -or
+       $candidate.results.Count -ne 2){throw 'Expected closed successful dev2 client-ingress gate'}
+    $beforeManifest=Join-Path $candidateRoot 'source-manifest-before.sha256'
+    $afterManifest=Join-Path $candidateRoot 'source-manifest-after.sha256'
+    if((Get-FileHash -LiteralPath $beforeManifest).Hash -ne (Get-FileHash -LiteralPath $afterManifest).Hash){throw 'Candidate inputs were not frozen'}
+    $productionNames=@()
+    foreach($line in Get-Content -LiteralPath $beforeManifest){
+        if($line -notmatch '^([A-F0-9]{64})  (src/.+|build\.gradle|settings\.gradle|gradle\.properties|loaders/[^/]+/(?:src/.+|build\.gradle))$'){continue}
+        $expected=$Matches[1];$relative=$Matches[2];$path=Join-Path $workspace $relative
+        $productionNames+=$relative
+        $actual=if($relative -eq 'gradle.properties'){
+            $normalized=[regex]::Replace([IO.File]::ReadAllText($path),'(?m)^mod_version='+[regex]::Escape($ExpectedVersion)+'(?=\r?$)',('mod_version='+$CandidateVersion))
+            [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($normalized)))
+        }else{(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash}
+        if($actual -ne $expected){throw "Candidate production source changed: $relative"}
+    }
+    $currentNames=@(foreach($name in @('src','loaders/forge/src','loaders/neoforge/src')){
+        Get-ChildItem -LiteralPath (Join-Path $workspace $name) -File -Recurse|ForEach-Object {$_.FullName.Substring($workspace.Length+1).Replace('\','/')}
+    })+@('build.gradle','settings.gradle','gradle.properties','loaders/forge/build.gradle','loaders/neoforge/build.gradle')
+    if(@(Compare-Object ($productionNames|Sort-Object) ($currentNames|Sort-Object)).Count){throw 'Candidate production file inventory changed'}
+    foreach($loader in @('forge','neoforge')){
+        $result=@($candidate.results|Where-Object loader -eq $loader)
+        if($result.Count -ne 1){throw 'Native result identity ambiguous'}
+        $childPath=[IO.Path]::GetFullPath($result[0].child_summary)
+        if(-not $childPath.StartsWith($evidenceParent,[StringComparison]::OrdinalIgnoreCase)){throw 'Native proof outside workspace evidence'}
+        $child=Get-Content -LiteralPath $childPath -Raw|ConvertFrom-Json
+        $artifact=@($candidate.artifacts|Where-Object loader -eq $loader)
+        $childArtifact=@($child.artifacts|Where-Object loader -eq $loader)
+        if(-not $child.success -or $child.loader -ne $loader -or $child.native_transport_experiment -ne 'client_request' -or
+           -not $child.both_conditions_assisted -or $child.measured_repeats -ne 3 -or $child.issues.Count -or
+           $child.steps.Count -ne 25 -or @($child.steps|Where-Object {-not $_.success -or $_.exit_code -ne 0 -or $_.timed_out}).Count -or
+           $artifact.Count -ne 1 -or $childArtifact.Count -ne 1 -or
+           $artifact[0].sha256 -ne $result[0].artifact_sha256 -or $artifact[0].sha256 -ne $childArtifact[0].sha256 -or
+           -not $childArtifact[0].nontransport_runtime_unchanged -or
+           -not $child.saved_gameplay.success -or $child.saved_gameplay.players.Count -ne 4 -or
+           -not $child.lighting.success -or $child.lighting.cases.Count -ne 2){throw 'Matching native lifetime/gameplay/saved proof missing'}
+        foreach($case in $child.lighting.cases){
+            if(-not $case.success -or $case.required_chunks -ne 50 -or $case.halo_chunks -ne 162 -or $case.compared_values -ne 10649600 -or
+               $case.block_differences -or $case.sky_differences -or $case.changed_chunks -or $case.saved_full_sky_below_original_source){throw 'Saved light proof differs'}
+        }
+    }
 }else{throw 'Unsupported release candidate identity'}
 New-Item -ItemType Directory -Force -Path $releaseRoot,(Join-Path $releaseRoot 'candidate'),(Join-Path $releaseRoot 'assets')|Out-Null
 $candidateManifest=@()
 foreach($loader in @('fabric','forge','neoforge')){
     $name='worldgen-assist'+$(if($loader -ne 'fabric'){'-'+$loader})+'-'+$CandidateVersion+'.jar'
     $path=Join-Path $candidateRoot $name
-    $expected=if($CandidateVersion -eq '0.1.0-alpha.8-dev.23+mc26.3'){
+    $expected=if($CandidateVersion -in @('0.1.0-alpha.8-dev.23+mc26.3','0.1.0-alpha.9-dev.2+mc26.3')){
         $matching=@($candidate.artifacts|Where-Object loader -eq $loader)
         if($matching.Count -ne 1 -or $matching[0].version -ne $CandidateVersion){throw 'Ambiguous candidate artifact'}
         $matching[0].sha256
@@ -72,7 +118,7 @@ foreach($loader in @('fabric','forge','neoforge')){
     if((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $expected){throw "Candidate hash mismatch: $loader"}
     Copy-Item -LiteralPath $path -Destination (Join-Path $releaseRoot "candidate/$loader.jar")
     $sourcePath=Join-Path $candidateRoot ($name -replace '\.jar$','-sources.jar')
-    if(-not(Test-Path -LiteralPath $sourcePath) -and $CandidateVersion -in @('0.1.0-alpha.7-dev.16+mc26.3','0.1.0-alpha.8-dev.23+mc26.3')){
+    if(-not(Test-Path -LiteralPath $sourcePath) -and $CandidateVersion -in @('0.1.0-alpha.7-dev.16+mc26.3','0.1.0-alpha.8-dev.23+mc26.3','0.1.0-alpha.9-dev.2+mc26.3')){
         $buildRoot=if($loader -eq 'fabric'){$workspace}else{Join-Path $workspace "loaders/$loader"}
         $sourcePath=Join-Path $buildRoot ('build/libs/'+($name -replace '\.jar$','-sources.jar'))
     }

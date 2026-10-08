@@ -1,5 +1,27 @@
 # Repository agent instructions
 
+## Alpha.9 packaging prepared; publication UNRUN
+
+Release package batch99298 now exits0/all3 builds/archive comparisons pass.
+Fabric257/Forge251/Neo245 classes/Mixins/other resources matchdev2; exact version
+metadata only differs, all source entries equal. Full release/source hashes in
+releases/v0.1.0-alpha.9+mc26.3-verification.md. No new JUnit/games/performance.
+Next intended commit/push/newtag/draft11assets/byte checks/publication/CF acceptance;
+publication still UNRUN here. Historical preparation below preserves its identity.
+
+User authorizes committing current work and a new alpha with verified gains.
+Closed dev2 gate050308 succeeds/all3 methods/3 builds/both native ALL25; RTT
+falls21.28/17.26%,FULL only2.92/0.20%,Forge CPU rises9.99%. Both switches remain
+defaultFALSE; remoteOFF. Source version advances ONLY mod_version toalpha9,
+protocol14/native6; docs identify original evidence and modest limits. Packaging
+requires exact frozen dev2 production inventory and matching child saved proofs,
+then ONE sequential three-loader assemble batch. Every runtime entry except
+version metadata and every source entry must match candidate;0newJUnit/games.
+After byte/hash checks, intended commits/push/new annotated tag/draft11assets/
+downloaded SHA checks/publication/automatic CF upload acceptance. Publicalpha8
+immutable,unrelated.vscode excluded,no beta/full-goal completion. Build/publication
+still UNRUN at this preparation checkpoint. Older UNRUN headings are history.
+
 ## Dev2 native client ingress: completed affected batch (2026-10-09)
 
 `native-client-request-gate-20261009-050308-626/summary.json` succeeds:

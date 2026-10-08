@@ -2,27 +2,27 @@
 
 [English](INSTALL.md) | [日本語](INSTALL.ja.md) · [Overview](../README.md)
 
-## Minecraft 26.3 alpha.8
+## Minecraft 26.3 alpha.9
 
 Use Minecraft **26.3**, Java **25** (tested 25.0.4), and Fabric **0.19.5**
 with Fabric API **0.161.0+26.3**, Forge **66.0.3**, or NeoForge **26.3.0.13-beta**.
-Download your loader's JAR from [alpha.8](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.8%2Bmc26.3).
+Download your loader's JAR from [alpha.9](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.9%2Bmc26.3).
 Replace older WorldgenAssist JARs on the server and all participating clients.
-**Protocol14/native channel5 requires updating both sides together.**
+**Protocol14/native channel6 requires updating both sides together.**
 
 | Loader | Install this JAR |
 | --- | --- |
-| Fabric | `worldgen-assist-0.1.0-alpha.8+mc26.3.jar` |
-| Forge | `worldgen-assist-forge-0.1.0-alpha.8+mc26.3.jar` |
-| NeoForge | `worldgen-assist-neoforge-0.1.0-alpha.8+mc26.3.jar` |
+| Fabric | `worldgen-assist-0.1.0-alpha.9+mc26.3.jar` |
+| Forge | `worldgen-assist-forge-0.1.0-alpha.9+mc26.3.jar` |
+| NeoForge | `worldgen-assist-neoforge-0.1.0-alpha.9+mc26.3.jar` |
 
 Source JARs are for developers. Remote assistance remains off by default.
 Use trusted participants and a backed-up test world. Raw-seed disclosure is
 explicit; seed secrecy and protection against colluding clients are unresolved.
 Complete terrain targets eligible vanilla Overworld contexts; arbitrary
-generators are unsupported. Read the [release verification](releases/v0.1.0-alpha.8+mc26.3-verification.md).
+generators are unsupported. Read the [release verification](releases/v0.1.0-alpha.9+mc26.3-verification.md).
 
-### Alpha.8 measured profile
+### Experimental profile inherited from alpha.8 (original measurements)
 
 Before starting the server, set these environment values in PowerShell.
 This opts into seed disclosure and experimental parallel FEATURES:
@@ -70,13 +70,39 @@ Receipt is not rendered completion. These are this profile's results, not an
 alpha.7 comparison or a general guarantee.
 
 Generation/decoration/saved structures/light match across all three loaders'
-bounded fixtures. Basic peaceful survival landing/mining/placing/reconnect and
-stopped saved state/light pass on **Fabric only**. Native ordinary gameplay,
-server restart, continuous exploration/combat/hazards and long sessions remain
-unverified; this release remains alpha. First two full server audits and later
+bounded fixtures. The Fabric speed measurements above retain their original
+dev.23 JAR identity. Dev.2 also verifies basic native survival, dimension changes,
+reconnect, stopped saves and own-block lighting. Server restart, continuous
+exploration/combat/hazards and long sessions remain unverified; this remains alpha. First two full server audits and later
 private1/8 (server) or1/64 with eligible independent peer/full agreement remain.
 Final domain/owner/epochs/current biome/shaping checks retain server authority.
 Pending demand waits are asynchronous100ms/adaptive max200ms; task deadline30s.
+
+### Optional alpha.9 native client request admission
+
+On EACH Forge/NeoForge client, add Java launch argument
+`-Dworldgen_assist.native.client_request_ingress=true` and restart the client.
+This submits received requests to the existing bounded compute workers. Original
+world operations and acceptance keep their original thread; dimension changes
+and disconnects revoke old requests/replies. This switch does not apply to Fabric.
+
+Both conditions assisted, same candidate JAR/view32/three matched regions, MAIN
+first. Median matched ratios with the new switch enabled:
+
+| Metric | Forge | NeoForge |
+| --- | ---: | ---: |
+| FULL completion | -2.92% | -0.20% |
+| Receipt (excluding rendering) | -3.68% | -1.26% |
+| Job RTT | -21.28% | -17.26% |
+| Server CPU | +9.99% | -3.43% |
+| Tick p95 | +3.16% | -0.58% |
+
+Full-generation gains are small and Forge CPU rises, so default remains false.
+Server `-Dworldgen_assist.native.request_batching=true` is a separate bounded
+1..4-job experiment; no speed gain was demonstrated. It also defaults false
+and was disabled during this ingress comparison. Assistance/seed disclosure/
+complete terrain/verification still require their separate explicit settings.
+Neither experiment is a direct alpha.8 comparison or general assistance ON/OFF proof.
 
 ## Historical Minecraft 26.3 alpha.7
 
