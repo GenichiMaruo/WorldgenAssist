@@ -1,5 +1,20 @@
 # Remote Protocol
 
+Dev2 completed harness selects native client MAIN/NETWORK, both server batchFALSE,
+canonical client_request identity, actual measured dispatches and original
+post-measurement End/Overworld/reconnect sequence. ONE batch remains UNRUN;
+authority/wire unchanged. See NATIVE_CLIENT_REQUEST_INGRESS.md.
+
+Dev2 retains shared14/native6 wire bytes and all per-job/owner/epoch/audit/domain/
+deadline/final-write checks. Captured native client admission changes scheduling,
+not authority. MAIN acceptance and exact-connection fallback remain; connection/
+respawn suspend permanently revokes old callbacks before original transitions.
+Server result handlers/Forge reassembly unchanged. Native request_batching and
+client_request_ingress JVM switches now defaultFALSE; remote/seed opt-ins stay
+OFF. All dev2 verification UNRUN; see NATIVE_CLIENT_REQUEST_INGRESS.md. Dev1
+batching033001 passed functional checks but did not demonstrate faster FULL.
+Publicalpha8/native5 unchanged; older UNRUN/default statements below are history.
+
 Native alpha.9-dev.1 uses channel6 to register the existing bounded
 TerrainJobBatchPayload (1..4 unique jobs); sharedprotocol14/job/codec bytes stay
 unchanged. Publicalpha8 remains native5. Update native server and clients

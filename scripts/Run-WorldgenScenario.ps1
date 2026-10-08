@@ -40,6 +40,8 @@ param(
     [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$GameplayProbeSha256,
     [switch]$NativeBatchExperiment,
     [ValidateSet('true','false')][string]$NativeRequestBatching='true',
+    [switch]$NativeClientRequestExperiment,
+    [ValidateSet('true','false')][string]$NativeClientRequestIngress='false',
     [string]$RemoteHost = 'gen1c@100.117.255.71',
     [string]$RemoteRoot = 'C:/Users/gen1c/AppData/Local/Temp/WorldgenAssist-20260909/port26.3'
 )
@@ -71,6 +73,9 @@ $predictionEnabled = [bool]::Parse($Prediction)
 $nativeRuntime=$null
 $gameplayEnabled=-not [string]::IsNullOrWhiteSpace($GameplayProbeJar)
 $gameplayNonce=if($gameplayEnabled){[Guid]::NewGuid().ToString('N')}else{$null}
+if($NativeClientRequestExperiment){
+    if(-not $NativeBatchExperiment -or $NativeRequestBatching -ne 'false'){throw 'Client request comparison requires the explicit native three-repeat profile with server batching disabled'}
+}
 if($NativeBatchExperiment -and ($Loader -eq 'fabric' -or -not $gameplayEnabled -or $Mode -ne 'assisted' -or $MeasuredRepeats -ne 3 -or $FeatureBackend -ne 'parallel' -or $NoiseBackend -ne 'cooperative' -or $RemoteWorkKind -ne 'complete' -or $CompleteVerification -ne 'peer' -or $AuthoritativeBiomes -ne 'demand')){throw 'Native batching requires the controlled three-repeat assisted gameplay profile'}
 $gameplayRepeats=if($NativeBatchExperiment){3}else{1}
 if($gameplayEnabled){
@@ -160,6 +165,12 @@ function Start-Client([string]$Name,[string]$Uuid,[int]$Index,[string]$AssetsRoo
         $argumentPath=$launch.Arguments[0].Substring(1)
         @('-Dworldgen_assist.client.worker_threads=4')+@(Get-Content -LiteralPath $argumentPath) | Set-Content -LiteralPath $argumentPath
     }
+    if($NativeClientRequestExperiment){
+        $argumentPath=$launch.Arguments[0].Substring(1)
+        @('-Dworldgen_assist.native.client_request_ingress='+$NativeClientRequestIngress)+@(Get-Content -LiteralPath $argumentPath) | Set-Content -LiteralPath $argumentPath
+        [ordered]@{experiment='client_request';ingress=$NativeClientRequestIngress;artifact_sha256=$artifactHash;loader=$Loader;argument_path=$argumentPath;argument_sha256=(Get-FileHash -LiteralPath $argumentPath).Hash;native_channel=6;server_batching='false'} |
+            ConvertTo-Json | Set-Content -LiteralPath (Join-Path $profile 'native-client-request-config.json') -Encoding utf8
+    }
     if($ClientPeerProbe){
         $argumentPath=$launch.Arguments[0].Substring(1)
         @('-Dworldgen_assist.client.peer_probe=true')+@(Get-Content -LiteralPath $argumentPath) | Set-Content -LiteralPath $argumentPath
@@ -170,6 +181,7 @@ function Start-Client([string]$Name,[string]$Uuid,[int]$Index,[string]$AssetsRoo
     $environment=@{JAVA_HOME=$jdk;Path="$jdk\bin;$env:Path";WORLDGEN_ASSIST_REMOTE=if($Mode -eq 'assisted'){'true'}else{'false'};WORLDGEN_ASSIST_CLIENT_SEEDED_LEAF_PUBLIC_FIXTURE='false';WORLDGEN_ASSIST_CLIENT_SEEDED_LEAF_FIXTURE_FAULT='none';WORLDGEN_ASSIST_CLIENT_MEASURE_RECEIPT=if($Purpose -eq 'performance'){'true'}else{'false'}}
     $environment['WORLDGEN_ASSIST_CLIENT_REUSE_CONTEXT'] = if($PipelineProfile -eq 'current'){'false'}else{'true'}
     $environment['WORLDGEN_ASSIST_CLIENT_JOB_WINDOW'] = switch($WindowProfile){'deep'{'32'} 'wide'{'16'} default{'4'}}
+    $environment['WORLDGEN_ASSIST_NATIVE_LIFETIME_PROBE']=([bool]$NativeClientRequestExperiment).ToString().ToLowerInvariant()
     if($gameplayEnabled){
         Copy-Item -LiteralPath $GameplayProbeJar -Destination (Join-Path $profile 'client/mods/worldgen-gameplay-probe.jar')
         $probeRoot=Join-Path $profile 'client/gameplay-probe';New-Item -ItemType Directory -Path $probeRoot|Out-Null
@@ -250,6 +262,7 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
     $remoteCommand += ' -ServerJvmProcessors '+$ServerJvmProcessors
     if($Loader -ne 'fabric'){$remoteCommand+=' -Loader '+$Loader+' -NativeInstallSha256 '+$nativeRuntime.sha256}
     if($NativeBatchExperiment){$remoteCommand+=' -NativeBatchExperiment -NativeArtifactSha256 '+$artifactHash+' -NativeRequestBatching '+$NativeRequestBatching}
+    if($NativeClientRequestExperiment){$remoteCommand+=' -NativeClientRequestExperiment'}
     Invoke-Remote ('Copy-Item -LiteralPath "'+$RemoteRoot+'/scenario-staging/WorldgenMeasurementRegion.ps1" -Destination "'+$RemoteRoot+'/WorldgenMeasurementRegion.ps1" -Force')
     Invoke-Remote ('Copy-Item -LiteralPath "'+$RemoteRoot+'/scenario-staging/WorldgenScenarioConsole.ps1" -Destination "'+$RemoteRoot+'/WorldgenScenarioConsole.ps1" -Force')
     $remoteCommand += ' -ViewDistance '+$ViewDistance
@@ -296,6 +309,7 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
     $deadline=[DateTime]::UtcNow.AddSeconds($scenarioSeconds)
     $receiptPending=$null
     $gameplayPending=$null
+    $nativeLifetimePending=$null
     while(-not $server.HasExited){
         if($tunnel.HasExited){throw 'SSH tunnel exited during scenario'}
         foreach($client in $clients){if($client.process.HasExited){throw "Client exited during scenario: $($client.name) exit_code=$($client.process.ExitCode)"}}
@@ -308,6 +322,10 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
                 if($line -match '^SERVER_GAMEPLAY_RECEIPT_WAIT 3 2$'){
                     if(-not $NativeBatchExperiment -or $receiptPending){throw 'Unexpected gameplay return receipt phase'}
                     $receiptPending=@{repeat=3;location=2;ack='gameplay-receipt.ack'}
+                }
+                if($line -match '^SERVER_NATIVE_LIFETIME_WAIT end$'){
+                    if(-not $NativeClientRequestExperiment -or $nativeLifetimePending){throw 'Unexpected native lifetime phase'}
+                    $nativeLifetimePending='end'
                 }
                 if($line -match '^SERVER_GAMEPLAY_WAIT (scan|ground|mine|place|reconnect)$'){
                     if(-not $gameplayEnabled -or $gameplayPending){throw 'Unexpected gameplay phase'}
@@ -338,6 +356,14 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
                 $encodedReport=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($gameplayReport|ConvertTo-Json -Depth 8)))
                 Invoke-Remote ('[IO.File]::WriteAllBytes("'+$RemoteRoot+'/evidence/'+$case+'/gameplay-'+$gameplayPending+'.ack",[Convert]::FromBase64String("'+$encodedReport+'"))')
                 $gameplayPending=$null
+            }
+        }
+        if($nativeLifetimePending){
+            $observed=$true
+            foreach($client in $clients){if((Read-WorldgenConsoleText $client.stdout) -notmatch 'benchmark\.native_dimension dimension=minecraft:the_end\b'){$observed=$false}}
+            if($observed){
+                Invoke-Remote ('Set-Content -LiteralPath "'+$RemoteRoot+'/evidence/'+$case+'/native-end.ack" -Value "complete"')
+                $nativeLifetimePending=$null
             }
         }
         Start-Sleep -Milliseconds 1000
@@ -395,6 +421,8 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
     $result.gameplay_probe=$gameplayEnabled;$result.gameplay_nonce=$gameplayNonce;$result.gameplay_probe_sha256=$GameplayProbeSha256
     $result.loader=$Loader;$result.native_runtime=$nativeRuntime
     $result.native_batch_experiment=[bool]$NativeBatchExperiment;$result.native_request_batching=$NativeRequestBatching
+    $result.native_client_request_experiment=[bool]$NativeClientRequestExperiment;$result.native_client_request_ingress=$NativeClientRequestIngress
+    $result.native_transport_experiment=if($NativeClientRequestExperiment){'client_request'}elseif($NativeBatchExperiment){'batching'}else{'none'}
     $result.gameplay_interaction_location=if($NativeBatchExperiment){2}else{$WarmupRuns+$MeasuredRepeats}
     if($gameplayEnabled){
         $journalPath=Join-Path $output 'remote-evidence/gameplay-journal.json'

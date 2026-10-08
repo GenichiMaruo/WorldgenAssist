@@ -1,19 +1,36 @@
 # Helpers for unshipped native probes and E-drive-only cached server runtimes.
-function Resolve-NativeBatchArtifact([object]$Candidate){
+function Resolve-NativeBatchArtifact([object]$Candidate,[bool]$ClientRequest=$false){
     if($Candidate.loader -notin @('forge','neoforge')){throw 'Native batching artifact required'}
     $current=& (Join-Path $PSScriptRoot 'Get-WorldgenArtifact.ps1') -Loader $Candidate.loader
-    if($current.Version -ne '0.1.0-alpha.9-dev.1+mc26.3'){throw 'Exact native batching development version required'}
+    $expectedVersion=if($ClientRequest){'0.1.0-alpha.9-dev.2+mc26.3'}else{'0.1.0-alpha.9-dev.1+mc26.3'}
+    if($current.Version -ne $expectedVersion){throw 'Exact native transport development version required'}
     $metadata=if($Candidate.loader -eq 'forge'){'META-INF/mods.toml'}else{'META-INF/neoforge.mods.toml'}
     $stems=if($Candidate.loader -eq 'forge'){@('ForgeRemoteJobSender','ForgeClientInit','ForgeNetwork')}else{@('NeoRemoteJobSender','NeoClientInit','NeoWorldgenAssist')}
     $prefix='io/github/genichimaruo/worldgenassist/'+$Candidate.loader+'/'
     $changed=@();$original=[IO.Compression.ZipFile]::OpenRead($Candidate.path);$new=[IO.Compression.ZipFile]::OpenRead($current.Path)
     try {
         $oldEntries=@($original.Entries|Where-Object {-not $_.FullName.EndsWith('/')});$newEntries=@($new.Entries|Where-Object {-not $_.FullName.EndsWith('/')})
-        if((($oldEntries.FullName|Sort-Object)-join ';') -cne (($newEntries.FullName|Sort-Object)-join ';')){throw 'Native candidate archive entries differ'}
+        $added=@()
+        if($ClientRequest){
+            $common='io/github/genichimaruo/worldgenassist/'
+            $added=@('client/ClientConnectionIngress.class','client/ClientConnectionIngress$Receiver.class','client/ClientConnectionIngress$Session.class','client/NativeClientRequestIngress.class','client/NativeClientRequestIngress$1.class','mixin/NativeClientRequestConnectionMixin263.class','mixin/NativeClientRespawnRequestMixin263.class')|ForEach-Object {$common+$_}
+            if($Candidate.loader -eq 'neoforge'){$added+='worldgen_assist.native_client.mixins.json'}
+        }
+        if((($oldEntries.FullName|Sort-Object)-join ';') -cne (@($newEntries.FullName|Where-Object {$_ -notin $added}|Sort-Object)-join ';') -or @($added|Where-Object {-not $new.GetEntry($_)}).Count){throw 'Native candidate archive entries differ outside exact new ingress helpers'}
         foreach($entry in $oldEntries){
             $oldStream=$entry.Open();$newStream=$new.GetEntry($entry.FullName).Open()
             try {
-                if($entry.FullName -eq $metadata){$a=[IO.StreamReader]::new($oldStream);$b=[IO.StreamReader]::new($newStream);if($a.ReadToEnd().Replace($Candidate.version,$current.Version) -cne $b.ReadToEnd()){throw 'Exact candidate metadata replacement required'};continue}
+                if($entry.FullName -eq $metadata){
+                    $a=[IO.StreamReader]::new($oldStream);$b=[IO.StreamReader]::new($newStream);$oldText=$a.ReadToEnd().Replace($Candidate.version,$current.Version);$newText=$b.ReadToEnd()
+                    if($ClientRequest -and $Candidate.loader -eq 'neoforge'){$oldText=$oldText.Replace('config="worldgen_assist.neoforge.mixins.json"','config="worldgen_assist.neoforge.mixins.json"'+"`n"+'[[mixins]]'+"`n"+'config="worldgen_assist.native_client.mixins.json"')}
+                    if($oldText.Replace("`r`n","`n") -cne $newText.Replace("`r`n","`n")){throw 'Exact candidate metadata replacement required'};continue
+                }
+                if($ClientRequest -and $Candidate.loader -eq 'forge' -and $entry.FullName -eq 'worldgen_assist.mixins.json'){
+                    $a=[IO.StreamReader]::new($oldStream);$b=[IO.StreamReader]::new($newStream);$oldConfig=$a.ReadToEnd()|ConvertFrom-Json;$newConfig=$b.ReadToEnd()|ConvertFrom-Json
+                    if(($newConfig.client-join ';') -cne ((@($oldConfig.client)+@('NativeClientRequestConnectionMixin263','NativeClientRespawnRequestMixin263'))-join ';')){throw 'Only exact native client hooks may be appended'}
+                    $newConfig.client=$oldConfig.client
+                    if(($oldConfig|ConvertTo-Json -Depth 10 -Compress) -cne ($newConfig|ConvertTo-Json -Depth 10 -Compress)){throw 'Existing generation Mixin configuration changed'};continue
+                }
                 $oldHash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($oldStream));$newHash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($newStream))
                 if($oldHash -eq $newHash){continue}
                 $allowed=$false;foreach($stem in $stems){if($entry.FullName -cmatch ('^'+[regex]::Escape($prefix+$stem)+'(\$[^/]+)?\.class$')){$allowed=$true}}
@@ -22,8 +39,13 @@ function Resolve-NativeBatchArtifact([object]$Candidate){
             }finally{$oldStream.Dispose();$newStream.Dispose()}
         }
         foreach($stem in $stems){if(@($changed|Where-Object entry -CEQ ($prefix+$stem+'.class')).Count -ne 1){throw ('Expected native transport change missing: '+$stem)}}
+        $addedHashes=@(foreach($name in $added){$stream=$new.GetEntry($name).Open();try{@{entry=$name;sha256=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream))}}finally{$stream.Dispose()}})
+        if($ClientRequest -and $Candidate.loader -eq 'neoforge'){
+            $stream=$new.GetEntry('worldgen_assist.native_client.mixins.json').Open();$reader=[IO.StreamReader]::new($stream)
+            try{if($reader.ReadToEnd().Trim() -cne ([IO.File]::ReadAllText((Join-Path $PSScriptRoot '../loaders/neoforge/src/main/resources/worldgen_assist.native_client.mixins.json')).Trim())){throw 'Exact client-only native Mixin resource required'}}finally{$reader.Dispose()}
+        }
     }finally{$original.Dispose();$new.Dispose()}
-    return @{loader=$Candidate.loader;path=$current.Path;sha256=(Get-FileHash -LiteralPath $current.Path).Hash;version=$current.Version;candidate_sha256=$Candidate.sha256;changed_entries=$changed;nontransport_runtime_unchanged=$true}
+    return @{loader=$Candidate.loader;path=$current.Path;sha256=(Get-FileHash -LiteralPath $current.Path).Hash;version=$current.Version;candidate_sha256=$Candidate.sha256;changed_entries=$changed;added_entries=$addedHashes;nontransport_runtime_unchanged=$true;client_request_experiment=$ClientRequest}
 }
 function Resolve-GameplayReleaseArtifact([object]$Candidate,[string]$PackageRoot){
     $proof=Get-Content -LiteralPath (Join-Path $PackageRoot 'build-verification.json') -Raw|ConvertFrom-Json

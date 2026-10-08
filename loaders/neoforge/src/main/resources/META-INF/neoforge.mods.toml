@@ -9,6 +9,8 @@ description='''Experimental client-assisted world generation.'''
 config="worldgen_assist.mixins.json"
 [[mixins]]
 config="worldgen_assist.neoforge.mixins.json"
+[[mixins]]
+config="worldgen_assist.native_client.mixins.json"
 [[dependencies.worldgen_assist]]
 modId="neoforge"
 type="required"

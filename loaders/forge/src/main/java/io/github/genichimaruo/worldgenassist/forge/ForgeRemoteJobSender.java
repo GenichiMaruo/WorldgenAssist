@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 final class ForgeRemoteJobSender implements RemoteJobSender {
     private static final boolean REQUEST_BATCHING = Boolean.parseBoolean(
-        System.getProperty("worldgen_assist.native.request_batching", "true"));
+        System.getProperty("worldgen_assist.native.request_batching", "false"));
     private static ServerPlayer player(UUID id) {
         MinecraftServer server = RemoteWorldgenManager.activeServer();
         return server == null ? null : server.getPlayerList().getPlayer(id);

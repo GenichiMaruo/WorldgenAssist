@@ -1,5 +1,25 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+Dev2 implementation/affected harness ready; ALL new tests/builds/runtimes UNRUN.
+Run-NativeRequestBatchGate -Execute -ClientRequestIngress owns3 focused client
+methods/3 sequential builds, native MAIN/NETWORK both remoteON/batchingFALSE/
+view32/warm1/measured3. Exact per-owner dispatch joins, original post-measurement
+dimension health/lifetime/reconnect and saved player/voxel/own-light required.
+No speed/publication/beta claim; publicalpha8 immutable. See
+NATIVE_CLIENT_REQUEST_INGRESS.md. Older incomplete/UNRUN paragraphs are history.
+
+## Native client request ingress dev2 implemented; verification UNRUN
+
+Client MAIN-wait candidate uses captured connection/context and existing bounded
+worker admission through pinned native NETWORK APIs. Native-only observation
+hooks preserve original packet routing and revoke before respawn/protocol/close;
+MAIN resume never revives old session identity. Server results/generation/wire14/
+native6 unchanged; batching/client ingress defaultsFALSE. New lifecycle test1
+and existing admission2 methods plus3 builds/native MAIN/NETWORK comparisons
+planned. Harness not yet complete; NO new tests/builds/runtime started. Finish
+ALL edits first, then ONE affected batch. See NATIVE_CLIENT_REQUEST_INGRESS.md.
+No dev2 speed/beta/publication claim; completed dev1 result below retains identity.
+
 ## Native batching033001 completed: functional pass, no speed gain
 
 Parent033001-492/session55809 exits0; Forge033002-511/Neo035850-619 each pass

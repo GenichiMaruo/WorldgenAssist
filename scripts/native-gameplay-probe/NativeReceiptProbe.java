@@ -25,6 +25,12 @@ public final class NativeReceiptProbe {
         int value=Integer.parseInt(match.group(2));if("BEGIN".equals(match.group(1)))repeat=value;
         LoggerFactory.getLogger("worldgen_gameplay_probe").info("[CAWG] benchmark.client_marker phase={} repeat={} nanos={}",match.group(1),value,System.nanoTime());
     }
+    public static void dimensionChanged() {
+        if(!"true".equalsIgnoreCase(System.getenv("WORLDGEN_ASSIST_NATIVE_LIFETIME_PROBE")) || !enabled())return;
+        var client=Minecraft.getInstance();
+        if(client.level!=null)LoggerFactory.getLogger("worldgen_gameplay_probe").info(
+            "[CAWG] benchmark.native_dimension dimension={} nanos={}",client.level.dimension().identifier(),System.nanoTime());
+    }
     public static void chunk(int x,int z) {
         if(repeat>0 && enabled())LoggerFactory.getLogger("worldgen_gameplay_probe").info("[CAWG] benchmark.chunk_received repeat={} chunk={},{} nanos={}",repeat,x,z,System.nanoTime());
     }

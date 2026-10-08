@@ -1,5 +1,28 @@
 # World Generation Pipeline Notes
 
+Dev2 harness ready, all new verification UNRUN. ONE selected batch compares
+native client MAIN/NETWORK with server batchingFALSE, actual per-owner job-ID
+dispatch paths and original post-measurement dimension/reconnect fences.
+Existing terrain computation/executor/server authority retain exact archive
+identities. Three selected client methods/three builds only. Queue-start times
+differ and cannot isolate MAIN waiting by subtraction. See
+NATIVE_CLIENT_REQUEST_INGRESS.md.
+Pending original respawns are counted in one captured session so admission
+remains suspended if several packets precede their MAIN callbacks. The one new
+lifecycle method includes this race. Both clients acknowledge actual original
+End respawn before unmeasured return; no measured coordinate/order changes.
+
+Dev2 native client request ingress is implemented but UNVERIFIED: MAIN acceptance
+captures connection/dimension/private worker context; native NETWORK handlers
+submit only through existing bounded worker admission. Exact-connection MAIN
+fallback remains. Single session suspend/close permanently revokes old callbacks,
+original MAIN respawn TAIL restores current context/new identity. No new executor,
+generation, result decode/assembly, authority or wire14/native6 change. Native
+batching and client-ingress defaultsFALSE; Fabric adapters/hooks unchanged.
+Finish all harness/docs before ONE focused3-method/3-build/native SAME-JAR
+comparison plus affected lifetime/saved checks. Harness incomplete; all new
+builds/tests/runtime/speed UNRUN. See NATIVE_CLIENT_REQUEST_INGRESS.md.
+
 Native batching033001-492 succeeds with both native ALL25 gameplay/own-saved-
 light steps, SAME dev1 batchingOFF/ON BOTHremoteON/three matched regions. FULL
 paired Forge+2.8553%/Neo+0.1877%; no demonstrated gain. Native request/result

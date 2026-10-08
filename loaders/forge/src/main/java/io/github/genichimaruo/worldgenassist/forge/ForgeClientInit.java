@@ -2,6 +2,7 @@ package io.github.genichimaruo.worldgenassist.forge;
 
 import io.github.genichimaruo.worldgenassist.client.ClientWorkerTransport;
 import io.github.genichimaruo.worldgenassist.client.ClientWorldgenWorker;
+import io.github.genichimaruo.worldgenassist.client.NativeClientRequestIngress;
 import io.github.genichimaruo.worldgenassist.client.WorldgenSettingsScreen;
 import io.github.genichimaruo.worldgenassist.client.SettingsScreenSmoke;
 import io.github.genichimaruo.worldgenassist.network.SettingsPayload;
@@ -12,6 +13,7 @@ import io.github.genichimaruo.worldgenassist.network.TerrainJobRequestPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobBatchPayload;
 import io.github.genichimaruo.worldgenassist.network.WorkerAcceptedPayload;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.Connection;
 import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraftforge.client.event.ScreenEvent;
@@ -22,6 +24,8 @@ public final class ForgeClientInit {
     private ForgeClientInit() {}
 
     static void register() {
+        io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
+            "[CAWG] native.client_request_ingress enabled={}", NativeClientRequestIngress.enabled());
         WorldgenSettingsScreen.installTransport(ForgeClientInit::canSend, ForgeClientInit::send);
         SettingsScreenSmoke smoke = SettingsScreenSmoke.createIfEnabled();
         if (smoke != null) TickEvent.ClientTickEvent.Post.BUS.addListener(event -> smoke.tick(Minecraft.getInstance()));
@@ -31,19 +35,33 @@ public final class ForgeClientInit {
         });
     }
 
-    public static void onLogin() { worker().onJoin(); }
-    public static void onDisconnect() { if (worker != null) worker.onDisconnect(); }
+    public static void onLogin() { NativeClientRequestIngress.clear(); worker().onJoin(); }
+    public static void onDisconnect() { NativeClientRequestIngress.clear(); if (worker != null) worker.onDisconnect(); }
 
     static void onSettings(SettingsPayload payload) {
         WorldgenSettingsScreen.receiveCurrent(Minecraft.getInstance(), payload);
     }
-    static void onAccepted(WorkerAcceptedPayload payload) { worker().onAccepted(payload); }
-    static void onJob(TerrainJobRequestPayload payload) { worker().handleRequest(Minecraft.getInstance(), payload.job()); }
-    static void onJobs(TerrainJobBatchPayload payload) {
+    static void onAccepted(WorkerAcceptedPayload payload, Connection connection) {
         var client = Minecraft.getInstance();
-        for (var job : payload.jobs()) worker().handleRequest(client, job);
+        if (!NativeClientRequestIngress.isCurrent(client, connection)) return;
+        var currentWorker = worker();
+        currentWorker.onAccepted(payload);
+        if (payload.accepted()) NativeClientRequestIngress.prepare(client, currentWorker);
+        else NativeClientRequestIngress.remove(connection);
     }
-    static void onCancel(TerrainJobCancelPayload payload) { worker().cancel(payload); }
+    /** Native fallback runs on MAIN and keeps the original receive connection. */
+    static void onRequestPayload(CustomPacketPayload payload, Connection connection) {
+        var client = Minecraft.getInstance();
+        if (!NativeClientRequestIngress.isCurrent(client, connection)) return;
+        var currentWorker = worker();
+        if (payload instanceof TerrainJobRequestPayload request) {
+            NativeClientRequestIngress.prepare(client, currentWorker);
+            currentWorker.handleRequest(client, request.job());
+        } else if (payload instanceof TerrainJobBatchPayload batch) {
+            NativeClientRequestIngress.prepare(client, currentWorker);
+            for (var job : batch.jobs()) currentWorker.handleRequest(client, job);
+        } else if (payload instanceof TerrainJobCancelPayload cancel) currentWorker.cancel(cancel);
+    }
 
     private static boolean canSend() {
         var listener = Minecraft.getInstance().getConnection();

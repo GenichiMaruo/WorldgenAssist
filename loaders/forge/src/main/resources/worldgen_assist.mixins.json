@@ -24,7 +24,9 @@
   ],
   "client": [
     "ForgeClientPacketListenerMixin",
-    "ForgeMinecraftDisconnectMixin"
+    "ForgeMinecraftDisconnectMixin",
+    "NativeClientRequestConnectionMixin263",
+    "NativeClientRespawnRequestMixin263"
   ],
   "injectors": { "defaultRequire": 1 }
 }

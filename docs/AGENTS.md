@@ -1,5 +1,34 @@
 # Repository agent instructions
 
+## Native client request admission dev2 ready for one affected batch; UNRUN
+
+New dev2 uses Forge add/explicit Neo client NETWORK for request/batch/cancel,
+with MAIN acceptance/capture and original fallback guarded by exact receive
+connection. Existing worker/executor/generation/authority/wire14/native6 remain.
+Single captured client session is permanently revoked on suspend/close; MAIN
+respawn resume publishes a new identity, never revives old queued callbacks.
+Native-only require1 observation hooks preserve original routing/counters/Forge
+packetLogger; Fabric registers neither new hook. Server results/Forge assembler
+stay original. Both native batching/client ingress switches defaultFALSE.
+Three focused methods planned (new connection registry1 + existing admission2),
+three builds, SAME dev2 MAIN/NETWORK native weak E/view32/3-coordinate comparisons
+with batchingFALSE plus original affected respawn/reconnect/saved guards. ALL
+harness/docs edits before ONE batch; harness now complete, no tests/builds/
+runtimes started. ONE Run-NativeRequestBatchGate -Execute -ClientRequestIngress
+selects exactly3 client methods/3builds, native MAIN/NETWORK both assisted,
+batchFALSE. Require actual job/dispatch joins for both owners/three repeats and
+original post-measurement End/Overworld health/dimension witnesses plus client
+suspend/resume/reconnect sequence. Original generation archive bytes and saved
+gameplay/own-light checks remain strict. Queue means have different starts;
+do not subtract as isolated MAIN waiting. See NATIVE_CLIENT_REQUEST_INGRESS.md.
+No speed/beta/new release;
+The single new lifecycle method also covers two respawns read before MAIN;
+the captured session remains suspended until both original TAIL callbacks.
+Unshipped native receipt observer adds only original handleRespawn TAIL/require1
+to acknowledge both clients' End transition before return; three shared input
+class bytes unchanged. No shipped probe, floor/healing/pause or new sample.
+publicalpha8 immutable and goalactive. Older UNRUN paragraphs retain history.
+
 ## Native batching033001 closes: functional pass, no speed gain
 
 Session55809 exits0; native-request-batch-gate-20261009-033001-492 succeeds.

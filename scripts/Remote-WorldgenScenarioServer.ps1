@@ -39,7 +39,8 @@ param(
     [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$NativeInstallSha256,
     [switch]$NativeBatchExperiment,
     [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$NativeArtifactSha256,
-    [ValidateSet('true','false')][string]$NativeRequestBatching='true'
+    [ValidateSet('true','false')][string]$NativeRequestBatching='true',
+    [switch]$NativeClientRequestExperiment
 )
 
 # Remote half of the all-dimension trusted-raw scenario.  It owns only the
@@ -56,7 +57,8 @@ $dedicated = if($resolved -eq [IO.Path]::GetFullPath('E:/WorldgenAssist/port26.3
 if ($resolved -ne [IO.Path]::GetFullPath((Join-Path $dedicated 'port26.3'))) {
     throw 'Root must be the dedicated WorldgenAssist 26.3 test child'
 }
-if($NativeBatchExperiment -and ($Loader -eq 'fabric' -or -not $GameplayNonce -or -not $NativeArtifactSha256 -or $Mode -ne 'assisted' -or $MeasuredRepeats -ne 3 -or $FeatureBackend -ne 'parallel' -or $NoiseBackend -ne 'cooperative' -or $RemoteWorkKind -ne 'complete' -or $CompleteVerification -ne 'peer' -or $AuthoritativeBiomes -ne 'demand')){throw 'Native batching requires the controlled three-repeat assisted gameplay profile'}
+if($NativeClientRequestExperiment -and (-not $NativeBatchExperiment -or $NativeRequestBatching -ne 'false')){throw 'Client ingress profile requires server batching disabled'}
+if($NativeBatchExperiment -and ($Loader -eq 'fabric' -or -not $GameplayNonce -or -not $NativeArtifactSha256 -or $Mode -ne 'assisted' -or $MeasuredRepeats -ne 3 -or $FeatureBackend -ne 'parallel' -or $NoiseBackend -ne 'cooperative' -or $RemoteWorkKind -ne 'complete' -or $CompleteVerification -ne 'peer' -or $AuthoritativeBiomes -ne 'demand')){throw 'Native transport requires the controlled three-repeat assisted gameplay profile'}
 $gameplayRepeats=if($NativeBatchExperiment){3}else{1}
 $GameplayInteractionLocation=if($NativeBatchExperiment){2}else{$WarmupRuns+$MeasuredRepeats}
 if($GameplayNonce -and ($resolved -ne [IO.Path]::GetFullPath('E:/WorldgenAssist/port26.3') -or $Dimension -ne 'overworld' -or $Players -ne 2 -or $Purpose -ne 'performance' -or $ViewDistance -ne 32 -or -not $MeasureFullView -or $FeatureFixture -or $Seed -ne 8675309 -or $WarmupRuns -ne 1 -or $MeasuredRepeats -ne $gameplayRepeats -or $Movement -ne 'relocation')){throw 'Only bounded weak E-server ordinary gameplay probe allowed'}
@@ -582,10 +584,39 @@ try {
         [ordered]@{warmup_runs=$WarmupRuns;measured_repeats=$MeasuredRepeats;warmup=@($warm);measured=@($measured)} | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $evidence 'performance.json')
     }
     if($GameplayNonce){
+        if($NativeClientRequestExperiment){
+            # After every measured END and required receipt, exercise stock respawn
+            # and its captured-session fence. This is not a performance sample.
+            $transitionOffset=(Log-Text).Length
+            foreach($name in $ownerNames){Send-Command ('execute in minecraft:the_end run tp '+$name+' 16 150 16')}
+            foreach($name in $ownerNames){Wait-Log ('worker\.dimension_changed owner='+[regex]::Escape($owners[$name])+' from=minecraft:overworld to=minecraft:the_end\b') 60 $transitionOffset|Out-Null}
+            $witnesses=@()
+            foreach($name in $ownerNames){
+                $marker='CAWG_INGRESS_DIMENSION_'+$GameplayNonce+'_end_'+$name
+                Send-Command ('execute as '+$name+' if entity @s[gamemode=creative,nbt={Health:20.0f,DeathTime:0s}] run say '+$marker)
+                Wait-Log ([regex]::Escape($marker)) 30 $transitionOffset|Out-Null
+                $witnesses+=@{owner=$name;uuid=$owners[$name];dimension='minecraft:the_end';marker=$marker}
+            }
+            Write-Output 'SERVER_NATIVE_LIFETIME_WAIT end'
+            $lifetimeDeadline=[DateTime]::UtcNow.AddSeconds(120)
+            while(-not(Test-Path -LiteralPath (Join-Path $evidence 'native-end.ack'))){
+                if($process.HasExited -or [DateTime]::UtcNow -gt $lifetimeDeadline){throw 'Both original client End respawn acknowledgements missing'}
+                Start-Sleep -Milliseconds 250
+            }
+            Start-Location 2
+            foreach($name in $ownerNames){
+                Wait-Log ('worker\.dimension_changed owner='+[regex]::Escape($owners[$name])+' from=minecraft:the_end to=minecraft:overworld\b') 60 $transitionOffset|Out-Null
+                $marker='CAWG_INGRESS_DIMENSION_'+$GameplayNonce+'_return_'+$name
+                Send-Command ('execute as '+$name+' if entity @s[gamemode=creative,nbt={Health:20.0f,DeathTime:0s}] run say '+$marker)
+                Wait-Log ([regex]::Escape($marker)) 30 $transitionOffset|Out-Null
+                $witnesses+=@{owner=$name;uuid=$owners[$name];dimension='minecraft:overworld';marker=$marker}
+            }
+            [ordered]@{success=$true;nonce=$GameplayNonce;after_measured_repeats=3;performance_sample=$false;original_dimension_commands=$true;witnesses=$witnesses}|ConvertTo-Json -Depth 5|Set-Content -LiteralPath (Join-Path $evidence 'native-client-lifetime.json')
+        }
         if($NativeBatchExperiment){
             # AFTER all measurement ENDs/receipts. Revisit known natural dry ground
             # in the already generated first measured region, with stock teleport.
-            Start-Location 2
+            if(-not $NativeClientRequestExperiment){Start-Location 2}
             Write-Output 'SERVER_GAMEPLAY_RECEIPT_WAIT 3 2'
             $receiptDeadline=[DateTime]::UtcNow.AddSeconds(300)
             while(-not(Test-Path -LiteralPath (Join-Path $evidence 'gameplay-receipt.ack'))){

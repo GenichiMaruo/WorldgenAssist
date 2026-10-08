@@ -1,5 +1,19 @@
 # Validation matrix
 
+Dev2 affected batch implemented but UNRUN: Run-NativeRequestBatchGate -Execute
+-ClientRequestIngress. Exactly3 selected client methods/3builds, native MAIN/
+NETWORK both assisted/batchingFALSE/view32/three matched regions and actual
+per-owner dispatch/lifetime/reconnect evidence. Original saved gameplay/own-light
+guards remain; no broad matrix. Older incomplete paragraph retains history.
+
+Dev2 client-ingress production/lifecycle test is implemented, harness incomplete.
+After ALL source/harness/docs edits ONE affected batch selects3 methods (new
+captured-session1 + existing bounded admission2),3 builds, native SAME-JAR MAIN/
+NETWORK pairs with batchingFALSE/view32/2clients/warm1/measured3/weak E-server,
+actual path/lifetime/original gameplay/saved guards. No unchanged broad suites.
+All new validation UNRUN; see NATIVE_CLIENT_REQUEST_INGRESS.md. Beta/full goal
+active, publicalpha8 immutable.
+
 Native batching033001-492/session55809 closes success. Forge033002-511 and
 Neo035850-619 pass ALL25 functional/own-saved-light steps, SAME dev1 batching
 OFF/ON BOTHremoteON/warm1/measured3/view32/two clients. Two exact builds reused,

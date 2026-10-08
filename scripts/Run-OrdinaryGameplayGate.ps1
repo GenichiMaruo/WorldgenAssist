@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$Execute,[string]$SavedSafetyRoot='test-artifacts/ordinary-saved-safety-20261007-011147-936',[string]$ReuseProbeRoot,[ValidateSet('fabric','forge','neoforge')][string]$Loader='fabric',[string]$FabricGameplayRoot='test-artifacts/ordinary-gameplay-gate-20261007-230655-166',[string]$ReleasePackageRoot='test-artifacts/release-alpha8-20261008',[switch]$NativeBatchExperiment)
+param([switch]$Execute,[string]$SavedSafetyRoot='test-artifacts/ordinary-saved-safety-20261007-011147-936',[string]$ReuseProbeRoot,[ValidateSet('fabric','forge','neoforge')][string]$Loader='fabric',[string]$FabricGameplayRoot='test-artifacts/ordinary-gameplay-gate-20261007-230655-166',[string]$ReleasePackageRoot='test-artifacts/release-alpha8-20261008',[switch]$NativeBatchExperiment,[switch]$NativeClientRequestExperiment)
 # Complete every input-driver/harness edit before this single sequential batch.
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
@@ -11,6 +11,7 @@ if($Loader -ne 'fabric' -and $reusePath){throw 'Failed Fabric input JAR reuse is
 $fabricGameplayPath=if($Loader -ne 'fabric'){Owned $FabricGameplayRoot}else{$null}
 $releasePackagePath=Owned $ReleasePackageRoot
 if($NativeBatchExperiment -and ($Loader -eq 'fabric' -or $reusePath)){throw 'Native batching is an explicit native three-repeat profile'}
+if($NativeClientRequestExperiment -and -not $NativeBatchExperiment){throw 'Client request comparison requires the bounded native three-repeat profile'}
 $measuredRepeats=if($NativeBatchExperiment){3}else{1}
 if(-not $Execute){[ordered]@{saved_evidence=$savedPath;reused_probe_root=$reusePath;conditions=@('original','assisted');native_batch_experiment=[bool]$NativeBatchExperiment;both_conditions_assisted=[bool]$NativeBatchExperiment;loader=$Loader;view=32;players=2;warmup=1;measured=$measuredRepeats;phases=@('scan','ground','mine','place','reconnect');fresh_junit=0;mod_builds=0;test_only_jar_builds=$(if($reusePath){0}else{1});remote='gen1c@100.103.102.109';root='E:/WorldgenAssist/port26.3';scope='Exact selected-loader JAR; natural survival input, server witnesses and stopped saved NBT/voxel/light. Explicit native experiment compares SAME-JAR batching OFF/ON; otherwise remote OFF/ON.'}|ConvertTo-Json -Depth 6;exit 0}
 $root=Join-Path $base ($(if($Loader -eq 'fabric'){'ordinary-gameplay-gate-'}else{'ordinary-'+$Loader+'-gameplay-gate-'})+(Get-Date -Format 'yyyyMMdd-HHmmss-fff'));New-Item -ItemType Directory -Path $root|Out-Null
@@ -76,10 +77,14 @@ try {
         $allowed+='scripts/Run-NativeRequestBatchGate.ps1'
         $allowed+=@('loaders/forge/src/main/java/io/github/genichimaruo/worldgenassist/forge/ForgeRemoteJobSender.java','loaders/forge/src/main/java/io/github/genichimaruo/worldgenassist/forge/ForgeClientInit.java','loaders/forge/src/main/java/io/github/genichimaruo/worldgenassist/forge/ForgeNetwork.java','loaders/neoforge/src/main/java/io/github/genichimaruo/worldgenassist/neoforge/NeoRemoteJobSender.java','loaders/neoforge/src/main/java/io/github/genichimaruo/worldgenassist/neoforge/NeoClientInit.java','loaders/neoforge/src/main/java/io/github/genichimaruo/worldgenassist/neoforge/NeoWorldgenAssist.java')
     }
+    if($NativeClientRequestExperiment){
+        $allowed+=@('src/client/java/io/github/genichimaruo/worldgenassist/client/ClientConnectionIngress.java','src/client/java/io/github/genichimaruo/worldgenassist/client/NativeClientRequestIngress.java','src/client/java/io/github/genichimaruo/worldgenassist/mixin/NativeClientRequestConnectionMixin263.java','src/client/java/io/github/genichimaruo/worldgenassist/mixin/NativeClientRespawnRequestMixin263.java','src/portTest/java/io/github/genichimaruo/worldgenassist/client/ClientConnectionIngress263Test.java','loaders/forge/src/main/resources/worldgen_assist.mixins.json','loaders/neoforge/src/main/resources/META-INF/neoforge.mods.toml','loaders/neoforge/src/main/resources/worldgen_assist.native_client.mixins.json')
+    }
     $normalizedBefore=@($before|ForEach-Object {
         if($_.Substring(66) -eq 'gradle.properties'){
             $normalized=[IO.File]::ReadAllText((Join-Path $workspace 'gradle.properties')).Replace('mod_version=0.1.0-alpha.8+mc26.3','mod_version=0.1.0-alpha.8-dev.23+mc26.3')
             if($NativeBatchExperiment){$normalized=$normalized.Replace('mod_version=0.1.0-alpha.9-dev.1+mc26.3','mod_version=0.1.0-alpha.8-dev.23+mc26.3')}
+            if($NativeClientRequestExperiment){$normalized=$normalized.Replace('mod_version=0.1.0-alpha.9-dev.2+mc26.3','mod_version=0.1.0-alpha.8-dev.23+mc26.3')}
             [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($normalized)))+'  gradle.properties'
         }else{$_}
     })
@@ -99,7 +104,7 @@ try {
     }
     foreach($artifactLoader in @('fabric','forge','neoforge')){
         $a=@($confirmation.artifacts|Where-Object loader -eq $artifactLoader);if($a.Count -ne 1 -or $a[0].version -ne '0.1.0-alpha.8-dev.23+mc26.3' -or (Get-FileHash -LiteralPath $a[0].path).Hash -ne $a[0].sha256 -or (Get-FileHash -LiteralPath (Join-Path $confirmPath ([IO.Path]::GetFileName($a[0].path)))).Hash -ne $a[0].sha256 -or (Get-FileHash -LiteralPath (Join-Path $fullPath ([IO.Path]::GetFileName($a[0].path)))).Hash -ne $a[0].sha256){throw 'Exact original dev23 identities required'}
-        if($NativeBatchExperiment){if($artifactLoader -eq $Loader){$artifacts+=Resolve-NativeBatchArtifact $a[0]}else{$artifacts+=$a[0]}}else{$artifacts+=Resolve-GameplayReleaseArtifact $a[0] $releasePackagePath}
+        if($NativeBatchExperiment){if($artifactLoader -eq $Loader){$artifacts+=Resolve-NativeBatchArtifact $a[0] ([bool]$NativeClientRequestExperiment)}else{$artifacts+=$a[0]}}else{$artifacts+=Resolve-GameplayReleaseArtifact $a[0] $releasePackagePath}
     }
     $tokens=$null;$errors=$null;$ast=[Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'Run-FeaturePipelineGate.ps1'),[ref]$tokens,[ref]$errors);if($errors.Count){throw 'Unchanged helper syntax differs'}
     if($Loader -ne 'fabric'){$artifacts=@($artifacts|Sort-Object @{Expression={if($_.loader -eq $Loader){0}else{1}}},loader)}
@@ -145,8 +150,10 @@ try {
     $common+=@('-Loader',$Loader)
     $conditions=@(@{name='original';mode='vanilla';backend='parallel'},@{name='assisted';mode='assisted';backend='parallel'})
     if($NativeBatchExperiment){$repeatIndex=[Array]::IndexOf($common,'-MeasuredRepeats');$common[$repeatIndex+1]='3';$common+='-NativeBatchExperiment';$conditions=@(@{name='original';mode='assisted';backend='parallel';batching='false'},@{name='assisted';mode='assisted';backend='parallel';batching='true'})}
+    if($NativeClientRequestExperiment){$common+='-NativeClientRequestExperiment';$conditions=@(@{name='original';mode='assisted';backend='parallel';batching='false';ingress='false'},@{name='assisted';mode='assisted';backend='parallel';batching='false';ingress='true'})}
     foreach($condition in $conditions){
         $conditionArgs=if($NativeBatchExperiment){@('-NativeRequestBatching',$condition.batching)}else{@()}
+        if($NativeClientRequestExperiment){$conditionArgs+=@('-NativeClientRequestIngress',$condition.ingress)}
         $case=Join-Path $root $condition.name;Step ('runtime-'+$condition.name) (Get-Command pwsh.exe).Source (@('-NoProfile','-File',(Join-Path $PSScriptRoot 'Run-WorldgenScenario.ps1'))+$common+$conditionArgs+@('-Mode',$condition.mode,'-FeatureBackend','parallel','-OutputRoot',$case)) 1800
         $result=Check-Physical $case $condition $false
         if($result.loader -ne $Loader){throw 'Actual client/server loader differs'}
@@ -164,7 +171,7 @@ try {
         foreach($measurement in $result.performance.measured){if($measurement.completed_tasks -ne 10658 -or $measurement.failed_tasks -or $measurement.timeouts){throw 'Exact measured task/error scope differs'}}
         $log=Get-Content -LiteralPath (Join-Path $case 'remote-evidence/latest.log') -Raw;$gameLog=Get-Content -LiteralPath (Join-Path $case 'remote-evidence/minecraft-latest.log') -Raw
         if((Noise-Coordinates $log) -ne $coordinateHash -or $gameLog -notmatch 'Stopping server' -or $gameLog -notmatch 'Saving worlds' -or $log -match 'fixture.player_paused|job.timeout'){throw 'Equal ordinary coordinates/clean stop required'}
-        $intervals=@();$receiptCoverage=@();$batchCounts=@()
+        $intervals=@();$receiptCoverage=@();$batchCounts=@();$requestPaths=@()
         foreach($repeat in 1..$measuredRepeats){
             $window=[regex]::Match($log,'(?s)CAWG_SCENARIO_MEASURED_BEGIN_'+$repeat+'\b(?<body>.*?)CAWG_SCENARIO_MEASURED_END_'+$repeat+'\b').Groups['body'].Value
             $repeatHash=Noise-Coordinates $log $repeat
@@ -187,10 +194,36 @@ try {
                     if(($condition.batching -eq 'false' -and $batches.Count) -or ($condition.batching -eq 'true' -and -not $batches.Count)){throw 'Actual native per-owner batch selection differs'}
                     foreach($batch in $batches){if([int]$batch.Groups[1].Value -lt 2 -or [int]$batch.Groups[1].Value -gt 4){throw 'Actual native batch exceeds2..4 jobs'}}
                     $batchCounts+=@{repeat=$repeat;owner=$owner;packets=$batches.Count;jobs=@($batches|ForEach-Object {[int]$_.Groups[1].Value})}
+                    if($NativeClientRequestExperiment){
+                        $sent=@{};foreach($job in [regex]::Matches($window,'job\.sent id=(\S+) .*owner='+$uuid+'\b')){$sent[$job.Groups[1].Value]=$true}
+                        $dispatch=@([regex]::Matches($clientLog,'job\.client_dispatch id=(\S+) worker_queue_ms=([0-9.]+) .*request_path=(main|network)\b')|Where-Object {$sent.ContainsKey($_.Groups[1].Value)})
+                        $expectedPath=if($condition.ingress -eq 'true'){'network'}else{'main'}
+                        if(-not $dispatch.Count -or @($dispatch|Where-Object {$_.Groups[3].Value -ne $expectedPath}).Count){throw 'Actual measured per-owner native request path differs'}
+                        $queue=@($dispatch|ForEach-Object {[double]::Parse($_.Groups[2].Value,[Globalization.CultureInfo]::InvariantCulture)})
+                        $requestPaths+=@{repeat=$repeat;owner=$owner;path=$expectedPath;sent=$sent.Count;matched_dispatches=$dispatch.Count;worker_queue_mean_ms=($queue|Measure-Object -Average).Average}
+                    }
                 }
             }
         }
         if($NativeBatchExperiment){$batchConfig=Get-Content -LiteralPath (Join-Path $case 'remote-evidence/native-batching-config.json') -Raw|ConvertFrom-Json;if(-not $batchConfig.experiment -or $batchConfig.batching -ne $condition.batching -or $batchConfig.artifact_sha256 -ne $artifacts[0].sha256 -or $batchConfig.native_channel -ne 6 -or $batchConfig.maximum_jobs -ne 4 -or -not $result.native_batch_experiment -or $result.native_request_batching -ne $condition.batching){throw 'Actual native batch launch selection differs'}}
+        if($NativeClientRequestExperiment){
+            if(-not $result.native_client_request_experiment -or $result.native_transport_experiment -ne 'client_request' -or $result.native_client_request_ingress -ne $condition.ingress){throw 'Canonical client ingress experiment identity missing'}
+            $lifetime=Get-Content -LiteralPath (Join-Path $case 'remote-evidence/native-client-lifetime.json') -Raw|ConvertFrom-Json
+            if(-not $lifetime.success -or $lifetime.nonce -ne $result.gameplay_nonce -or $lifetime.after_measured_repeats -ne 3 -or $lifetime.performance_sample -or -not $lifetime.original_dimension_commands -or $lifetime.witnesses.Count -ne 4){throw 'Post-measurement original dimension lifetime proof missing'}
+            foreach($owner in 0..1){
+                $clientLog=Get-Content -LiteralPath (Join-Path $case "clients/owner-$owner/client/logs/latest.log") -Raw
+                $launch=Get-Content -LiteralPath (Join-Path $case "clients/owner-$owner/native-client-request-config.json") -Raw|ConvertFrom-Json
+                if($launch.experiment -ne 'client_request' -or $launch.ingress -ne $condition.ingress -or $launch.artifact_sha256 -ne $artifacts[0].sha256 -or $launch.loader -ne $Loader -or $launch.native_channel -ne 6 -or $launch.server_batching -ne 'false' -or (Get-FileHash -LiteralPath $launch.argument_path).Hash -ne $launch.argument_sha256 -or $clientLog -notmatch ('native\.client_request_ingress enabled='+$condition.ingress+'\b')){throw 'Actual client JVM request selection differs'}
+                $name=if($owner -eq 0){'ScenarioOwnerA'}else{'ScenarioOwnerB'};$uuid=if($owner -eq 0){'0557a034-0101-3132-9f82-f0d4761d4b04'}else{'c7afee9d-8411-38e2-8537-1c157fc2c41b'}
+                $witness=@($lifetime.witnesses|Where-Object owner -eq $name)
+                if($witness.Count -ne 2 -or ($witness.dimension-join ';') -cne 'minecraft:the_end;minecraft:overworld' -or @($witness|Where-Object uuid -ne $uuid).Count){throw 'Both original actor transitions required'}
+                foreach($row in $witness){if($gameLog -notmatch [regex]::Escape($row.marker)){throw 'Authoritative transition health witness missing'}}
+                if($clientLog -notmatch '(?s)benchmark\.native_dimension dimension=minecraft:the_end\b.*benchmark\.native_dimension dimension=minecraft:overworld\b'){throw 'Both original client respawn transitions missing'}
+                if($condition.ingress -eq 'true'){
+                    if($clientLog -notmatch '(?s)worker\.native_request_bound dimension=minecraft:overworld.*worker\.native_request_suspended.*worker\.native_request_resumed dimension=minecraft:the_end.*worker\.native_request_suspended.*worker\.native_request_resumed dimension=minecraft:overworld.*worker\.native_request_revoked.*worker\.native_request_bound dimension=minecraft:overworld'){throw 'Actual respawn fence and reconnect replacement sequence missing'}
+                }elseif($clientLog -match 'worker\.native_request_(bound|suspended|resumed|revoked)'){throw 'MAIN control must not use captured native ingress'}
+            }
+        }
         $journal=$result.gameplay_journal;if(-not $journal.success -or $journal.nonce -ne $result.gameplay_nonce -or ($journal.phases.phase-join ';') -cne 'scan;ground;mine;place;reconnect' -or $journal.physics_paused -or $journal.world_blocks_set_by_console -or $journal.health_set){throw 'Exact natural gameplay journal missing'}
         if($NativeBatchExperiment -and ($journal.interaction_location -ne 2 -or $journal.after_measured_repeats -ne 3 -or $result.gameplay_interaction_location -ne 2 -or (Get-Content -LiteralPath (Join-Path $case 'remote-runner.log') -Raw) -notmatch 'SERVER_GAMEPLAY_RECEIPT_WAIT 3 2')){throw 'Exact post-measurement natural interaction location/return receipts missing'}
         foreach($phase in $journal.phases){if($phase.clients.Count -ne 2 -or (($phase.clients.owner|Sort-Object)-join ';') -cne 'ScenarioOwnerA;ScenarioOwnerB'){throw 'Both original actors required'};foreach($row in $phase.clients){if(-not $row.success -or $row.health -ne 20 -or -not $row.alive -or $row.nonce -ne $journal.nonce){throw 'Gameplay actor state failed'};if($phase.phase -ne 'scan' -and ($row.game_type -ne 0 -or $row.flying -or -not $row.on_ground -or $gameLog -notmatch [regex]::Escape('CAWG_GAMEPLAY_PLAYER_'+$journal.nonce+'_'+$phase.phase+'_'+$row.owner))){throw 'Authoritative survival landing proof missing'};if($phase.phase -eq 'mine' -and $row.original_mining_calls -lt 2){throw 'Original multi-tick mining missing'};if($phase.phase -in @('mine','place','reconnect') -and $gameLog -notmatch [regex]::Escape('CAWG_GAMEPLAY_BLOCK_'+$journal.nonce+'_'+$phase.phase+'_'+$row.owner)){throw 'Authoritative block proof missing'};if($phase.phase -eq 'reconnect' -and -not $row.connection_changed){throw 'Original reconnect missing'}}}
@@ -202,7 +235,7 @@ try {
         foreach($file in $inventory){$local=Join-Path $destination $file.relative;New-Item -ItemType Directory -Force -Path ([IO.Path]::GetDirectoryName($local))|Out-Null;Step ($condition.name+'-copy-'+[IO.Path]::GetFileName($local)) (Get-Command scp.exe).Source @('-q',('gen1c@100.103.102.109:E:/WorldgenAssist/port26.3/'+$remote.case+'/'+$file.relative),$local) 60;if((Get-Item -LiteralPath $local).Length -ne $file.bytes -or (Get-FileHash -LiteralPath $local).Hash -ne $file.sha256){throw 'Saved copy identity differs'}}
         $afterRemote=@(Saved-Inventory ($condition.name+'-saved-after') $remote.case $paths);if(($inventory|ConvertTo-Json -Compress) -cne ($afterRemote|ConvertTo-Json -Compress)){throw 'Remote saved inputs changed during copy'}
         foreach($row in $final){$uuid=if($row.owner -eq 'ScenarioOwnerA'){'0557a034-0101-3132-9f82-f0d4761d4b04'}else{'c7afee9d-8411-38e2-8537-1c157fc2c41b'};$rx=[int][Math]::Floor($row.target[0]/512.0);$rz=[int][Math]::Floor($row.target[2]/512.0);$players+=@{condition=$condition.name;owner=$row.owner;data=(Join-Path $destination ('players/data/'+$uuid+'.dat'));stats=(Join-Path $destination ('players/stats/'+$uuid+'.json'));region=(Join-Path $destination "dimensions/minecraft/overworld/region/r.$rx.$rz.mca");x=$row.stand[0]+0.5;y=$row.stand[1];z=$row.stand[2]+0.5;target=@($row.target)}}
-        $cases[$condition.name]=Join-Path $destination 'dimensions/minecraft/overworld/region';$inputs+=@{condition=$condition.name;world=$remote.case;destination=$destination;inventory=$inventory};$runtime+=@{condition=$condition.name;result=(Join-Path $case 'scenario-result.json');journal=$journal;measured_features=$intervals;coordinate_sha256=$coordinateHash;receipt_coverage=$receiptCoverage;batch_counts=$batchCounts}
+        $cases[$condition.name]=Join-Path $destination 'dimensions/minecraft/overworld/region';$inputs+=@{condition=$condition.name;world=$remote.case;destination=$destination;inventory=$inventory};$runtime+=@{condition=$condition.name;result=(Join-Path $case 'scenario-result.json');journal=$journal;measured_features=$intervals;coordinate_sha256=$coordinateHash;receipt_coverage=$receiptCoverage;batch_counts=$batchCounts;request_paths=$requestPaths}
     }
     $descriptor=Join-Path $root 'saved-gameplay-descriptor.json';@{output=(Join-Path $root 'saved-gameplay.json');players=$players}|ConvertTo-Json -Depth 8|Set-Content -LiteralPath $descriptor -Encoding utf8
     $offlineClasspath=$offlineClasses+';'+$classpath
@@ -222,7 +255,7 @@ finally {
         if(Test-Path -LiteralPath (Join-Path $root 'saved-gameplay.json')){$savedReport=Get-Content -LiteralPath (Join-Path $root 'saved-gameplay.json') -Raw|ConvertFrom-Json};$lightReport=Lighting-Reports
     }catch{$issues.Add($_.Exception.ToString())}
     if($lock){$lock.Dispose()}
-    [ordered]@{schema='worldgen-assist.ordinary-gameplay-gate.v1';native_batch_experiment=[bool]$NativeBatchExperiment;measured_repeats=$measuredRepeats;both_conditions_assisted=[bool]$NativeBatchExperiment;loader=$Loader;fabric_input_parent=$fabricGameplayPath;success=($issues.Count -eq 0);root=$root;saved_safety_parent=$savedPath;reused_probe_root=$reusePath;artifacts=$artifacts;probe_jar=$probeJar;probe_sha256=$probeSha;steps=@($steps);runtime=$runtime;inputs=$inputs;saved_gameplay=$savedReport;lighting=$lightReport;issues=@($issues);new_junit=0;mod_builds=0;reused_unit_methods=4;reused_reader_methods=1;new_native=$(if($Loader -eq 'fabric'){0}else{@($steps|Where-Object {$_.name -match '^runtime-'}).Count});beta_claim=$false;scope=('Exact selected '+$Loader+' JAR; ordinary weak E-server/view32/two clients, natural survival landing/original multi-tick mining/placing/client reconnect plus authoritative checks and stopped saved player/voxel/light. Explicit native experiment compares SAME-JAR batching OFF/ON with three same-coordinate repeats, both remoteON. Other profile uses one remoteOFF/ON repeat. Server restart/continuous motion remain unproved.')}|ConvertTo-Json -Depth 18|Set-Content -LiteralPath (Join-Path $root 'summary.json')
+    [ordered]@{schema='worldgen-assist.ordinary-gameplay-gate.v1';native_batch_experiment=[bool]$NativeBatchExperiment;native_client_request_experiment=[bool]$NativeClientRequestExperiment;native_transport_experiment=$(if($NativeClientRequestExperiment){'client_request'}elseif($NativeBatchExperiment){'batching'}else{'none'});measured_repeats=$measuredRepeats;both_conditions_assisted=[bool]$NativeBatchExperiment;loader=$Loader;fabric_input_parent=$fabricGameplayPath;success=($issues.Count -eq 0);root=$root;saved_safety_parent=$savedPath;reused_probe_root=$reusePath;artifacts=$artifacts;probe_jar=$probeJar;probe_sha256=$probeSha;steps=@($steps);runtime=$runtime;inputs=$inputs;saved_gameplay=$savedReport;lighting=$lightReport;issues=@($issues);new_junit=0;mod_builds=0;reused_unit_methods=4;reused_reader_methods=1;new_native=$(if($Loader -eq 'fabric'){0}else{@($steps|Where-Object {$_.name -match '^runtime-'}).Count});beta_claim=$false;scope=('Exact selected '+$Loader+' JAR; ordinary weak E-server/view32/two clients, natural survival landing/original multi-tick mining/placing/client reconnect plus authoritative checks and stopped saved player/voxel/light. Explicit native experiment compares SAME-JAR batching OFF/ON, or MAIN/NETWORK request with batchingFALSE; three same-coordinate repeats, both remoteON. Other profile uses one remoteOFF/ON repeat. Server restart/continuous motion remain unproved.')}|ConvertTo-Json -Depth 18|Set-Content -LiteralPath (Join-Path $root 'summary.json')
     Write-Output "ORDINARY_GAMEPLAY_GATE success=$($issues.Count -eq 0) summary=$(Join-Path $root 'summary.json')"
 }
 if($issues.Count){exit 1}

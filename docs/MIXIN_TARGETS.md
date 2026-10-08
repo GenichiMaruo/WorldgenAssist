@@ -1,5 +1,21 @@
 # Mixin Targets
 
+Dev2 adds native CLIENT-only NativeClientRequestConnectionMixin263 observation
+at Connection.channelRead0 genericsFtw (only respawn suspend), channelInactive
+HEAD/setupInboundProtocol HEAD revoke, and NativeClientRespawnRequestMixin263
+at ClientPacketListener.handleRespawn TAIL. All require1, no cancellation or
+counter changes; Forge packetLogger stays original. Primary26.2/exact26.3/both
+native targets verified in native-ingress-source-review-20261009/findings.json.
+Forge's existing client config and Neo's separate native_client config load
+these; Fabric does not. Original generation/server result Mixins unchanged.
+Dev2 build/runtime still UNRUN; completed batch checks actual client load and
+post-measurement End/Overworld suspend/resume plus reconnect replacement for
+both actors. No generation target change. See NATIVE_CLIENT_REQUEST_INGRESS.md.
+Unshipped native receipt observer also observes handleRespawn TAIL/require1,
+gated by WORLDGEN_ASSIST_NATIVE_LIFETIME_PROBE. Both actual client End callbacks
+are acknowledged before returning. Original three shared input class bytes stay
+equal to the successful Fabric probe; it is not a shipped Mixin.
+
 Native batching033001-492 passes both native ALL25 gameplay/own-saved-light
 gates on alpha9-dev1/native6 without generation/Mixin target changes. FULL paired
 Forge+2.8553%/Neo+0.1877% is not a speedup. Primary26.2 then exact26.3/Forge/Neo

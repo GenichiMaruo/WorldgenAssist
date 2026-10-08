@@ -62,14 +62,19 @@ final class ForgeNetwork {
             })
             .flow(PacketFlow.CLIENTBOUND)
             .addMain(WorkerAcceptedPayload.TYPE, WorkerAcceptedPayload.CODEC,
-                (payload, context) -> ForgeClientInit.onAccepted(payload))
-            .addMain(TerrainJobRequestPayload.TYPE, TerrainJobRequestPayload.CODEC,
-                (payload, context) -> ForgeClientInit.onJob(payload))
-            .addMain(TerrainJobBatchPayload.TYPE, TerrainJobBatchPayload.CODEC,
-                (payload, context) -> ForgeClientInit.onJobs(payload))
-            .addMain(TerrainJobCancelPayload.TYPE, TerrainJobCancelPayload.CODEC,
-                (payload, context) -> ForgeClientInit.onCancel(payload))
+                (payload, context) -> ForgeClientInit.onAccepted(payload, context.getConnection()))
+            .add(TerrainJobRequestPayload.TYPE, TerrainJobRequestPayload.CODEC, ForgeNetwork::receiveClientRequest)
+            .add(TerrainJobBatchPayload.TYPE, TerrainJobBatchPayload.CODEC, ForgeNetwork::receiveClientRequest)
+            .add(TerrainJobCancelPayload.TYPE, TerrainJobCancelPayload.CODEC, ForgeNetwork::receiveClientRequest)
             .build();
+    }
+
+    private static void receiveClientRequest(CustomPacketPayload payload, CustomPayloadEvent.Context context) {
+        var connection = context.getConnection();
+        long receivedNanos = System.nanoTime();
+        if (!io.github.genichimaruo.worldgenassist.client.NativeClientRequestIngress.receive(connection, payload, receivedNanos))
+            context.enqueueWork(() -> ForgeClientInit.onRequestPayload(payload, connection));
+        context.setPacketHandled(true);
     }
 
     static boolean canSend(Connection connection) { return channel != null && channel.isRemotePresent(connection); }
