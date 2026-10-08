@@ -1,5 +1,28 @@
 # Repository agent instructions
 
+## Native batching033001 closes: functional pass, no speed gain
+
+Session55809 exits0; native-request-batch-gate-20261009-033001-492 succeeds.
+Forge033002-511 and Neo035850-619 each pass ALL25 ordinary/saved-light steps,
+both conditions remoteON, SAME alpha9-dev1 JAR, batchingOFF first, warm1/three
+identical measured coordinates, weak E-server/view32/two stronger-PC clients.
+Exact two builds reused from031155; ZERO fresh JUnit/MOD builds. All inputs/JARs
+frozen; both owners actually use bounded ON batches/OFFzero, all10658 tasks/
+3461 required receipts per owner/repeat and10082 feature/light bodies/peak2/
+zero ownership conflicts. All8 saved players survival/Health20/deaths0/damage0/
+onGround/nonflying/persisted COBBLESTONE; each of4 own-light cases50 interior/
+162 halo/10649600 values, zero differences. Initial scan failure remains failed.
+Median SAME-repeat ratios ON/OFF: Forge FULL+2.8553%,receipt+3.5453%,CPU+1.0080%,
+RTT+1.5486%; Neo FULL+0.1877%,receipt-0.2219%,CPU+0.2748%,RTT+4.2994%.
+Forge0/3 and Neo1/3 faster FULL; no demonstrated batching speedup, reverse-order
+causality or beta. Publicalpha8 immutable. c0906b3 commits the experiment; next
+dev must disable native batching by default and retain its explicit switch.
+Pinned native payload APIs run before vanilla PacketUtils handoff; captured
+ClientWorldgenWorker admission can avoid client MAIN waiting. Forge fragment
+assembler is server-thread-only HashMap: do not move it unchanged. Primary
+source/API entry hashes retained in native-ingress-source-review-20261009.
+Next implementation/test UNRUN; goalactive/no beta. Old UNRUN sections are history.
+
 ## Native batch first run closes at natural-site scan; geography repair UNRUN
 
 native-request-batch-gate-20261009-031155-147/session4829 exits1. Both native

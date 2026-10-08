@@ -1,5 +1,40 @@
 # Native request batching: measured gap and next experiment
 
+## Completed controlled comparison (2026-10-09)
+
+`native-request-batch-gate-20261009-033001-492`, session55809 exit0, succeeds.
+Both children pass all25 steps: Forge033002-511 and Neo035850-619. SAME alpha.9-
+dev.1 artifact per loader, both conditions remoteON, batchingOFF first, weak
+E-server/view32/two stronger-PC clients, warm1/three matched relocations.
+Only successful031155 builds reused; no fresh JUnit/MOD build. Original failed
+site scan remains failed; all new runtime/gameplay/saved evidence is fresh.
+
+| Median matched ON/OFF change | Forge | NeoForge |
+| --- | ---: | ---: |
+| FULL completion | +2.8553% | +0.1877% |
+| Required client receipts | +3.5453% | -0.2219% |
+| Server CPU | +1.0080% | +0.2748% |
+| Request/reply event mean | +1.5486% | +4.2994% |
+| Tick p95 | +0.1166% | +0.5416% |
+
+Forge0/3 and Neo1/3 faster FULL. Median same-repeat ratios, not ratios of separate
+medians or opposite-order causal evidence. **No demonstrated batching speedup.**
+Reduced dispatches did not reduce request/reply time, which includes queues and
+is not raw wire latency. Native handlers still use MAIN in both directions.
+Next dev should retain explicit batching but defaultOFF and test captured client
+network admission. Server-thread-only Forge fragment reassembly stays original.
+
+Every measured region10658 tasks/3461 required receipts per owner/10082 feature-
+light bodies/peak2/zero ownership conflicts. Both owners use2..4-job batches
+in every ON repeat and zero OFF; actual peer/audit/provided-biome routes run.
+All sources and current/retained artifacts match. All8 saved players survival/
+Health20/onGround/nonflying/deaths0/damage0/persisted COBBLESTONE. Each of4 own-
+light cases50 interior/162 halo/10,649,600 values, zero differences. This is
+functional/own-saved evidence, not new vanilla parity/server restart/continuous
+exploration/beta proof. Exact candidate hashes below retained; publicalpha8
+unchanged. Primary26.2/26.3/native source/API entry hashes for next work are in
+`native-ingress-source-review-20261009/findings.json`. Older UNRUN text is history.
+
 ## First candidate batch and natural-site correction (2026-10-09)
 
 `native-request-batch-gate-20261009-031155-147` closes failed, session4829 exit1.

@@ -1,5 +1,15 @@
 # World Generation Pipeline Notes
 
+Native batching033001-492 succeeds with both native ALL25 gameplay/own-saved-
+light steps, SAME dev1 batchingOFF/ON BOTHremoteON/three matched regions. FULL
+paired Forge+2.8553%/Neo+0.1877%; no demonstrated gain. Native request/result
+handlers retain MAIN waiting and RTT means do not fall. Next source-confirmed
+candidate uses captured client admission through existing bounded workers, with
+connection/respawn revocation and original MAIN state capture. Forge PayloadFlow.
+add and explicit Neo client HandlerThread.NETWORK dispatch before PacketUtils.
+ForgeResultAssembler remains server-thread-only; moving its HashMap unchanged
+would be invalid. Next implementation/test UNRUN; publicalpha8 unchanged/no beta.
+
 Native batching's first031155 batch builds2/bootsForge/completes3 measured
 regions, but ownerB's later location4 natural-site scan fails. Test harness now
 returns to previously-generated location2 AFTER all measured ENDs/receipts and

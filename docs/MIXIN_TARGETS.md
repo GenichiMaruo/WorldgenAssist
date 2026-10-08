@@ -1,5 +1,15 @@
 # Mixin Targets
 
+Native batching033001-492 passes both native ALL25 gameplay/own-saved-light
+gates on alpha9-dev1/native6 without generation/Mixin target changes. FULL paired
+Forge+2.8553%/Neo+0.1877% is not a speedup. Primary26.2 then exact26.3/Forge/Neo
+Connection.channelRead0 verifies shouldHandleMessage before genericsFtw;
+channelInactive/setupInboundProtocol are lifetime boundaries. Forge's extra
+packetLogger and original routing/counters must remain. Native custom payload
+APIs dispatch before vanilla PacketUtils MAIN handoff. No new hook implemented
+or verified yet; entry hashes in native-ingress-source-review-20261009/findings.json.
+Publicalpha8 immutable; beta/full goal active.
+
 Native batch031155 builds pass; Forge boots and completes3 measured regions,
 then test-only dry-ground scan fails at location4. Repair stock post-measurement
 teleport/receipt wait/interaction location only; native probe bytecode and all

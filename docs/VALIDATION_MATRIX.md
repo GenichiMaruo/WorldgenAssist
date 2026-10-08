@@ -1,5 +1,15 @@
 # Validation matrix
 
+Native batching033001-492/session55809 closes success. Forge033002-511 and
+Neo035850-619 pass ALL25 functional/own-saved-light steps, SAME dev1 batching
+OFF/ON BOTHremoteON/warm1/measured3/view32/two clients. Two exact builds reused,
+0freshJUnit/MODbuilds; all frozen-input/task/receipt/feature/authority/cleanup
+gates pass. Initial scan failure retained. Median paired FULL Forge+2.8553%/
+Neo+0.1877%: no demonstrated speedup, opposite-order causality or beta. Next
+client MAIN-wait experiment needs a new dev version and ALL source/harness/docs
+before ONE affected batch. Scope/hashes in NATIVE_REQUEST_BATCHING.md; old UNRUN
+text is historical.
+
 Native first031155 batch closes failed at post-measurement dry-ground scan,
 after2 successful builds. Harness-only interaction-site repair selects previous
 measured location2 AFTER all3 measurements/receipts, with fresh full-view return

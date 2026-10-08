@@ -1,5 +1,22 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## Native batching033001 completed: functional pass, no speed gain
+
+Parent033001-492/session55809 exits0; Forge033002-511/Neo035850-619 each pass
+ALL25 steps, SAME alpha9-dev1 batchingOFF/ON BOTHremoteON, weak E-server/view32/
+two stronger-PC clients/warm1/three matched relocations. Two exact builds reused;
+0freshJUnit/MODbuilds. Original failed scan retained. Frozen inputs/artifacts,
+actual per-owner ON2..4 batches/OFFzero, all10658 tasks/3461 required receipts/
+owner/repeat/10082 feature-light bodies/peak2/zero ownership conflicts pass.
+All8 saved players Health20/survival/onGround/nonflying/deaths0/damage0/placed
+COBBLESTONE; four own-light cases each50 interior/162 halo/10649600 values,
+zero differences. Median paired FULL Forge+2.8553%(0/3 faster),Neo+0.1877%
+(1/3 faster); receipt+3.5453%/-0.2219%,CPU+1.0080%/+0.2748%,RTT+1.5486%/
++4.2994%. No demonstrated speedup or opposite-order causality. Client MAIN wait
+is a source-confirmed next hypothesis, not implemented/measured. Prior Fabric
+~20.93% evidence retains separate identity. Publicalpha8 immutable; no alpha9
+publication/beta/full-goal claim. See NATIVE_REQUEST_BATCHING.md; old UNRUN history.
+
 ## Native batching first gate closes failed; post-measurement site repair UNRUN
 
 031155-147/session4829 exit1: two native builds pass, Forge031217-359 exact
