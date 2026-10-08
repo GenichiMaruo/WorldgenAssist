@@ -1,5 +1,179 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## Native ordinary gameplay passes; one-repeat speed differs (2026-10-09)
+
+Both Forge003009-312 and Neo022233-731 complete all25 steps with exact public
+alpha8,weak E-server/view32/two stronger-PC clients. ALL8 native saved players
+Health20/survival/onGround/nonflying/deaths0/damage0/placedCOBBLESTONE; each
+of4 lighting cases compares10,649,600 own-world values with zero differences.
+No new JUnit/MOD builds. Source/JAR/24 copied raw inputs verified. Interrupted
+parent and pre-game Neo path failures remain incomplete/failed as originally
+recorded. Neo's shortened label/full-hash guards work in both actual conditions.
+
+Single-repeat FULL Forge-8.5797%,Neo+11.1981%;CPU-15.1998/-19.3924%. Thus no
+general native speed/beta claim. Existing-log-only analysis confirms complete
+applications7581/8162,request/reply means75.479/96.793ms and zero native request
+batches. Native senders/registrations lack Fabric's bounded batch implementation;
+this is a source-confirmed gap,not measured cause. Full evidence and next
+controlled implementation/minimum batch plan: [native batching](NATIVE_REQUEST_BATCHING.md).
+Production/JARs/defaults unchanged; next native transport experiment UNIMPLEMENTED.
+
+## NeoForge preparation path failure and correction (2026-10-09)
+
+Fresh child `ordinary-neoforge-gameplay-gate-20261009-021910-947`, session3016,
+exits1: four adapter/offline/preflight steps pass; original runtime stops at
+remote `ExtractToFile`, before game startup. Raw CLIXML and failure-detail retain
+the actual `listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar`
+failure. Its full path is264 characters; Forge's longest path is234.
+No ordinary Neo generation/gameplay/saved success or speed claim.
+
+Only Neo's E-native directory label changes64->16 hash characters, reducing
+maximum library path to216. Complete manifest/file SHA256 checks remain;
+existing different manifest rejects a label collision, preparation rejects
+paths>=240, launcher and local evidence require that exact shortened root.
+Forge path/production/publicalpha8/protocol/targets remain unchanged. Closed
+Forge proof retains its original harness; checkpoint425-source equality was
+verified BEFORE this repair. After all edits/docs ONE fresh remaining Neo
+OFF/ON/saved batch;0newJUnit/MODbuilds. Corrected followup UNRUN, beta unproved.
+
+## Native ordinary gameplay checkpoint (2026-10-09)
+
+Forge child `ordinary-forge-gameplay-gate-20261008-003009-312` completed
+successfully: all25 steps, both remoteOFF/ON conditions, both actors' natural
+survival landing/mining/COBBLESTONE placement/client reconnect, and all4 saved
+players (Health20, no recorded deaths/damage). Each condition's own saved-light
+check covers50 interior/162 halo chunks/10,649,600 values with zero differences.
+Exact public alpha.8 Forge JAR3E570F38... and unshipped probe6B65D7D6...;
+no new JUnit or MOD builds. This is bounded ordinary gameplay evidence, not
+server restart, continuous exploration, or repeatable native speed evidence.
+
+Parent `native-ordinary-gameplay-gate-20261008-003008-389` has no terminal
+summary. Its handle is missing and current process inventory shows no owned
+local test or remote server. Neo child004450-007 has only preparation files,
+no completed runtime/saved verdict; interruption cause is not established.
+Do not relabel either incomplete record as successful. Read-only checkpoint
+`test-artifacts/native-interrupted-checkpoint-20261009.json` confirms the425
+current tracked source hashes, three artifacts, probe and12 copied Forge raw
+files still match the closed Forge proof. The first checkpoint comparison
+used the wrong path separator spelling; corrected exact original framing
+matches, with no source change.
+
+All documentation edits precede ONE fresh remaining NeoForge remoteOFF/ON
+batch using unchanged `Run-OrdinaryGameplayGate.ps1 -Execute -Loader neoforge`.
+Retain completed Forge and original Fabric/4-method/882 proofs; no unchanged
+Forge rerun, new JUnit, MOD build or release replacement. Neo followup UNRUN;
+goal stays active and beta remains unproved.
+
+## Weak native Forge server boots; test-probe Mixin compatibility corrected
+
+Closed native002708-820/session57807 exits1;Forge child002709-760. Preparation
+and exact runtime hashes pass;actual E-native Forge server reaches SERVER_READY
+case002813-707. Both clients exit1 before joining: separate probe requests
+JAVA_25,unrecognised by installed Forge Mixin0.8.7. Exact cause retained in
+stderr;production uses JAVA_21 and server loads alpha8 successfully. Cleanup
+true/loopback closed;no measured generation/gameplay/assisted/Neo/saved pass.
+
+Change ONLY native test JAR Mixin compatibility label to JAVA_21,matching
+production;actual Java25 runtime/class files unchanged. Shared successful Fabric
+input source/bytecode remains exact;no target/authority/product change. All edits/
+docs before ONE fresh native batch,0newJUnit/MODbuilds. Do not reuse old probe
+after metadata edit. Publicalpha8 immutable;new checks UNRUN,goalactive/not beta.
+
+## Native preparation reaches remote file validation; WinPS array reader corrected
+
+Closed native002256-891/session15091 exits1;correct Forge child002257-795
+four initial steps pass. Archive/helper transfer+hash and short-command execution
+pass. WinPS5.1 ConvertFrom-Json outputs a top-level array as ONE object;
+@(...pipeline...) wrapped it,so foreach row.bytes became Object[] and Int64
+conversion failed before extraction/game launch. Raw CLIXML retains exact
+conversion line;this is a verified new harness cause,not Minecraft failure.
+Original failure/cleanupfalse retained;0gameplay/saved/assisted/Neo proof.
+
+Remove outer pipeline array wrapper in BOTH remote native manifest readers.
+Keep exact JSON/manifest hash,count/size/path/per-file guards. Primary/native
+Mixin findings and production/release identities unchanged. All repairs/docs
+before ONE fresh sequential native batch,0newJUnit/MODbuilds. New runtime
+verification UNRUN;goalactive/beta unproved.
+
+## Correct Forge preparation closed at Windows command length; helper corrected
+
+native001917-645/session94666 exits1;Forge child001918-618 now records ACTUAL
+Forge/alpha8 hash3E570F38... and correct native adapter. Four initial steps pass.
+Local manifest+201555396-byte cached runtime archive and SCP staging complete;
+long encoded preparation command is rejected by Windows: command line too long.
+New retained failure-detail confirms Prepare-NativeGameplayRuntime/Invoke-Remote,
+not Minecraft/worldgen. No game/survival/assisted/Neo/saved pass;failed records
+unchanged,original cleanupfalse retained. First local bytes error does not recur
+after explicit sum;historical exact throw was unrecorded so cause remains inferred.
+
+Transfer the native preparation as an owned UTF8 .ps1 file,hash-check remote
+bytes,invoke through a short command with PROCESS-only execution policy.
+Existing manifest/archive/path/file/Mods bounds remain. Remote size sum also uses
+explicit long arithmetic. All edits/docs before ONE fresh native sequential
+batch;0newJUnit/WGA builds,only native test adapter/offline helper compilation.
+Exact alpha8 production/JAR/tag/assets/defaults unchanged. All game checks still
+UNRUN;beta/full goalactive,not an external blocker.
+
+## First native batch closed before game launch; harness correction prepared
+
+native-ordinary-gameplay-gate-20261008-001239-905/session46178 exits1;
+child ordinary-forge-gameplay-gate-001240-871 has4 successful adapter/package/
+offline/preflight steps then runtime-original failure. Core foreach($loader)
+overwrote case-insensitive parameter $Loader,so ACTUAL requested Forge became
+Neo. Retain original summary/probe as Neo preparation,not Forge/native gameplay
+success. Local staging fails with invalid bytes argument; exact throw trace was
+not retained. No world/clients/server started,remote read-only owned_java=[] and
+staged helper time00:14:22 confirmed. Original cleanup_safe=false remains as
+recorded. All release source/JAR identities untouched; prior alpha8 publicproof
+unchanged.
+
+Use separate artifactLoader variable; replace new local property-sum binding
+with explicit bounded long sum,retain full exception/ScriptStackTrace in scenario
+failure-detail.txt for any next failure. Byte-error cause remains unproved.
+ALL repairs/docs before ONE fresh native batch;0newJUnit/MODbuilds,only native
+test adapters/offline helpers and still-unrun native ordinary pairs. Do not reuse
+misidentified adapter or failed runtime. Beta/full objective stays unproved.
+
+## Native ordinary gameplay on the weak E-server prepared; UNRUN
+
+New Run-NativeOrdinaryGameplayGate -Execute owns ONE sequential Forge then
+NeoForge original/assisted batch, view32/warm1/measured1/two stronger-PC clients.
+It uses exact published alpha8 JARs; closed release-alpha8-20261008 proof and
+fresh archive-entry checks require ONLY version metadata to differ from dev23.
+Original4 affected methods/one lighting-reader method/3-loader882 proofs reused;
+ZERO new JUnit or MOD builds. Production/protocol14/native5/defaults unchanged.
+
+The separate UNShipped client-only probe reuses the successful230655 THREE
+original input class files after shared-source/JAR/frozen-parent checks. Only
+native metadata/empty loader entry/three original packet receipt hooks are
+compiled. Minecraft.tick TAIL/stopDestroyBlock HEAD and ClientPacketListener
+handleSystemChat/handleDisguisedChat/handleLevelChunkWithLight TAIL require1
+verified first against generated26.2 then exact26.3, Forge66.0.3 injected
+source SHA E7BD5F6C96045414045A8629AA877AB5416E8750CCB14D0F9A5CEFE0C229C62F,
+Neo26.3.0.13-beta source SHA
+990FBD28DC46DD9A1C41E67F9389A972C0097D38D551678F125A481402E351DF.
+26.2 packet uses getX/getZ;26.3 uses x/z. Packet receipt after replacement
+still queues light work: NOT rendering/light-completion proof. Helper class
+is outside Mixin package; probe is NOT copied to server or release assets.
+
+Existing verified installed server libraries/shim are copied to private
+E:/WorldgenAssist/port26.3/native-runtime/<loader>/<manifestSHA>; no new machine
+install/download. Native args resolve in this E-working-directory; temp/user.home/
+world/log/cache stay E. Manifest/files bounded and hash checked before/after;
+same runtime identity required OFF/ON. Separate profiles/two original actor
+UUIDs,original quit/input/read-only server witnesses; no physics pause/healing/
+artificial floor/console block writes. Successful clean stops permit exact
+saved player/COBBLESTONE and50 interior/162 halo/10649600 lighting checks per
+condition. Same10658 tasks/3461 required receipts/10082 feature-light bodies/
+ownership guards retained. Fail-fast original evidence preserved.
+
+Finish ALL harness/docs edits before this selected batch; no concurrent builds/
+runtimes. All new compile/loader/runtime/gameplay/saved checks still UNRUN.
+One native repeat is functional evidence, NOT repeatable native speed/beta,
+server restart/continuous exploration/combat/hazards or full goal completion.
+Published alpha8/tag/assets stay immutable; next production changes need a new
+development version. Prior headings retain original identities.
+
 ## Ordinary Fabric survival/input/saved-light gate230655 passes
 
 Closed ordinary-gameplay-gate-20261007-230655-166/session50927 exits0,ALL25

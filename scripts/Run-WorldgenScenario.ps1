@@ -35,6 +35,7 @@ param(
     [switch]$DecorationDigest,
     [switch]$FeatureFixture,
     [string]$FeatureReplayFile,
+    [ValidateSet('fabric','forge','neoforge')][string]$Loader='fabric',
     [string]$GameplayProbeJar,
     [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$GameplayProbeSha256,
     [string]$RemoteHost = 'gen1c@100.117.255.71',
@@ -64,12 +65,15 @@ $predictionEnabled = [bool]::Parse($Prediction)
 . (Join-Path $PSScriptRoot 'WorldgenScenarioConsole.ps1')
 . (Join-Path $PSScriptRoot 'FeatureFixtureEvidence.ps1')
 . (Join-Path $PSScriptRoot 'WorldgenGameplayClient.ps1')
+. (Join-Path $PSScriptRoot 'NativeGameplayEvidence.ps1')
+$nativeRuntime=$null
 $gameplayEnabled=-not [string]::IsNullOrWhiteSpace($GameplayProbeJar)
 $gameplayNonce=if($gameplayEnabled){[Guid]::NewGuid().ToString('N')}else{$null}
 if($gameplayEnabled){
     $GameplayProbeJar=[IO.Path]::GetFullPath($GameplayProbeJar)
     if(-not $GameplayProbeJar.StartsWith($testRoot,[StringComparison]::OrdinalIgnoreCase) -or $Dimension -ne 'overworld' -or $Players -ne 2 -or $Purpose -ne 'performance' -or -not $MeasureFullView -or $ViewDistance -ne 32 -or $Seed -ne 8675309 -or $Movement -ne 'relocation' -or $FeatureFixture -or $WarmupRuns -ne 1 -or $MeasuredRepeats -ne 1 -or (Get-FileHash -LiteralPath $GameplayProbeJar).Hash -ne $GameplayProbeSha256){throw 'Exact bounded public gameplay probe requires its owned hashed test JAR'}
 }
+if($Loader -ne 'fabric' -and -not $gameplayEnabled){throw 'Native weak-server adapter is limited to ordinary gameplay evidence'}
 $replay=$null
 if($FeatureFixture -and (-not $DecorationDigest -or $Purpose -ne 'correctness' -or $Dimension -ne 'overworld' -or $Players -ne 2 -or $Seed -ne 8675309 -or $ViewDistance -gt 10)){throw 'Bounded two-owner diagnostic fixture required'}
 if($FeatureReplayFile){
@@ -97,6 +101,8 @@ function Write-Json([string]$Path,[object]$Value) { Write-Utf8 $Path ($Value | C
 function Get-Manifest {
     $files = @(Get-ChildItem -LiteralPath (Join-Path $workspace 'src') -File -Recurse)
     $files+=Get-Item -LiteralPath (Join-Path $PSScriptRoot 'WorldgenGameplayClient.ps1'),(Join-Path $PSScriptRoot 'WorldgenGameplayServer.ps1')
+    $files+=Get-Item -LiteralPath (Join-Path $PSScriptRoot 'NativeGameplayEvidence.ps1')
+    if($Loader -ne 'fabric'){$files+=Get-Item -LiteralPath (Join-Path $PSScriptRoot 'New-InstalledNativeLoaderClient.ps1')}
     foreach($relative in @('build.gradle','settings.gradle','gradle.properties','scripts/Get-WorldgenArtifact.ps1','scripts/New-InstalledFixtureClient.ps1','scripts/New-TwoClientFixtureClient.ps1','scripts/Prepare-InstalledFixtureAssets.ps1','scripts/Run-WorldgenScenario.ps1','scripts/Remote-WorldgenScenarioServer.ps1','scripts/WorldgenMeasurementRegion.ps1','scripts/WorldgenScenarioConsole.ps1','scripts/FeatureFixtureEvidence.ps1')) { $files += Get-Item -LiteralPath (Join-Path $workspace $relative) }
     return @($files | Sort-Object FullName | ForEach-Object { $relative=$_.FullName.Substring($workspace.Length+1).Replace('\','/'); "$(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256 | Select-Object -ExpandProperty Hash)  $relative" })
 }
@@ -124,7 +130,11 @@ function Receive-RemoteEvidence {
 }
 function Start-Client([string]$Name,[string]$Uuid,[int]$Index,[string]$AssetsRoot) {
     $profile=Join-Path $output ('clients/owner-'+$Index)
-    $launch=& (Join-Path $PSScriptRoot 'New-TwoClientFixtureClient.ps1') -Username $Name -Uuid $Uuid -Root $profile -AssetsRoot $AssetsRoot
+    if($Loader -eq 'fabric'){$launch=& (Join-Path $PSScriptRoot 'New-TwoClientFixtureClient.ps1') -Username $Name -Uuid $Uuid -Root $profile -AssetsRoot $AssetsRoot}
+    else{
+        $launch=& (Join-Path $PSScriptRoot 'New-InstalledNativeLoaderClient.ps1') -Loader $Loader -Username $Name -Uuid $Uuid -Root $profile -AssetsRoot $AssetsRoot -InstallerProfile $nativeRuntime.installer_profile
+        @('version:5023','onboardAccessibility:false','skipMultiplayerWarning:true','tutorialStep:none','fullscreen:false','enableVsync:false','maxFps:30','simulationDistance:3')|Set-Content -LiteralPath (Join-Path $profile 'client/options.txt') -Encoding utf8
+    }
     # Isolated stationary workloads must not consume keyboard/mouse gameplay
     # input from the desktop running the automated clients. Only these newly
     # created evidence profiles are changed; server commands still move owners.
@@ -140,7 +150,7 @@ function Start-Client([string]$Name,[string]$Uuid,[int]$Index,[string]$AssetsRoo
     $optionLines | Set-Content -LiteralPath $optionPath
     if($MeasureFullView){
         $argumentPath=$launch.Arguments[0].Substring(1)
-        @(Get-Content -LiteralPath $argumentPath | ForEach-Object {if($_ -eq '-Xmx2G'){'-Xmx4G'}else{$_}}) | Set-Content -LiteralPath $argumentPath
+        @(Get-Content -LiteralPath $argumentPath | ForEach-Object {if($_ -in @('-Xmx2G','"-Xmx2G"')){'-Xmx4G'}else{$_}}) | Set-Content -LiteralPath $argumentPath
     }
     if($RemoteWorkKind -eq 'complete'){
         $argumentPath=$launch.Arguments[0].Substring(1)
@@ -196,7 +206,7 @@ try {
     New-Item -ItemType Directory -Force -Path $output | Out-Null
     foreach($target in @($output,(Join-Path $output 'remote-evidence'))){if((Test-Path -LiteralPath $target) -and ((Get-Item -LiteralPath $target -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)){throw "Output target must not be a reparse point: $target"}}
     $manifestBefore=Save-Manifest 'source-manifest-before.sha256'
-    $artifact=& (Join-Path $PSScriptRoot 'Get-WorldgenArtifact.ps1') -Workspace $workspace
+    $artifact=& (Join-Path $PSScriptRoot 'Get-WorldgenArtifact.ps1') -Workspace $workspace -Loader $Loader
     if($artifact.Minecraft -ne '26.3' -or -not(Test-Path -LiteralPath $artifact.Path -PathType Leaf)){throw "Exact 26.3 artifact is missing: $($artifact.Path)"}
     $artifactHash=(Get-FileHash -LiteralPath $artifact.Path -Algorithm SHA256).Hash.ToUpperInvariant()
     if(-not(Test-Path -LiteralPath "$jdk\bin\java.exe")){throw 'Pinned JDK 25.0.4 is missing'};if(-not(Test-Path -LiteralPath $api)){throw 'Pinned Fabric API cache entry is missing'}
@@ -205,6 +215,7 @@ try {
     Invoke-Remote ('New-Item -ItemType Directory -Force -Path "'+$RemoteRoot+'/mods","'+$RemoteRoot+'/retired-mods","'+$RemoteRoot+'/scenario-staging" | Out-Null')
     & scp.exe -q $artifact.Path $api $launcher (Join-Path $workspace 'run/eula.txt') (Join-Path $PSScriptRoot 'Remote-WorldgenScenarioServer.ps1') (Join-Path $PSScriptRoot 'WorldgenMeasurementRegion.ps1') (Join-Path $PSScriptRoot 'WorldgenScenarioConsole.ps1') ($RemoteHost + ':' + $RemoteRoot + '/scenario-staging/')
     if($LASTEXITCODE -ne 0){throw 'Remote scenario file transfer failed'}
+    if($Loader -ne 'fabric'){$nativeRuntime=Prepare-NativeGameplayRuntime $Loader}
     if($gameplayEnabled){
         & scp.exe -q (Join-Path $PSScriptRoot 'WorldgenGameplayServer.ps1') ($RemoteHost+':'+$RemoteRoot+'/scenario-staging/')
         if($LASTEXITCODE -ne 0){throw 'Gameplay helper transfer failed'}
@@ -224,11 +235,16 @@ try {
         $jfcHash=(Get-FileHash -LiteralPath $jfc).Hash
         Invoke-Remote ('if((Get-FileHash -LiteralPath "'+$RemoteRoot+'/scenario-staging/profile.jfc").Hash -ne "'+$jfcHash+'"){throw "JFR settings hash mismatch"}')
     }
-    Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherHash="'+$launcherHash+'";$name="'+$artifact.FileName+'";$stage=Join-Path $root ("scenario-staging/"+$name);if((Get-FileHash -LiteralPath $stage -Algorithm SHA256).Hash -ne $expected){throw "Staged artifact SHA-256 mismatch"};$stamp=Get-Date -Format "yyyyMMdd-HHmmss-fff";foreach($old in @(Get-ChildItem -LiteralPath (Join-Path $root "mods") -Filter "worldgen-assist-*.jar" -File)){if($old.Name -ne $name -or (Get-FileHash -LiteralPath $old.FullName -Algorithm SHA256).Hash -ne $expected){Move-Item -LiteralPath $old.FullName -Destination (Join-Path $root ("retired-mods/"+$stamp+"-"+$old.Name))}};Copy-Item -LiteralPath $stage -Destination (Join-Path $root ("mods/"+$name)) -Force;Copy-Item -LiteralPath (Join-Path $root "scenario-staging/fabric-api-0.161.0+26.3.jar") -Destination (Join-Path $root "mods/fabric-api-0.161.0+26.3.jar") -Force;Copy-Item -LiteralPath (Join-Path $root "scenario-staging/fabric-server-mc.26.3-loader.0.19.5-launcher.1.1.2.jar") -Destination (Join-Path $root "fabric-server-launch.jar") -Force;Copy-Item -LiteralPath (Join-Path $root "scenario-staging/eula.txt") -Destination (Join-Path $root "eula.txt") -Force;Copy-Item -LiteralPath (Join-Path $root "scenario-staging/Remote-WorldgenScenarioServer.ps1") -Destination (Join-Path $root "Remote-WorldgenScenarioServer.ps1") -Force;if((Get-FileHash -LiteralPath (Join-Path $root ("mods/"+$name)) -Algorithm SHA256).Hash -ne $expected -or (Get-FileHash -LiteralPath (Join-Path $root "fabric-server-launch.jar") -Algorithm SHA256).Hash -ne $launcherHash){throw "Installed artifact or launcher SHA-256 mismatch"}')
+    if($Loader -eq 'fabric'){
+Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherHash="'+$launcherHash+'";$name="'+$artifact.FileName+'";$stage=Join-Path $root ("scenario-staging/"+$name);if((Get-FileHash -LiteralPath $stage -Algorithm SHA256).Hash -ne $expected){throw "Staged artifact SHA-256 mismatch"};$stamp=Get-Date -Format "yyyyMMdd-HHmmss-fff";foreach($old in @(Get-ChildItem -LiteralPath (Join-Path $root "mods") -Filter "worldgen-assist-*.jar" -File)){if($old.Name -ne $name -or (Get-FileHash -LiteralPath $old.FullName -Algorithm SHA256).Hash -ne $expected){Move-Item -LiteralPath $old.FullName -Destination (Join-Path $root ("retired-mods/"+$stamp+"-"+$old.Name))}};Copy-Item -LiteralPath $stage -Destination (Join-Path $root ("mods/"+$name)) -Force;Copy-Item -LiteralPath (Join-Path $root "scenario-staging/fabric-api-0.161.0+26.3.jar") -Destination (Join-Path $root "mods/fabric-api-0.161.0+26.3.jar") -Force;Copy-Item -LiteralPath (Join-Path $root "scenario-staging/fabric-server-mc.26.3-loader.0.19.5-launcher.1.1.2.jar") -Destination (Join-Path $root "fabric-server-launch.jar") -Force;Copy-Item -LiteralPath (Join-Path $root "scenario-staging/eula.txt") -Destination (Join-Path $root "eula.txt") -Force;Copy-Item -LiteralPath (Join-Path $root "scenario-staging/Remote-WorldgenScenarioServer.ps1") -Destination (Join-Path $root "Remote-WorldgenScenarioServer.ps1") -Force;if((Get-FileHash -LiteralPath (Join-Path $root ("mods/"+$name)) -Algorithm SHA256).Hash -ne $expected -or (Get-FileHash -LiteralPath (Join-Path $root "fabric-server-launch.jar") -Algorithm SHA256).Hash -ne $launcherHash){throw "Installed artifact or launcher SHA-256 mismatch"}')
+    }else{
+        Invoke-Remote ('Copy-Item -LiteralPath "'+$RemoteRoot+'/scenario-staging/eula.txt" -Destination "'+$RemoteRoot+'/eula.txt" -Force;Copy-Item -LiteralPath "'+$RemoteRoot+'/scenario-staging/Remote-WorldgenScenarioServer.ps1" -Destination "'+$RemoteRoot+'/Remote-WorldgenScenarioServer.ps1" -Force')
+    }
     $tunnel=Start-Owned 'ssh.exe' @('-N','-o','BatchMode=yes','-o','ExitOnForwardFailure=yes','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=2','-L','127.0.0.1:25585:127.0.0.1:25585',$RemoteHost);$tunnelOut=$tunnel.StandardOutput.ReadToEndAsync();$tunnelErr=$tunnel.StandardError.ReadToEndAsync()
     $remoteCommand='& "'+$RemoteRoot+'/Remote-WorldgenScenarioServer.ps1" -Root "'+$RemoteRoot+'" -Dimension '+$Dimension+' -Mode '+$Mode+' -Players '+$Players+' -Purpose '+$Purpose+' -CacheEntries '+$CacheEntries+' -Prediction '+$predictionEnabled.ToString().ToLowerInvariant()+' -ValidationCells '+$ValidationCells+' -Seed '+$Seed+' -ServerLogicalProcessors '+$ServerLogicalProcessors+' -PipelineProfile '+$PipelineProfile+' -Movement '+$Movement
     $remoteCommand += ' -CorrectnessDemandWaitMs '+$CorrectnessDemandWaitMs
     $remoteCommand += ' -ServerJvmProcessors '+$ServerJvmProcessors
+    if($Loader -ne 'fabric'){$remoteCommand+=' -Loader '+$Loader+' -NativeInstallSha256 '+$nativeRuntime.sha256}
     Invoke-Remote ('Copy-Item -LiteralPath "'+$RemoteRoot+'/scenario-staging/WorldgenMeasurementRegion.ps1" -Destination "'+$RemoteRoot+'/WorldgenMeasurementRegion.ps1" -Force')
     Invoke-Remote ('Copy-Item -LiteralPath "'+$RemoteRoot+'/scenario-staging/WorldgenScenarioConsole.ps1" -Destination "'+$RemoteRoot+'/WorldgenScenarioConsole.ps1" -Force')
     $remoteCommand += ' -ViewDistance '+$ViewDistance
@@ -335,11 +351,12 @@ try {
     }
     $manifestAfter=Save-Manifest 'source-manifest-after.sha256';if($manifestBefore -ne $manifestAfter){throw 'Source or harness manifest changed during the scenario'}
     $success=$true
-} catch { $failure=$_.Exception.Message; $success=$false } finally {
+} catch { $failure=$_.Exception.Message; $success=$false;Write-Utf8 (Join-Path $output 'failure-detail.txt') ($_.Exception.ToString()+[Environment]::NewLine+$_.ScriptStackTrace) } finally {
     if(-not $success){foreach($client in $clients){Save-ClientFailureDiagnostic $client}}
     if(-not $success -and $null -ne $server){
         try {
-            Invoke-Remote ('$root=[IO.Path]::GetFullPath("'+$RemoteRoot+'");$launcher=Join-Path $root "fabric-server-launch.jar";foreach($process in @(Get-CimInstance Win32_Process -Filter "name=''java.exe''" | Where-Object {$_.CommandLine -and $_.CommandLine.IndexOf($launcher,[StringComparison]::OrdinalIgnoreCase) -ge 0})){Stop-Process -Id $process.ProcessId -Force}')
+            $launchIdentity=if($Loader -eq 'fabric'){Join-Path $RemoteRoot 'fabric-server-launch.jar'}else{Join-Path $nativeRuntime.root $(if($Loader -eq 'forge'){'libraries/net/minecraftforge/forge/26.3-66.0.3/win_args.txt'}else{'libraries/net/neoforged/neoforge/26.3.0.13-beta/win_args.txt'})}
+            Invoke-Remote ('$launcher="'+$launchIdentity.Replace('\','/')+'";foreach($process in @(Get-CimInstance Win32_Process -Filter "name=''java.exe''" | Where-Object {$_.CommandLine -and $_.CommandLine.Replace(''\'',''/'').IndexOf($launcher,[StringComparison]::OrdinalIgnoreCase) -ge 0})){Stop-Process -Id $process.ProcessId -Force}')
             if(-not $server.HasExited){[void]$server.WaitForExit(30000)}
         } catch { $cleanupSafe=$false;Write-Utf8 (Join-Path $output 'remote-cleanup-error.txt') $_.Exception.ToString() }
     }
@@ -367,6 +384,7 @@ try {
     $result.client_worker_threads = if($RemoteWorkKind -eq 'complete'){4}else{2}
     $result.client_peer_probe = [bool]$ClientPeerProbe
     $result.gameplay_probe=$gameplayEnabled;$result.gameplay_nonce=$gameplayNonce;$result.gameplay_probe_sha256=$GameplayProbeSha256
+    $result.loader=$Loader;$result.native_runtime=$nativeRuntime
     if($gameplayEnabled){
         $journalPath=Join-Path $output 'remote-evidence/gameplay-journal.json'
         $result.gameplay_journal=if(Test-Path -LiteralPath $journalPath){Get-Content -LiteralPath $journalPath -Raw|ConvertFrom-Json}else{$null}

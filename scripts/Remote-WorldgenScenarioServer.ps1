@@ -34,7 +34,9 @@ param(
     [switch]$DecorationDigest,
     [switch]$FeatureFixture,
     [string]$FeatureReplaySha256,
-    [ValidatePattern('^[a-f0-9]{32}$')][string]$GameplayNonce
+    [ValidatePattern('^[a-f0-9]{32}$')][string]$GameplayNonce,
+    [ValidateSet('fabric','forge','neoforge')][string]$Loader='fabric',
+    [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$NativeInstallSha256
 )
 
 # Remote half of the all-dimension trusted-raw scenario.  It owns only the
@@ -53,6 +55,20 @@ if ($resolved -ne [IO.Path]::GetFullPath((Join-Path $dedicated 'port26.3'))) {
 }
 if($GameplayNonce -and ($resolved -ne [IO.Path]::GetFullPath('E:/WorldgenAssist/port26.3') -or $Dimension -ne 'overworld' -or $Players -ne 2 -or $Purpose -ne 'performance' -or $ViewDistance -ne 32 -or -not $MeasureFullView -or $FeatureFixture -or $Seed -ne 8675309 -or $WarmupRuns -ne 1 -or $MeasuredRepeats -ne 1 -or $Movement -ne 'relocation')){throw 'Only bounded weak E-server ordinary gameplay probe allowed'}
 if($GameplayNonce){. (Join-Path $PSScriptRoot 'WorldgenGameplayServer.ps1')}
+$runtimeWorkingRoot=$resolved
+if($Loader -ne 'fabric'){
+    if(-not $GameplayNonce -or -not $NativeInstallSha256){throw 'Only bounded native ordinary gameplay runtime allowed'}
+    $runtimeLabel=if($Loader -eq 'neoforge'){$NativeInstallSha256.Substring(0,16)}else{$NativeInstallSha256}
+    $runtimeWorkingRoot=Join-Path $resolved ('native-runtime/'+$Loader+'/'+$runtimeLabel)
+    $manifest=Join-Path $runtimeWorkingRoot 'runtime-manifest.json'
+    if((Get-FileHash -LiteralPath $manifest).Hash -ne $NativeInstallSha256){throw 'Native runtime manifest changed'}
+    $runtimeRows=Get-Content -LiteralPath $manifest -Raw|ConvertFrom-Json
+    if($runtimeRows.Count -gt 512){throw 'Native runtime file bound'}
+    foreach($row in $runtimeRows){
+        if($row.relative -notmatch '^(libraries/[A-Za-z0-9_./+-]+|forge-26\.3-66\.0\.3-shim\.jar)$' -or $row.relative.Contains('..')){throw 'Native runtime path bound'}
+        if((Get-FileHash -LiteralPath (Join-Path $runtimeWorkingRoot $row.relative)).Hash -ne $row.sha256){throw 'Native runtime input changed'}
+    }
+}
 $javaExecutable = Join-Path $dedicated 'java25/bin/java.exe'
 if ($RemoteApplicationProfile -eq 'overlap' -and $PipelineProfile -ne 'prefetch') { throw 'Overlap measurement requires the bounded prefetch pipeline' }
 if (-not (Test-Path -LiteralPath $javaExecutable -PathType Leaf)) { throw 'Dedicated JDK 25 is missing' }
@@ -79,7 +95,7 @@ if($FeatureReplaySha256){
 $lock = [IO.File]::Open((Join-Path $resolved 'scenario-run.lock'), 'OpenOrCreate', 'ReadWrite', 'None')
 $case = 'scenario-' + $Dimension + '-' + $Mode + '-p' + $Players + '-' + $Purpose + '-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff')
 $evidence = Join-Path $resolved ('evidence/' + $case)
-$latest = Join-Path $resolved 'logs/latest.log'
+$latest = Join-Path $runtimeWorkingRoot 'logs/latest.log'
 $process = $null; $stdout = $null; $stderr = $null; $success = $false
 $ownerNames = @('ScenarioOwnerA', 'ScenarioOwnerB')[0..($Players - 1)]
 $owners = @{}
@@ -384,7 +400,9 @@ try {
     if ((Get-Content -LiteralPath (Join-Path $resolved 'eula.txt') -Raw) -notmatch '(?m)^eula=true\s*$') { throw 'Existing EULA acceptance is required' }
     if (Get-NetTCPConnection -LocalPort 25585 -State Listen -ErrorAction SilentlyContinue) { throw 'Loopback fixture port 25585 is already occupied' }
     $viewDistance = $ViewDistance
-    @('server-ip=127.0.0.1','server-port=25585','online-mode=false','white-list=false','enforce-whitelist=false',("level-name=$case"),("level-seed=$Seed"),("view-distance=$viewDistance"),'simulation-distance=3',("max-players=$Players"),'gamemode=spectator','difficulty=peaceful','enable-rcon=false','enable-query=false','pause-when-empty-seconds=-1','spawn-protection=0') | Set-Content -LiteralPath (Join-Path $resolved 'server.properties')
+    $levelName=if($Loader -eq 'fabric'){$case}else{(Join-Path $resolved $case).Replace('\','/')}
+    @('server-ip=127.0.0.1','server-port=25585','online-mode=false','white-list=false','enforce-whitelist=false',("level-name=$levelName"),("level-seed=$Seed"),("view-distance=$viewDistance"),'simulation-distance=3',("max-players=$Players"),'gamemode=spectator','difficulty=peaceful','enable-rcon=false','enable-query=false','pause-when-empty-seconds=-1','spawn-protection=0') | Set-Content -LiteralPath (Join-Path $resolved 'server.properties')
+    if($Loader -ne 'fabric'){Copy-Item -LiteralPath (Join-Path $resolved 'server.properties') -Destination (Join-Path $runtimeWorkingRoot 'server.properties') -Force}
     if ($Dimension -eq 'fixture') {
         $pack = Join-Path $resolved ($case + '/datapacks/worldgenassist-fixture')
         $definition = Join-Path $pack 'data/worldgen_assist/dimension'
@@ -399,8 +417,10 @@ try {
     [ordered]@{radius=$measurementRadius;shape=$measurementShape;expected_chunks_per_owner=$measurementOffsets.Count} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'measurement-region.json')
     Copy-Item -LiteralPath (Join-Path $resolved 'server.properties') -Destination (Join-Path $evidence 'server.properties')
     [ordered]@{base_ms=if($Purpose -eq 'correctness'){$CorrectnessDemandWaitMs}else{100};adaptive=($PipelineProfile -ne 'current');maximum_ms=if($PipelineProfile -eq 'current'){30000}elseif($Purpose -eq 'correctness'){[Math]::Min(1000,$CorrectnessDemandWaitMs*2)}else{200}} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'demand-wait-config.json')
-    $start = [Diagnostics.ProcessStartInfo]::new(); $start.FileName = $javaExecutable; $start.Arguments = $(if($MeasureFullView){'-Xmx6G'}else{'-Xmx3G'})+' -Djava.io.tmpdir="'+$taskTemp+'" -Dworldgen_assist.remote.diagnostics=true -jar "' + (Join-Path $resolved 'fabric-server-launch.jar') + '" nogui'; $start.WorkingDirectory = $resolved
+    $launcherArguments=if($Loader -eq 'fabric'){'-jar "'+(Join-Path $resolved 'fabric-server-launch.jar')+'"'}else{'"@'+(Join-Path $runtimeWorkingRoot $(if($Loader -eq 'forge'){'libraries/net/minecraftforge/forge/26.3-66.0.3/win_args.txt'}else{'libraries/net/neoforged/neoforge/26.3.0.13-beta/win_args.txt'}))+'"'}
+    $start = [Diagnostics.ProcessStartInfo]::new(); $start.FileName = $javaExecutable; $start.Arguments = $(if($MeasureFullView){'-Xmx6G'}else{'-Xmx3G'})+' -Djava.io.tmpdir="'+$taskTemp+'" -Dworldgen_assist.remote.diagnostics=true '+$launcherArguments+' nogui'; $start.WorkingDirectory = $runtimeWorkingRoot
     $start.UseShellExecute = $false; $start.CreateNoWindow = $true; $start.RedirectStandardInput = $true; $start.RedirectStandardOutput = $true; $start.RedirectStandardError = $true
+    if($Loader -ne 'fabric'){$start.Arguments='-Duser.home="'+(Join-Path $dedicated 'native-user-home')+'" '+$start.Arguments}
     if($ServerJvmProcessors -gt 0){$start.Arguments='-XX:ActiveProcessorCount='+$ServerJvmProcessors+' '+$start.Arguments}
     if($QuietRemoteTrace){$start.Arguments='-Dworldgen_assist.remote.trace_jobs=false '+$start.Arguments}
     if($ServerFlightRecording){
@@ -584,6 +604,11 @@ try {
     }
     if(-not $process.WaitForExit(30000) -or $process.ExitCode -ne 0){throw 'Server did not stop cleanly'}
     if((Log-Text) -match 'Mixin apply failed|Encountered an unexpected exception|Exception in server tick loop'){throw 'Server logged a runtime error'}
+    if($Loader -ne 'fabric'){
+        if((Get-FileHash -LiteralPath $manifest).Hash -ne $NativeInstallSha256){throw 'Native manifest changed during runtime'}
+        foreach($row in $runtimeRows){if((Get-FileHash -LiteralPath (Join-Path $runtimeWorkingRoot $row.relative)).Hash -ne $row.sha256){throw 'Native runtime changed during selected case'}}
+        [ordered]@{loader=$Loader;root=$runtimeWorkingRoot;manifest_sha256=$NativeInstallSha256;files=$runtimeRows.Count;before_after_equal=$true}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $evidence 'native-runtime-identity.json')
+    }
     $success=$true
 } catch {
     $_ | Out-String | Set-Content -LiteralPath (Join-Path $evidence 'failure.txt')

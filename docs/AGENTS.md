@@ -1,5 +1,160 @@
 # Repository agent instructions
 
+## Native ordinary gameplay closes; transport gap identified (2026-10-09)
+
+Forge003009-312 and fresh Neo022233-731 both pass all25 ordinary/saved-light
+steps. Exact alpha8 JARs/24 native raw inputs/original frozen source manifests
+verified; Forge's later three-file Neo path delta is explicit. Interrupted
+parent remains incomplete. Source/publicversion/protocol14/native5 unchanged.
+Single native FULL changes Forge-8.5797%/Neo+11.1981%,CPU-15.1998/-19.3924%;
+not repeatable native speed proof. Existing-log coverage analysis only,0games/
+JUnit/MODbuilds. See NATIVE_REQUEST_BATCHING.md for all hashes/counts/scopes.
+Native senders lack Fabric's sendJobs batching override and registrations;
+zero native batches matches source. This is a verified gap,not proven slowdown
+cause. Next implement same bounded shared1..4-job channel and controlled SAME-JAR
+OFF/ON native experiment in a NEW dev version; inspect pinned APIs first.
+ALL edits/docs before ONE affected batch;reuse only unchanged identity-checked
+proofs,keep original individual authority/fallback/seed/defaults. Beta/full goal
+still unproved (native repeatability/restart/continuous exploration/stability).
+
+## NeoForge WinPS path repair prepared (2026-10-09; UNRUN)
+
+Fresh Neo021910-947/session3016 fails before Minecraft startup during native
+ExtractToFile; exact longest library path264 characters exceeds WinPS5.1 limit.
+Retain failed raw CLIXML/failure-detail; no runtime/gameplay verdict. Forge's
+longest path234 is unchanged. Neo directory label uses first16 manifest-hash
+characters (max library path216); complete64-character manifest/file hashes
+remain required, existing different manifest rejects label collisions.
+Preparation rejects any native path>=240; remote launcher and local observer
+require the same exact E-owned root. No game target/production/JAR change.
+All repairs/docs BEFORE ONE remaining Neo OFF/ON batch;0newJUnit/MODbuilds.
+Prior closed Forge retains original harness identity;425-source checkpoint was
+before this explicit repair, not a claim that all harness sources remain equal.
+
+## Native checkpoint and remaining NeoForge batch (2026-10-09)
+
+Closed Forge003009-312 passes all25 ordinary gameplay/saved-light steps on
+the weak E-server/view32/two stronger-PC clients with exact publicalpha8.
+Parent003008-389 and Neo004450-007 are interrupted/incomplete, not successful;
+missing handle and local/remote inventories show no owned test/server live.
+Checkpoint native-interrupted-checkpoint-20261009.json verifies425 current
+source hashes,3 artifacts/probe/12 raw saved files against closed Forge.
+See TEST_RESULTS_LATEST for exact scope. No production/target/protocol change.
+After ALL doc edits, ONE fresh unchanged Run-OrdinaryGameplayGate -Execute
+-Loader neoforge runs only the remaining OFF/ON/saved pair; do not rerun Forge
+or unchanged JUnit/MOD builds. Neo followup UNRUN; native repeatable speed,
+server restart/continuous exploration/beta/full goal remain unproved.
+
+## Weak native Forge server boots; test-probe Mixin compatibility corrected
+
+Closed native002708-820/session57807 exits1;Forge child002709-760. Preparation
+and exact runtime hashes pass;actual E-native Forge server reaches SERVER_READY
+case002813-707. Both clients exit1 before joining: separate probe requests
+JAVA_25,unrecognised by installed Forge Mixin0.8.7. Exact cause retained in
+stderr;production uses JAVA_21 and server loads alpha8 successfully. Cleanup
+true/loopback closed;no measured generation/gameplay/assisted/Neo/saved pass.
+
+Change ONLY native test JAR Mixin compatibility label to JAVA_21,matching
+production;actual Java25 runtime/class files unchanged. Shared successful Fabric
+input source/bytecode remains exact;no target/authority/product change. All edits/
+docs before ONE fresh native batch,0newJUnit/MODbuilds. Do not reuse old probe
+after metadata edit. Publicalpha8 immutable;new checks UNRUN,goalactive/not beta.
+
+## Native preparation reaches remote file validation; WinPS array reader corrected
+
+Closed native002256-891/session15091 exits1;correct Forge child002257-795
+four initial steps pass. Archive/helper transfer+hash and short-command execution
+pass. WinPS5.1 ConvertFrom-Json outputs a top-level array as ONE object;
+@(...pipeline...) wrapped it,so foreach row.bytes became Object[] and Int64
+conversion failed before extraction/game launch. Raw CLIXML retains exact
+conversion line;this is a verified new harness cause,not Minecraft failure.
+Original failure/cleanupfalse retained;0gameplay/saved/assisted/Neo proof.
+
+Remove outer pipeline array wrapper in BOTH remote native manifest readers.
+Keep exact JSON/manifest hash,count/size/path/per-file guards. Primary/native
+Mixin findings and production/release identities unchanged. All repairs/docs
+before ONE fresh sequential native batch,0newJUnit/MODbuilds. New runtime
+verification UNRUN;goalactive/beta unproved.
+
+## Correct Forge preparation closed at Windows command length; helper corrected
+
+native001917-645/session94666 exits1;Forge child001918-618 now records ACTUAL
+Forge/alpha8 hash3E570F38... and correct native adapter. Four initial steps pass.
+Local manifest+201555396-byte cached runtime archive and SCP staging complete;
+long encoded preparation command is rejected by Windows: command line too long.
+New retained failure-detail confirms Prepare-NativeGameplayRuntime/Invoke-Remote,
+not Minecraft/worldgen. No game/survival/assisted/Neo/saved pass;failed records
+unchanged,original cleanupfalse retained. First local bytes error does not recur
+after explicit sum;historical exact throw was unrecorded so cause remains inferred.
+
+Transfer the native preparation as an owned UTF8 .ps1 file,hash-check remote
+bytes,invoke through a short command with PROCESS-only execution policy.
+Existing manifest/archive/path/file/Mods bounds remain. Remote size sum also uses
+explicit long arithmetic. All edits/docs before ONE fresh native sequential
+batch;0newJUnit/WGA builds,only native test adapter/offline helper compilation.
+Exact alpha8 production/JAR/tag/assets/defaults unchanged. All game checks still
+UNRUN;beta/full goalactive,not an external blocker.
+
+## First native batch closed before game launch; harness correction prepared
+
+native-ordinary-gameplay-gate-20261008-001239-905/session46178 exits1;
+child ordinary-forge-gameplay-gate-001240-871 has4 successful adapter/package/
+offline/preflight steps then runtime-original failure. Core foreach($loader)
+overwrote case-insensitive parameter $Loader,so ACTUAL requested Forge became
+Neo. Retain original summary/probe as Neo preparation,not Forge/native gameplay
+success. Local staging fails with invalid bytes argument; exact throw trace was
+not retained. No world/clients/server started,remote read-only owned_java=[] and
+staged helper time00:14:22 confirmed. Original cleanup_safe=false remains as
+recorded. All release source/JAR identities untouched; prior alpha8 publicproof
+unchanged.
+
+Use separate artifactLoader variable; replace new local property-sum binding
+with explicit bounded long sum,retain full exception/ScriptStackTrace in scenario
+failure-detail.txt for any next failure. Byte-error cause remains unproved.
+ALL repairs/docs before ONE fresh native batch;0newJUnit/MODbuilds,only native
+test adapters/offline helpers and still-unrun native ordinary pairs. Do not reuse
+misidentified adapter or failed runtime. Beta/full objective stays unproved.
+
+## Native ordinary gameplay on the weak E-server prepared; UNRUN
+
+New Run-NativeOrdinaryGameplayGate -Execute owns ONE sequential Forge then
+NeoForge original/assisted batch, view32/warm1/measured1/two stronger-PC clients.
+It uses exact published alpha8 JARs; closed release-alpha8-20261008 proof and
+fresh archive-entry checks require ONLY version metadata to differ from dev23.
+Original4 affected methods/one lighting-reader method/3-loader882 proofs reused;
+ZERO new JUnit or MOD builds. Production/protocol14/native5/defaults unchanged.
+
+The separate UNShipped client-only probe reuses the successful230655 THREE
+original input class files after shared-source/JAR/frozen-parent checks. Only
+native metadata/empty loader entry/three original packet receipt hooks are
+compiled. Minecraft.tick TAIL/stopDestroyBlock HEAD and ClientPacketListener
+handleSystemChat/handleDisguisedChat/handleLevelChunkWithLight TAIL require1
+verified first against generated26.2 then exact26.3, Forge66.0.3 injected
+source SHA E7BD5F6C96045414045A8629AA877AB5416E8750CCB14D0F9A5CEFE0C229C62F,
+Neo26.3.0.13-beta source SHA
+990FBD28DC46DD9A1C41E67F9389A972C0097D38D551678F125A481402E351DF.
+26.2 packet uses getX/getZ;26.3 uses x/z. Packet receipt after replacement
+still queues light work: NOT rendering/light-completion proof. Helper class
+is outside Mixin package; probe is NOT copied to server or release assets.
+
+Existing verified installed server libraries/shim are copied to private
+E:/WorldgenAssist/port26.3/native-runtime/<loader>/<manifestSHA>; no new machine
+install/download. Native args resolve in this E-working-directory; temp/user.home/
+world/log/cache stay E. Manifest/files bounded and hash checked before/after;
+same runtime identity required OFF/ON. Separate profiles/two original actor
+UUIDs,original quit/input/read-only server witnesses; no physics pause/healing/
+artificial floor/console block writes. Successful clean stops permit exact
+saved player/COBBLESTONE and50 interior/162 halo/10649600 lighting checks per
+condition. Same10658 tasks/3461 required receipts/10082 feature-light bodies/
+ownership guards retained. Fail-fast original evidence preserved.
+
+Finish ALL harness/docs edits before this selected batch; no concurrent builds/
+runtimes. All new compile/loader/runtime/gameplay/saved checks still UNRUN.
+One native repeat is functional evidence, NOT repeatable native speed/beta,
+server restart/continuous exploration/combat/hazards or full goal completion.
+Published alpha8/tag/assets stay immutable; next production changes need a new
+development version. Prior headings retain original identities.
+
 ## Alpha.8 published; automatic CurseForge upload succeeds (2026-10-08 JST)
 
 User authorizes a new alpha and commits. Version0.1.0-alpha.8+mc26.3 retains
