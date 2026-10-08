@@ -1,5 +1,17 @@
 # Mixin Targets
 
+Native batch031155 builds pass; Forge boots and completes3 measured regions,
+then test-only dry-ground scan fails at location4. Repair stock post-measurement
+teleport/receipt wait/interaction location only; native probe bytecode and all
+game/Mixin targets unchanged. Observer retains repeat3 after END, so return to
+disjoint location2 requires new receipts. Followup UNRUN; full scope in
+NATIVE_REQUEST_BATCHING.md. No failed gameplay/speed proof reuse.
+
+Native alpha.9-dev.1 request batching changes ONLY loader registration/senders/
+client adapters, not game Mixins or targets. Pinned Forge addMain and Neo MAIN
+payload APIs are recorded in NATIVE_REQUEST_BATCHING.md. Channel6/shared14;
+same per-job worker handler and bounded shared codec. New runtime UNRUN.
+
 Native input/receipt probe hooks now run successfully in BOTH Forge003009-312
 and Neo022233-731 ordinary gameplay/saved-light pairs. Production targets/JARs
 unchanged; packet receipt still does not prove rendering completion. Next

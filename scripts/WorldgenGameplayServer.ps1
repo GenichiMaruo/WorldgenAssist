@@ -39,15 +39,15 @@ function Assert-GameplayBlock([object]$Row,[string]$Expected,[string]$Phase){
     throw "Authoritative block confirmation timed out: $marker; original block/item/position diagnostics retained"
 }
 function Invoke-OrdinaryGameplay {
-    $journal=[ordered]@{nonce=$GameplayNonce;success=$false;phases=@();physics_paused=$false;world_blocks_set_by_console=$false;health_set=$false}
+    $journal=[ordered]@{nonce=$GameplayNonce;success=$false;interaction_location=$GameplayInteractionLocation;after_measured_repeats=$MeasuredRepeats;phases=@();physics_paused=$false;world_blocks_set_by_console=$false;health_set=$false}
     try {
         $scan=Wait-GameplayAcknowledgement 'scan'
         foreach($row in $scan.players){
             if($row.stand.Count -ne 3 -or $row.target.Count -ne 3){throw 'Bounded scan geometry required'}
             foreach($coordinate in @($row.stand)+@($row.target)){if([double]$coordinate -ne [int]$coordinate){throw 'Integer natural patch required'}}
             $sign=if($row.owner -eq $ownerNames[0]){1}else{-1}
-            $cx=$sign*(16000+4096*($WarmupRuns+$MeasuredRepeats));$cz=$sign*(-32000-4096*($WarmupRuns+$MeasuredRepeats))
-            if([Math]::Abs($row.stand[0]-$cx) -gt 97 -or [Math]::Abs($row.stand[2]-$cz) -gt 97 -or $row.stand[1] -lt -60 -or $row.stand[1] -gt 315 -or $row.target[0] -ne $row.stand[0]+1 -or $row.target[1] -ne $row.stand[1]-1 -or $row.target[2] -ne $row.stand[2]){throw 'Only loaded last measured center patch allowed'}
+            $cx=$sign*(16000+4096*$GameplayInteractionLocation);$cz=$sign*(-32000-4096*$GameplayInteractionLocation)
+            if([Math]::Abs($row.stand[0]-$cx) -gt 97 -or [Math]::Abs($row.stand[2]-$cz) -gt 97 -or $row.stand[1] -lt -60 -or $row.stand[1] -gt 315 -or $row.target[0] -ne $row.stand[0]+1 -or $row.target[1] -ne $row.stand[1]-1 -or $row.target[2] -ne $row.stand[2]){throw 'Only loaded explicitly selected measured center patch allowed'}
             foreach($id in @($row.stand_block,$row.target_block)){if($id -notin @('minecraft:grass_block','minecraft:dirt','minecraft:coarse_dirt','minecraft:rooted_dirt','minecraft:stone','minecraft:andesite','minecraft:diorite','minecraft:granite','minecraft:deepslate','minecraft:sandstone','minecraft:red_sandstone','minecraft:sand','minecraft:red_sand','minecraft:gravel')){throw 'Natural solid ground required'}}
             if($row.support_block -notmatch '^minecraft:[a-z0-9_]{1,80}$'){throw 'Support identifier bound'}
             $floor=@($row.stand[0],($row.stand[1]-1),$row.stand[2]);$head=@($row.stand[0],($row.stand[1]+1),$row.stand[2]);$support=@($row.target[0],($row.target[1]-1),$row.target[2])

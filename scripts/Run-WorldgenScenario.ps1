@@ -38,6 +38,8 @@ param(
     [ValidateSet('fabric','forge','neoforge')][string]$Loader='fabric',
     [string]$GameplayProbeJar,
     [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$GameplayProbeSha256,
+    [switch]$NativeBatchExperiment,
+    [ValidateSet('true','false')][string]$NativeRequestBatching='true',
     [string]$RemoteHost = 'gen1c@100.117.255.71',
     [string]$RemoteRoot = 'C:/Users/gen1c/AppData/Local/Temp/WorldgenAssist-20260909/port26.3'
 )
@@ -69,9 +71,11 @@ $predictionEnabled = [bool]::Parse($Prediction)
 $nativeRuntime=$null
 $gameplayEnabled=-not [string]::IsNullOrWhiteSpace($GameplayProbeJar)
 $gameplayNonce=if($gameplayEnabled){[Guid]::NewGuid().ToString('N')}else{$null}
+if($NativeBatchExperiment -and ($Loader -eq 'fabric' -or -not $gameplayEnabled -or $Mode -ne 'assisted' -or $MeasuredRepeats -ne 3 -or $FeatureBackend -ne 'parallel' -or $NoiseBackend -ne 'cooperative' -or $RemoteWorkKind -ne 'complete' -or $CompleteVerification -ne 'peer' -or $AuthoritativeBiomes -ne 'demand')){throw 'Native batching requires the controlled three-repeat assisted gameplay profile'}
+$gameplayRepeats=if($NativeBatchExperiment){3}else{1}
 if($gameplayEnabled){
     $GameplayProbeJar=[IO.Path]::GetFullPath($GameplayProbeJar)
-    if(-not $GameplayProbeJar.StartsWith($testRoot,[StringComparison]::OrdinalIgnoreCase) -or $Dimension -ne 'overworld' -or $Players -ne 2 -or $Purpose -ne 'performance' -or -not $MeasureFullView -or $ViewDistance -ne 32 -or $Seed -ne 8675309 -or $Movement -ne 'relocation' -or $FeatureFixture -or $WarmupRuns -ne 1 -or $MeasuredRepeats -ne 1 -or (Get-FileHash -LiteralPath $GameplayProbeJar).Hash -ne $GameplayProbeSha256){throw 'Exact bounded public gameplay probe requires its owned hashed test JAR'}
+    if(-not $GameplayProbeJar.StartsWith($testRoot,[StringComparison]::OrdinalIgnoreCase) -or $Dimension -ne 'overworld' -or $Players -ne 2 -or $Purpose -ne 'performance' -or -not $MeasureFullView -or $ViewDistance -ne 32 -or $Seed -ne 8675309 -or $Movement -ne 'relocation' -or $FeatureFixture -or $WarmupRuns -ne 1 -or $MeasuredRepeats -ne $gameplayRepeats -or (Get-FileHash -LiteralPath $GameplayProbeJar).Hash -ne $GameplayProbeSha256){throw 'Exact bounded public gameplay probe requires its owned hashed test JAR'}
 }
 if($Loader -ne 'fabric' -and -not $gameplayEnabled){throw 'Native weak-server adapter is limited to ordinary gameplay evidence'}
 $replay=$null
@@ -245,6 +249,7 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
     $remoteCommand += ' -CorrectnessDemandWaitMs '+$CorrectnessDemandWaitMs
     $remoteCommand += ' -ServerJvmProcessors '+$ServerJvmProcessors
     if($Loader -ne 'fabric'){$remoteCommand+=' -Loader '+$Loader+' -NativeInstallSha256 '+$nativeRuntime.sha256}
+    if($NativeBatchExperiment){$remoteCommand+=' -NativeBatchExperiment -NativeArtifactSha256 '+$artifactHash+' -NativeRequestBatching '+$NativeRequestBatching}
     Invoke-Remote ('Copy-Item -LiteralPath "'+$RemoteRoot+'/scenario-staging/WorldgenMeasurementRegion.ps1" -Destination "'+$RemoteRoot+'/WorldgenMeasurementRegion.ps1" -Force')
     Invoke-Remote ('Copy-Item -LiteralPath "'+$RemoteRoot+'/scenario-staging/WorldgenScenarioConsole.ps1" -Destination "'+$RemoteRoot+'/WorldgenScenarioConsole.ps1" -Force')
     $remoteCommand += ' -ViewDistance '+$ViewDistance
@@ -299,7 +304,11 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
             $line=$lineTask.GetAwaiter().GetResult()
             if($null -ne $line){
                 $line|Add-Content -LiteralPath (Join-Path $output 'remote-runner.log')
-                if($line -match '^SERVER_RECEIPT_WAIT (\d+) (\d+)$'){$receiptPending=@{repeat=[int]$Matches[1];location=[int]$Matches[2]}}
+                if($line -match '^SERVER_RECEIPT_WAIT (\d+) (\d+)$'){$receiptPending=@{repeat=[int]$Matches[1];location=[int]$Matches[2];ack=('receipt-'+$Matches[1]+'.ack')}}
+                if($line -match '^SERVER_GAMEPLAY_RECEIPT_WAIT 3 2$'){
+                    if(-not $NativeBatchExperiment -or $receiptPending){throw 'Unexpected gameplay return receipt phase'}
+                    $receiptPending=@{repeat=3;location=2;ack='gameplay-receipt.ack'}
+                }
                 if($line -match '^SERVER_GAMEPLAY_WAIT (scan|ground|mine|place|reconnect)$'){
                     if(-not $gameplayEnabled -or $gameplayPending){throw 'Unexpected gameplay phase'}
                     $gameplayPending=$Matches[1];Start-GameplayControl $gameplayPending $clients $gameplayNonce
@@ -318,7 +327,7 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
                 if($expected.Count -gt 0){$allReceived=$false}
             }
             if($allReceived){
-                Invoke-Remote ('Set-Content -LiteralPath "'+$RemoteRoot+'/evidence/'+$case+'/receipt-'+$receiptPending.repeat+'.ack" -Value "complete"')
+                Invoke-Remote ('Set-Content -LiteralPath "'+$RemoteRoot+'/evidence/'+$case+'/'+$receiptPending.ack+'" -Value "complete"')
                 $receiptPending=$null
             }
         }
@@ -385,6 +394,8 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
     $result.client_peer_probe = [bool]$ClientPeerProbe
     $result.gameplay_probe=$gameplayEnabled;$result.gameplay_nonce=$gameplayNonce;$result.gameplay_probe_sha256=$GameplayProbeSha256
     $result.loader=$Loader;$result.native_runtime=$nativeRuntime
+    $result.native_batch_experiment=[bool]$NativeBatchExperiment;$result.native_request_batching=$NativeRequestBatching
+    $result.gameplay_interaction_location=if($NativeBatchExperiment){2}else{$WarmupRuns+$MeasuredRepeats}
     if($gameplayEnabled){
         $journalPath=Join-Path $output 'remote-evidence/gameplay-journal.json'
         $result.gameplay_journal=if(Test-Path -LiteralPath $journalPath){Get-Content -LiteralPath $journalPath -Raw|ConvertFrom-Json}else{$null}

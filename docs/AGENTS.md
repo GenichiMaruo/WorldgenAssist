@@ -1,5 +1,65 @@
 # Repository agent instructions
 
+## Native batch first run closes at natural-site scan; geography repair UNRUN
+
+native-request-batch-gate-20261009-031155-147/session4829 exits1. Both native
+builds pass; exact3-stem archive/common-source checks and E-Forge boot pass.
+Forge031217-359 batchingOFF completes all3 measured10658-task regions and
+required receipts, then B scan fails "no bounded natural dry landing/mining
+patch" at last location4. B scans37249 columns/7122 natural floors; Health20,
+alive/creative/flying. A scan succeeds. No ground/mining/place/reconnect/saved/
+batchON/Neo/speed verdict; original failure and cleanup_safe=true retained.
+This is a test-site selection failure, not proof of a generation regression.
+
+Only harness changes: AFTER every measured END and required receipt, stock
+Start-Location2 revisits the already-generated first measured region where
+closed alpha8 ordinary gameplay proved natural ground. Both clients must
+receive all3461 return chunks before scan; unchanged native observer keeps
+repeat3 after END, and centers2/4 are disjoint, so old repeat1 arrivals cannot
+satisfy this new acknowledgement. Separate gameplay-receipt.ack preserves all
+original measurement ACKs. Geometry97/radius96/natural ground/health/mining/
+placement/reconnect/saved-light strictness unchanged; no floor/healing/pause/
+new seed or performance-region/order change. Journal records location2 after3.
+
+After ALL edits/docs ONE Run-NativeRequestBatchGate -Execute -ReuseBuildRoot
+test-artifacts/native-request-batch-gate-20261009-031155-147. Reuse ONLY the2
+successful builds after original frozen manifests/current+retained JAR hashes
+and exact source equality except five explicit geography/reuse helpers and six
+docs. Failed runtime verdict/performance/survival proofs never reused; fresh
+both native OFF/ON pairs retain all guards. ZERO new JUnit/MOD builds. JARs
+remain alpha9-dev1 Forge4D9B8F64.../Neo925410A4...,shared14/native6. New followup
+UNRUN;publicalpha8 immutable,goalactive/no beta. Prior UNRUN headings history.
+
+## Native bounded request batching implemented; verification UNRUN
+
+New alpha.9-dev.1 changes ONLY three native transport classes per loader and
+version metadata. Both native sendJobs adapters use unchanged shared1..4-job
+codec; individual fallback remains when disabled/unavailable. Every contained
+job enters the SAME original MAIN worker handler, with original job identity,
+authority/audit/cancellation/deadline/epoch/domain/application/fallback. Native
+channel6 is explicit (publicalpha8 channel5 remains immutable); sharedprotocol14
+bytes and game/Mixin/generation code unchanged. JVM switch
+worldgen_assist.native.request_batching defaults true; remote remains defaultOFF.
+Pinned Forge66.0.3 and Neo26.3.0.13-beta registration/MAIN/version APIs verified;
+full hashes and scope in NATIVE_REQUEST_BATCHING.md. No network-ingress bypass.
+
+ALL implementation/harness/docs before ONE Run-NativeRequestBatchGate -Execute:
+two native builds, ZERO new unchanged JUnit/Fabric build/runtime; archive checks
+allow only exact3 native class stems/inner classes and metadata. Strict source
+inventory preserves all common/codec/test/build helpers before old proofs reused.
+Forge thenNeo SAME new JAR batchingOFF/ON BOTH remoteassisted/cooperative/parallel,
+weak E-server/view32/two stronger-PC clients/warm1/three identical relocations.
+Each repeat10658tasks/3461requiredreceipts perowner/10082feature-light bodies,
+peak2/zero ownership conflicts/actual peer,audit,providedBIO use/clean stops.
+Each owner must show ON batches2..4 and OFFzero, exact launch/property/native6.
+Original survival input/reconnect and stopped saved player/voxel/own-light checks
+remain. Full library+artifact hashes authority; isolated E-runtime directory label
+manifest16-artifact12 prevents mixing old/public MODs and stays below240chars.
+Freeze source/docs/JARs during batch; retain every failure and terminal handle.
+ALL new builds/runtimes/measurements UNRUN; no speed/beta/release claim. Existing
+882 evidence belongs to original dev23 artifacts, not new native transport tests.
+Opposite-order reproducibility/restart/continuous exploration still pending.
+
 ## Native ordinary gameplay closes; transport gap identified (2026-10-09)
 
 Forge003009-312 and fresh Neo022233-731 both pass all25 ordinary/saved-light

@@ -1,5 +1,19 @@
 # Validation matrix
 
+Native first031155 batch closes failed at post-measurement dry-ground scan,
+after2 successful builds. Harness-only interaction-site repair selects previous
+measured location2 AFTER all3 measurements/receipts, with fresh full-view return
+ACK before unchanged stock input. ONE followup -ReuseBuildRoot031155 reuses ONLY
+exact unchanged builds; fresh both native pairs/all strict guards. No failed
+runtime/speed proof reuse or new unchanged JUnit/builds. Followup UNRUN.
+
+Native alpha.9-dev.1 batching selects `Run-NativeRequestBatchGate -Execute`:
+two native builds, SAME-JAR batchingOFF/ON BOTHremoteON, each warm1/measured3
+weak E-server/view32/two clients, ordinary input/authoritative/saved-light gates.
+All edits/docs first; freeze inputs, no competing or unchanged broad tests.
+Identity-checked common/JUnit/old882 proofs retain their original artifacts.
+This affected experiment is currently UNRUN, not general parity/beta evidence.
+
 ## Ordinary Fabric survival/input/saved-light gate230655 passes
 
 Closed ordinary-gameplay-gate-20261007-230655-166/session50927 exits0,ALL25

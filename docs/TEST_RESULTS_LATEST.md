@@ -1,5 +1,37 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## Native batching first gate closes failed; post-measurement site repair UNRUN
+
+031155-147/session4829 exit1: two native builds pass, Forge031217-359 exact
+transport-only archive check/server boot/three10658-task measurements and
+full-view receipts complete. Later ownerB bounded scan finds no dry natural
+patch at location4 (37249 columns/7122 natural floors;Health20/alive/flying).
+Original failure/cleanup_safe=true retained. No batchON/Neo/interaction/saved/
+paired-speed success. This does not establish a generation regression.
+
+Harness-only repair returns to already-generated known natural location2 AFTER
+every measurement/receipt, requires fresh repeat3-labelled full-view receipts
+before original scan. Distinct regions/oldrepeat1 receipt labels cannot satisfy
+this new ACK. Original measurement ACKs/coordinates/metrics/strict radius96,
+health/mining/placement/reconnect/saved-light gates unchanged. ONE fresh pair
+batch with strict -ReuseBuildRoot031155 reuses ONLY two unchanged exact builds,
+zero fresh JUnit/MOD builds; failed gameplay/timings not reused. Followup UNRUN.
+See NATIVE_REQUEST_BATCHING.md for exact hashes, source identity and scope.
+
+## Native alpha.9-dev.1 batching implemented; all new verification UNRUN
+
+Exact three native transport class stems perloader now register/send/receive
+the shared1..4-job codec; native6/shared14. No generation/Mixin or common codec
+change. Run-NativeRequestBatchGate owns two necessary native builds and four
+sequential ordinary weak E-server/view32/two-client runtimes, SAME candidate
+batchingOFF/ON BOTHremoteON/warm1/three same-coordinate repeats, plus original
+survival/reconnect/server witnesses and stopped player/voxel/lighting checks.
+Every task/receipt/feature footprint/authority/cleanup gate stays strict; zero
+new unchanged JUnit/Fabric build. Old exact dev23 source/XML/882 evidence is
+retained with original identities, not claimed as fresh native6 runtime proof.
+No new speed, beta, release or completed-test claim. Full design/APIs:
+[native batching](NATIVE_REQUEST_BATCHING.md).
+
 ## Native ordinary gameplay passes; one-repeat speed differs (2026-10-09)
 
 Both Forge003009-312 and Neo022233-731 complete all25 steps with exact public

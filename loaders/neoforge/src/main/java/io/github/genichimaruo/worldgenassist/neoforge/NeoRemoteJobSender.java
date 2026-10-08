@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import io.github.genichimaruo.worldgenassist.network.TerrainJobCancelPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobRequestPayload;
+import io.github.genichimaruo.worldgenassist.network.TerrainJobBatchPayload;
 import io.github.genichimaruo.worldgenassist.server.RemoteJobSender;
 import io.github.genichimaruo.worldgenassist.server.RemoteWorldgenManager;
 import net.minecraft.server.MinecraftServer;
@@ -12,6 +13,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.registration.NetworkRegistry;
 
 final class NeoRemoteJobSender implements RemoteJobSender {
+    private static final boolean REQUEST_BATCHING = Boolean.parseBoolean(
+        System.getProperty("worldgen_assist.native.request_batching", "true"));
     private static ServerPlayer player(UUID id) {
         MinecraftServer server = RemoteWorldgenManager.activeServer();
         return server == null ? null : server.getPlayerList().getPlayer(id);
@@ -26,6 +29,15 @@ final class NeoRemoteJobSender implements RemoteJobSender {
         ServerPlayer player = player(ownerId);
         if (player == null || !canSend(ownerId)) throw new IllegalStateException("Worker cannot receive job: " + ownerId);
         PacketDistributor.sendToPlayer(player, payload);
+    }
+    @Override public void sendJobs(UUID ownerId, java.util.List<io.github.genichimaruo.worldgenassist.common.TerrainDensityJob> jobs) {
+        ServerPlayer player = player(ownerId);
+        if (REQUEST_BATCHING && jobs.size() > 1 && player != null
+            && NetworkRegistry.hasChannel(player.connection, TerrainJobBatchPayload.TYPE.id())) {
+            PacketDistributor.sendToPlayer(player, new TerrainJobBatchPayload(jobs));
+            io.github.genichimaruo.worldgenassist.WorldgenAssist.LOGGER.info(
+                "[CAWG] jobs.batch_sent owner={} count={}", ownerId, jobs.size());
+        } else RemoteJobSender.super.sendJobs(ownerId, jobs);
     }
 
     @Override public void sendCancel(UUID ownerId, TerrainJobCancelPayload payload) {

@@ -5,6 +5,7 @@ import io.github.genichimaruo.worldgenassist.network.ForgeResultFragmentPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobCancelPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobFailurePayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobRequestPayload;
+import io.github.genichimaruo.worldgenassist.network.TerrainJobBatchPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobResultPayload;
 import io.github.genichimaruo.worldgenassist.network.WorkerAcceptedPayload;
 import io.github.genichimaruo.worldgenassist.network.WorkerHelloPayload;
@@ -24,7 +25,7 @@ final class ForgeNetwork {
     static void register(ForgeWorldgenAssist owner) {
         if (channel != null) throw new IllegalStateException("Forge channel already registered");
         channel = ChannelBuilder.named("worldgen_assist:play")
-            .networkProtocolVersion(5).optional().payloadChannel().play().flow(PacketFlow.SERVERBOUND)
+            .networkProtocolVersion(6).optional().payloadChannel().play().flow(PacketFlow.SERVERBOUND)
             .addMain(WorkerHelloPayload.TYPE, WorkerHelloPayload.CODEC, (payload, context) -> {
                 ServerPlayer player = context.getSender();
                 if (player != null) channel.reply(owner.manager().handleHello(player.getUUID(), payload), context);
@@ -64,6 +65,8 @@ final class ForgeNetwork {
                 (payload, context) -> ForgeClientInit.onAccepted(payload))
             .addMain(TerrainJobRequestPayload.TYPE, TerrainJobRequestPayload.CODEC,
                 (payload, context) -> ForgeClientInit.onJob(payload))
+            .addMain(TerrainJobBatchPayload.TYPE, TerrainJobBatchPayload.CODEC,
+                (payload, context) -> ForgeClientInit.onJobs(payload))
             .addMain(TerrainJobCancelPayload.TYPE, TerrainJobCancelPayload.CODEC,
                 (payload, context) -> ForgeClientInit.onCancel(payload))
             .build();

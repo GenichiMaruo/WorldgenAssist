@@ -48,7 +48,7 @@ public final class NeoWorldgenAssist implements WorldgenLoaderHooks {
         modBus.addListener(this::registerNetwork);
     }
     private void registerNetwork(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("5");
+        var registrar = event.registrar("6");
         registrar.playToServer(WorkerHelloPayload.TYPE, WorkerHelloPayload.CODEC,
             (payload, context) -> context.reply(remote().handleHello(((ServerPlayer) context.player()).getUUID(), payload)));
         registrar.playToServer(TerrainJobResultPayload.TYPE, TerrainJobResultPayload.CODEC,
@@ -66,6 +66,8 @@ public final class NeoWorldgenAssist implements WorldgenLoaderHooks {
             });
         registrar.playToClient(WorkerAcceptedPayload.TYPE, WorkerAcceptedPayload.CODEC);
         registrar.playToClient(TerrainJobRequestPayload.TYPE, TerrainJobRequestPayload.CODEC);
+        registrar.playToClient(io.github.genichimaruo.worldgenassist.network.TerrainJobBatchPayload.TYPE,
+            io.github.genichimaruo.worldgenassist.network.TerrainJobBatchPayload.CODEC);
         registrar.playToClient(TerrainJobCancelPayload.TYPE, TerrainJobCancelPayload.CODEC);
     }
     private RemoteWorldgenManager remote() {

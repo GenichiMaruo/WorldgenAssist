@@ -1,5 +1,20 @@
 # World Generation Pipeline Notes
 
+Native batching's first031155 batch builds2/bootsForge/completes3 measured
+regions, but ownerB's later location4 natural-site scan fails. Test harness now
+returns to previously-generated location2 AFTER all measured ENDs/receipts and
+waits both full-view return receipts before stock gameplay. No production
+generation order/work/authority/measurement coordinate change or artificial
+terrain/physics/health. Journal/saved checks require actual selected location.
+Followup UNRUN; failed batch retained, unchanged builds reused with exact hashes.
+
+Native alpha.9-dev.1 now uses bounded shared1..4-job request batches through
+the original native MAIN handlers; disabled/unavailable uses original individual
+sends. No new task/ticket/executor/wait, changed generation ordering or weakened
+authority. JVM batching switch supports SAME-JAR OFF/ON, both assistanceON.
+New builds/runtimes UNRUN; publicalpha8 individual-send findings below retain
+their original identity. See NATIVE_REQUEST_BATCHING.md for controlled gate.
+
 Both native weak-E/view32 ordinary input/saved-light pairs pass; no generation
 pipeline change. Native senders currently inherit individual request sends;
 only Fabric overrides sendJobs with shared bounded1..4-job batching. Native

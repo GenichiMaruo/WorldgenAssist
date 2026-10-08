@@ -36,7 +36,10 @@ param(
     [string]$FeatureReplaySha256,
     [ValidatePattern('^[a-f0-9]{32}$')][string]$GameplayNonce,
     [ValidateSet('fabric','forge','neoforge')][string]$Loader='fabric',
-    [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$NativeInstallSha256
+    [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$NativeInstallSha256,
+    [switch]$NativeBatchExperiment,
+    [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$NativeArtifactSha256,
+    [ValidateSet('true','false')][string]$NativeRequestBatching='true'
 )
 
 # Remote half of the all-dimension trusted-raw scenario.  It owns only the
@@ -53,15 +56,20 @@ $dedicated = if($resolved -eq [IO.Path]::GetFullPath('E:/WorldgenAssist/port26.3
 if ($resolved -ne [IO.Path]::GetFullPath((Join-Path $dedicated 'port26.3'))) {
     throw 'Root must be the dedicated WorldgenAssist 26.3 test child'
 }
-if($GameplayNonce -and ($resolved -ne [IO.Path]::GetFullPath('E:/WorldgenAssist/port26.3') -or $Dimension -ne 'overworld' -or $Players -ne 2 -or $Purpose -ne 'performance' -or $ViewDistance -ne 32 -or -not $MeasureFullView -or $FeatureFixture -or $Seed -ne 8675309 -or $WarmupRuns -ne 1 -or $MeasuredRepeats -ne 1 -or $Movement -ne 'relocation')){throw 'Only bounded weak E-server ordinary gameplay probe allowed'}
+if($NativeBatchExperiment -and ($Loader -eq 'fabric' -or -not $GameplayNonce -or -not $NativeArtifactSha256 -or $Mode -ne 'assisted' -or $MeasuredRepeats -ne 3 -or $FeatureBackend -ne 'parallel' -or $NoiseBackend -ne 'cooperative' -or $RemoteWorkKind -ne 'complete' -or $CompleteVerification -ne 'peer' -or $AuthoritativeBiomes -ne 'demand')){throw 'Native batching requires the controlled three-repeat assisted gameplay profile'}
+$gameplayRepeats=if($NativeBatchExperiment){3}else{1}
+$GameplayInteractionLocation=if($NativeBatchExperiment){2}else{$WarmupRuns+$MeasuredRepeats}
+if($GameplayNonce -and ($resolved -ne [IO.Path]::GetFullPath('E:/WorldgenAssist/port26.3') -or $Dimension -ne 'overworld' -or $Players -ne 2 -or $Purpose -ne 'performance' -or $ViewDistance -ne 32 -or -not $MeasureFullView -or $FeatureFixture -or $Seed -ne 8675309 -or $WarmupRuns -ne 1 -or $MeasuredRepeats -ne $gameplayRepeats -or $Movement -ne 'relocation')){throw 'Only bounded weak E-server ordinary gameplay probe allowed'}
 if($GameplayNonce){. (Join-Path $PSScriptRoot 'WorldgenGameplayServer.ps1')}
 $runtimeWorkingRoot=$resolved
 if($Loader -ne 'fabric'){
     if(-not $GameplayNonce -or -not $NativeInstallSha256){throw 'Only bounded native ordinary gameplay runtime allowed'}
     $runtimeLabel=if($Loader -eq 'neoforge'){$NativeInstallSha256.Substring(0,16)}else{$NativeInstallSha256}
+    if($NativeBatchExperiment){$runtimeLabel=$NativeInstallSha256.Substring(0,16)+'-'+$NativeArtifactSha256.Substring(0,12)}
     $runtimeWorkingRoot=Join-Path $resolved ('native-runtime/'+$Loader+'/'+$runtimeLabel)
     $manifest=Join-Path $runtimeWorkingRoot 'runtime-manifest.json'
     if((Get-FileHash -LiteralPath $manifest).Hash -ne $NativeInstallSha256){throw 'Native runtime manifest changed'}
+    if($NativeBatchExperiment){$nativeMods=@(Get-ChildItem -LiteralPath (Join-Path $runtimeWorkingRoot 'mods') -File -Filter '*.jar');if($nativeMods.Count -ne 1 -or (Get-FileHash -LiteralPath $nativeMods[0].FullName).Hash -ne $NativeArtifactSha256){throw 'Exact isolated native candidate MOD required'}}
     $runtimeRows=Get-Content -LiteralPath $manifest -Raw|ConvertFrom-Json
     if($runtimeRows.Count -gt 512){throw 'Native runtime file bound'}
     foreach($row in $runtimeRows){
@@ -421,6 +429,7 @@ try {
     $start = [Diagnostics.ProcessStartInfo]::new(); $start.FileName = $javaExecutable; $start.Arguments = $(if($MeasureFullView){'-Xmx6G'}else{'-Xmx3G'})+' -Djava.io.tmpdir="'+$taskTemp+'" -Dworldgen_assist.remote.diagnostics=true '+$launcherArguments+' nogui'; $start.WorkingDirectory = $runtimeWorkingRoot
     $start.UseShellExecute = $false; $start.CreateNoWindow = $true; $start.RedirectStandardInput = $true; $start.RedirectStandardOutput = $true; $start.RedirectStandardError = $true
     if($Loader -ne 'fabric'){$start.Arguments='-Duser.home="'+(Join-Path $dedicated 'native-user-home')+'" '+$start.Arguments}
+    if($NativeBatchExperiment){$start.Arguments='-Dworldgen_assist.native.request_batching='+$NativeRequestBatching+' '+$start.Arguments;[ordered]@{experiment=$true;batching=$NativeRequestBatching;artifact_sha256=$NativeArtifactSha256;native_channel=6;maximum_jobs=4;runtime_root=$runtimeWorkingRoot}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $evidence 'native-batching-config.json')}
     if($ServerJvmProcessors -gt 0){$start.Arguments='-XX:ActiveProcessorCount='+$ServerJvmProcessors+' '+$start.Arguments}
     if($QuietRemoteTrace){$start.Arguments='-Dworldgen_assist.remote.trace_jobs=false '+$start.Arguments}
     if($ServerFlightRecording){
@@ -572,7 +581,20 @@ try {
         }
         [ordered]@{warmup_runs=$WarmupRuns;measured_repeats=$MeasuredRepeats;warmup=@($warm);measured=@($measured)} | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $evidence 'performance.json')
     }
-    if($GameplayNonce){Invoke-OrdinaryGameplay}
+    if($GameplayNonce){
+        if($NativeBatchExperiment){
+            # AFTER all measurement ENDs/receipts. Revisit known natural dry ground
+            # in the already generated first measured region, with stock teleport.
+            Start-Location 2
+            Write-Output 'SERVER_GAMEPLAY_RECEIPT_WAIT 3 2'
+            $receiptDeadline=[DateTime]::UtcNow.AddSeconds(300)
+            while(-not(Test-Path -LiteralPath (Join-Path $evidence 'gameplay-receipt.ack'))){
+                if($process.HasExited -or [DateTime]::UtcNow -gt $receiptDeadline){throw 'Original gameplay return full-view receipt missing'}
+                Start-Sleep -Milliseconds 1000
+            }
+        }
+        Invoke-OrdinaryGameplay
+    }
     # Generated 26.3 PlayerList.removeAll indexes a list that a synchronous
     # disconnect may shrink. Close these owned fixture clients individually
     # before stop, after every measurement and receipt has been recorded.
@@ -607,6 +629,7 @@ try {
     if($Loader -ne 'fabric'){
         if((Get-FileHash -LiteralPath $manifest).Hash -ne $NativeInstallSha256){throw 'Native manifest changed during runtime'}
         foreach($row in $runtimeRows){if((Get-FileHash -LiteralPath (Join-Path $runtimeWorkingRoot $row.relative)).Hash -ne $row.sha256){throw 'Native runtime changed during selected case'}}
+        if($NativeBatchExperiment){if((Get-FileHash -LiteralPath $nativeMods[0].FullName).Hash -ne $NativeArtifactSha256){throw 'Native candidate MOD changed during runtime'}}
         [ordered]@{loader=$Loader;root=$runtimeWorkingRoot;manifest_sha256=$NativeInstallSha256;files=$runtimeRows.Count;before_after_equal=$true}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $evidence 'native-runtime-identity.json')
     }
     $success=$true

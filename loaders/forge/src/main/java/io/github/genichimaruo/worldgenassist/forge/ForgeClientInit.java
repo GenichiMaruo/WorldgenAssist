@@ -9,6 +9,7 @@ import io.github.genichimaruo.worldgenassist.network.ForgeResultFragmentPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobResultPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobCancelPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobRequestPayload;
+import io.github.genichimaruo.worldgenassist.network.TerrainJobBatchPayload;
 import io.github.genichimaruo.worldgenassist.network.WorkerAcceptedPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.options.OptionsScreen;
@@ -38,6 +39,10 @@ public final class ForgeClientInit {
     }
     static void onAccepted(WorkerAcceptedPayload payload) { worker().onAccepted(payload); }
     static void onJob(TerrainJobRequestPayload payload) { worker().handleRequest(Minecraft.getInstance(), payload.job()); }
+    static void onJobs(TerrainJobBatchPayload payload) {
+        var client = Minecraft.getInstance();
+        for (var job : payload.jobs()) worker().handleRequest(client, job);
+    }
     static void onCancel(TerrainJobCancelPayload payload) { worker().cancel(payload); }
 
     private static boolean canSend() {

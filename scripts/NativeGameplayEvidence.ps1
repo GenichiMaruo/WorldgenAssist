@@ -1,4 +1,30 @@
 # Helpers for unshipped native probes and E-drive-only cached server runtimes.
+function Resolve-NativeBatchArtifact([object]$Candidate){
+    if($Candidate.loader -notin @('forge','neoforge')){throw 'Native batching artifact required'}
+    $current=& (Join-Path $PSScriptRoot 'Get-WorldgenArtifact.ps1') -Loader $Candidate.loader
+    if($current.Version -ne '0.1.0-alpha.9-dev.1+mc26.3'){throw 'Exact native batching development version required'}
+    $metadata=if($Candidate.loader -eq 'forge'){'META-INF/mods.toml'}else{'META-INF/neoforge.mods.toml'}
+    $stems=if($Candidate.loader -eq 'forge'){@('ForgeRemoteJobSender','ForgeClientInit','ForgeNetwork')}else{@('NeoRemoteJobSender','NeoClientInit','NeoWorldgenAssist')}
+    $prefix='io/github/genichimaruo/worldgenassist/'+$Candidate.loader+'/'
+    $changed=@();$original=[IO.Compression.ZipFile]::OpenRead($Candidate.path);$new=[IO.Compression.ZipFile]::OpenRead($current.Path)
+    try {
+        $oldEntries=@($original.Entries|Where-Object {-not $_.FullName.EndsWith('/')});$newEntries=@($new.Entries|Where-Object {-not $_.FullName.EndsWith('/')})
+        if((($oldEntries.FullName|Sort-Object)-join ';') -cne (($newEntries.FullName|Sort-Object)-join ';')){throw 'Native candidate archive entries differ'}
+        foreach($entry in $oldEntries){
+            $oldStream=$entry.Open();$newStream=$new.GetEntry($entry.FullName).Open()
+            try {
+                if($entry.FullName -eq $metadata){$a=[IO.StreamReader]::new($oldStream);$b=[IO.StreamReader]::new($newStream);if($a.ReadToEnd().Replace($Candidate.version,$current.Version) -cne $b.ReadToEnd()){throw 'Exact candidate metadata replacement required'};continue}
+                $oldHash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($oldStream));$newHash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($newStream))
+                if($oldHash -eq $newHash){continue}
+                $allowed=$false;foreach($stem in $stems){if($entry.FullName -cmatch ('^'+[regex]::Escape($prefix+$stem)+'(\$[^/]+)?\.class$')){$allowed=$true}}
+                if(-not $allowed){throw ('Unexpected candidate runtime change: '+$entry.FullName)}
+                $changed+=@{entry=$entry.FullName;original_sha256=$oldHash;candidate_sha256=$newHash}
+            }finally{$oldStream.Dispose();$newStream.Dispose()}
+        }
+        foreach($stem in $stems){if(@($changed|Where-Object entry -CEQ ($prefix+$stem+'.class')).Count -ne 1){throw ('Expected native transport change missing: '+$stem)}}
+    }finally{$original.Dispose();$new.Dispose()}
+    return @{loader=$Candidate.loader;path=$current.Path;sha256=(Get-FileHash -LiteralPath $current.Path).Hash;version=$current.Version;candidate_sha256=$Candidate.sha256;changed_entries=$changed;nontransport_runtime_unchanged=$true}
+}
 function Resolve-GameplayReleaseArtifact([object]$Candidate,[string]$PackageRoot){
     $proof=Get-Content -LiteralPath (Join-Path $PackageRoot 'build-verification.json') -Raw|ConvertFrom-Json
     if(-not $proof.success -or $proof.candidate_version -ne '0.1.0-alpha.8-dev.23+mc26.3' -or $proof.version -ne '0.1.0-alpha.8+mc26.3' -or $proof.builds.Count -ne 3 -or @($proof.builds|Where-Object status -ne 'PASSED').Count){throw 'Exact successful alpha8 packaging required'}
@@ -75,6 +101,7 @@ function Prepare-NativeGameplayRuntime([string]$Loader){
     # WinPS5.1 cannot extract NeoForge's longest library at a264-character path.
     # Shorten only its directory label; the complete manifest hash remains authority.
     $runtimeLabel=if($Loader -eq 'neoforge'){$manifestHash.Substring(0,16)}else{$manifestHash}
+    if($NativeBatchExperiment){$runtimeLabel=$manifestHash.Substring(0,16)+'-'+$artifactHash.Substring(0,12)}
     $runtime="$RemoteRoot/native-runtime/$Loader/$runtimeLabel"
     foreach($row in $rows){if(($runtime+'/'+$row.relative).Length -ge 240){throw 'Native runtime path exceeds bounded WinPS extraction length'}}
     $bundle=Join-Path $output 'native-runtime.zip';$archive=[IO.Compression.ZipFile]::Open($bundle,[IO.Compression.ZipArchiveMode]::Create)
@@ -93,7 +120,7 @@ function Prepare-NativeGameplayRuntime([string]$Loader){
     $code+='$ancestor=[IO.Path]::GetDirectoryName($target);while($ancestor.Length -ge $nativeRoot.Length){if((Test-Path -LiteralPath $ancestor) -and ((Get-Item -LiteralPath $ancestor -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)){throw "Native directory reparse point"};$ancestor=[IO.Path]::GetDirectoryName($ancestor)};'
     $code+='$entry=$zip.GetEntry($row.relative);if($null -eq $entry -or $entry.Length -ne $row.bytes){throw "Native entry identity"};if(-not(Test-Path -LiteralPath $target)){New-Item -ItemType Directory -Force -Path ([IO.Path]::GetDirectoryName($target))|Out-Null;[IO.Compression.ZipFileExtensions]::ExtractToFile($entry,$target)};if(((Get-Item -LiteralPath $target -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -or (Get-Item -LiteralPath $target).Length -ne $row.bytes -or (Get-FileHash -LiteralPath $target).Hash -ne $row.sha256){throw "Native runtime hash differs"}}}finally{$zip.Dispose()};'
     $code+='New-Item -ItemType Directory -Force -Path ($nativeRoot+"/mods")|Out-Null;Copy-Item -LiteralPath ($stage+"/eula.txt") -Destination ($nativeRoot+"/eula.txt") -Force;'
-    $code+='$name="'+$artifact.FileName+'";if(@(Get-ChildItem -LiteralPath ($nativeRoot+"/mods") -File -Filter "*.jar"|Where-Object {$_.Name -ne $name}).Count){throw "Unexpected native server mod"};Copy-Item -LiteralPath ($stage+"/"+$name) -Destination ($nativeRoot+"/mods/"+$name) -Force;if((Get-FileHash -LiteralPath ($nativeRoot+"/mods/"+$name)).Hash -ne "'+$artifactHash+'"){throw "Native MOD hash differs"};'
+    $code+='$name="'+$artifact.FileName+'";if(@(Get-ChildItem -LiteralPath ($nativeRoot+"/mods") -File -Filter "*.jar"|Where-Object {$_.Name -ne $name}).Count){throw "Unexpected native server mod"};if((Test-Path -LiteralPath ($nativeRoot+"/mods/"+$name)) -and (Get-FileHash -LiteralPath ($nativeRoot+"/mods/"+$name)).Hash -ne "'+$artifactHash+'"){throw "Native artifact label collision"};Copy-Item -LiteralPath ($stage+"/"+$name) -Destination ($nativeRoot+"/mods/"+$name) -Force;if((Get-FileHash -LiteralPath ($nativeRoot+"/mods/"+$name)).Hash -ne "'+$artifactHash+'"){throw "Native MOD hash differs"};'
     $code+='Copy-Item -LiteralPath ($stage+"/native-runtime-manifest.json") -Destination ($nativeRoot+"/runtime-manifest.json") -Force'
     $prepareScript=Join-Path $output 'prepare-native-runtime.ps1'
     Write-Utf8 $prepareScript ('$ErrorActionPreference="Stop";$ProgressPreference="SilentlyContinue";'+$code)
@@ -101,6 +128,6 @@ function Prepare-NativeGameplayRuntime([string]$Loader){
     & scp.exe -q $prepareScript ($RemoteHost+':'+$RemoteRoot+'/scenario-staging/')
     if($LASTEXITCODE -ne 0){throw 'Native preparation helper transfer failed'}
     Invoke-Remote ('$helper="'+$RemoteRoot+'/scenario-staging/prepare-native-runtime.ps1";if((Get-FileHash -LiteralPath $helper).Hash -ne "'+$prepareHash+'"){throw "Native preparation helper hash differs"};Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force;& $helper')
-    Write-Json (Join-Path $output 'native-runtime.json') @{loader=$Loader;root=$runtime;manifest_sha256=$manifestHash;bundle_sha256=$bundleHash;files=$rows.Count;source=$source}
+    Write-Json (Join-Path $output 'native-runtime.json') @{loader=$Loader;root=$runtime;manifest_sha256=$manifestHash;artifact_sha256=$artifactHash;bundle_sha256=$bundleHash;files=$rows.Count;source=$source}
     return @{sha256=$manifestHash;root=$runtime;installer_profile=(Join-Path $installed 'client-profile')}
 }

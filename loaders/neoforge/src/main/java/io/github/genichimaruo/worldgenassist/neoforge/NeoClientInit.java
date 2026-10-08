@@ -7,6 +7,7 @@ import io.github.genichimaruo.worldgenassist.client.SettingsScreenSmoke;
 import io.github.genichimaruo.worldgenassist.network.SettingsPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobCancelPayload;
 import io.github.genichimaruo.worldgenassist.network.TerrainJobRequestPayload;
+import io.github.genichimaruo.worldgenassist.network.TerrainJobBatchPayload;
 import io.github.genichimaruo.worldgenassist.network.WorkerAcceptedPayload;
 import io.github.genichimaruo.worldgenassist.network.WorkerHelloPayload;
 import net.minecraft.client.Minecraft;
@@ -44,6 +45,10 @@ final class NeoClientInit {
         event.register(WorkerAcceptedPayload.TYPE, (payload, context) -> worker().onAccepted(payload));
         event.register(TerrainJobRequestPayload.TYPE,
             (payload, context) -> worker().handleRequest(Minecraft.getInstance(), payload.job()));
+        event.register(TerrainJobBatchPayload.TYPE, (payload, context) -> {
+            var client = Minecraft.getInstance();
+            for (var job : payload.jobs()) worker().handleRequest(client, job);
+        });
         event.register(TerrainJobCancelPayload.TYPE, (payload, context) -> worker().cancel(payload));
     }
 

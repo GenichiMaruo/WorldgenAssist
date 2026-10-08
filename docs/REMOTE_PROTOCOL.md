@@ -1,5 +1,14 @@
 # Remote Protocol
 
+Native alpha.9-dev.1 uses channel6 to register the existing bounded
+TerrainJobBatchPayload (1..4 unique jobs); sharedprotocol14/job/codec bytes stay
+unchanged. Publicalpha8 remains native5. Update native server and clients
+together. Per-job identity/deadline/epoch/domain/validation/cancel/fallback are
+unchanged; a batch grants no collective authority. Native batching can be
+disabled by JVM worldgen_assist.native.request_batching=false for SAME-JAR
+comparison; remote/default seed choices stay OFF. New verification UNRUN.
+See NATIVE_REQUEST_BATCHING.md for exact APIs and affected one-batch scope.
+
 ## Dev.19 gate154217-052 completed: no end-to-end gain
 
 ONE sequential session51372 exits0;exactly1 affected method (0 failures/errors/

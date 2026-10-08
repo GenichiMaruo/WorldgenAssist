@@ -1,5 +1,43 @@
 # Native request batching: measured gap and next experiment
 
+## First candidate batch and natural-site correction (2026-10-09)
+
+`native-request-batch-gate-20261009-031155-147` closes failed, session4829 exit1.
+Both necessary native builds pass. Forge031217-359 passes exact unchanged
+runtime-entry/source gates and boots on the weak E-server; batchingOFF completes
+three10658-task regions and full-view receipts. Its later ordinary scan fails
+for ownerB at location4: all37249 bounded columns tested,7122 natural-floor
+columns, no acceptable dry two-block/support patch. B remains Health20/alive/
+creative/flying; A finds a valid patch. No ground/mining/placement/reconnect,
+saved-light, batchingON, Neo or performance comparison pass. Cleanup is safe.
+Raw failure remains retained; no claim about the actual terrain failure cause.
+
+Candidate SHA256:
+
+- Forge `4D9B8F64B36CCE5F1DEF860012A8D9F0A1B1152CD14F7EC9E395A12BF2E0E2AF`
+- Neo `925410A4FC307EFE664A6F7DB042631B3500CF8105CFE356C9B73239B77ADB91`
+
+Repair ONLY the interaction-site selection: after ALL three measurement ENDs
+and receipt acknowledgements, use original stock teleport to the already
+generated first measured location2, where the closed alpha8 ordinary tests
+proved natural ground. Require all3461 chunks newly received per owner under
+the existing final repeat3 observer before scanning. Location2 and4 view32
+regions are disjoint; initial location2 arrivals were labelled repeat1, so they
+cannot satisfy the new receipt check. A separate `gameplay-receipt.ack` preserves
+all measurement ACKs. No measurement marker/time/coordinate change, new terrain
+selection, relaxed radius96/geometry97, healing, artificial floor or physics pause.
+The journal records interaction_location2 after_measured_repeats3; exact own-world
+saved lighting still uses the actual interaction coordinates.
+
+After every repair/doc edit, ONE fresh native OFF/ON batch uses
+`-ReuseBuildRoot test-artifacts/native-request-batch-gate-20261009-031155-147`.
+Reuse only successful two-build evidence with original frozen source manifest,
+current/retained exact JAR identity and unchanged production/test/build inputs.
+Only five explicit geography/reuse helpers and six updated docs may differ.
+Failed runtime or its timings are never relabelled/reused as a successful pair.
+No new unchanged JUnit/MOD builds; both native pairs remain fresh. New verification
+is UNRUN. Publicalpha8 remains immutable; full goal/beta remain unproved.
+
 ## Closed evidence (2026-10-09)
 
 Both native ordinary gameplay pairs pass all25 steps on GENPC-SUB's E-drive,
@@ -75,7 +113,7 @@ and client adapters register only `TerrainJobRequestPayload`, not the optional
 batch type. Zero logged native batches agrees with this source evidence.
 This establishes the missing feature, NOT that it caused Neo's slower run.
 
-## Next implementation and minimum verification (not implemented yet)
+## Implementation and minimum verification (implemented; UNRUN)
 
 1. Register the existing shared batch codec in BOTH native transports; route
    every contained job to the same original worker request handler. Override
@@ -102,4 +140,49 @@ This establishes the missing feature, NOT that it caused Neo's slower run.
    restart/continuous exploration and broader stability remain separate beta
    gaps; passing this transport experiment alone does not complete the goal.
 
-No new production code/version or batching test has run yet. Goal remains active.
+The candidate is now `0.1.0-alpha.9-dev.1+mc26.3`, shared protocol14 and native
+channel6. Forge uses `addMain`; Neo's default MAIN registrar routes the batch
+to its client adapter. Each adapter invokes the existing worker once per job.
+Both native senders override `sendJobs`; the JVM property
+`worldgen_assist.native.request_batching` defaults `true`, and `false` selects
+the old individual sends in the SAME JAR. Neo also checks batch channel
+availability. Shared codec/source bytes and generation/Mixins are unchanged.
+The source-confirmed gap above describes the publicalpha8 checkpoint.
+
+Pinned APIs inspected:
+
+- Forge66.0.3 sources SHA256
+  `E7BD5F6C96045414045A8629AA877AB5416E8750CCB14D0F9A5CEFE0C229C62F`:
+  `PayloadChannel.addMain` queues original main execution and marks handled;
+  `ChannelBuilder.networkProtocolVersion` uses exact version matching.
+- Neo26.3.0.13-beta API sources SHA256
+  `FD9C942BA22F21432CF9D4DC61CA387DFF4B4CFB03C036906CD43FCD8159D975`:
+  `PayloadRegistrar` defaults MAIN; client-only registration permits separate
+  `RegisterClientPayloadHandlersEvent`, with a versioned registrar string.
+
+Run `scripts/Run-NativeRequestBatchGate.ps1 -Execute` only after every edit.
+It parses affected helpers, builds Forge then Neo sequentially, verifies old
+successful common-source/JUnit/artifact identities and archive entries, then
+runs the existing ordinary gate with `-NativeBatchExperiment` for each loader.
+Only metadata and each loader's exact three transport class stems (including
+their inner classes) may differ from dev23; every other game/runtime resource
+must remain byte-equal. No unchanged JUnit, Fabric build or broad matrix rerun.
+
+Both pair conditions use remoteON, identical cooperative/parallel settings,
+the same new JAR, view32/two owners, one warmup and three same-coordinate
+relocations. Directory labels `manifest16-artifact12` isolate new E-runtime
+MODs; complete64-character library and artifact hashes remain authority,
+existing conflicting hashes fail, library paths must be below240 characters.
+Original public/previous runtime roots are untouched. Per-repeat terrain task,
+feature/light footprint, required receipts, independent peer/audit/input use,
+actual per-owner batch2..4/OFFzero and clean-stop gates remain strict.
+Natural survival input/server witnesses/reconnect and exact own-world saved
+player/COBBLESTONE/lighting checks remain required. Each pair's three ratios
+are aggregated only after matching repeats; OFF runs first. An opposite-order
+confirmation remains necessary before claiming repeatable batching gains.
+
+Batching removes some native packets/main enqueues. Native per-job preparation
+still runs on MAIN: this does not implement Fabric's networkingress bypass,
+remove validation, or prove raw network/critical-path savings. Old speed/parity
+proofs retain original artifact identities. All NEW build/runtime/performance
+checks are UNRUN; goal remains active, publicalpha8 immutable, beta unproved.
