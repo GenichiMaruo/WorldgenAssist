@@ -1,5 +1,42 @@
 # Mixin Targets
 
+## Dev2 native client ingress: completed affected batch (2026-10-09)
+
+`native-client-request-gate-20261009-050308-626/summary.json` succeeds:
+all five parent steps, exactly three affected client methods (failures/errors/
+skips0), three sequential builds. Forge050342-770 and Neo053327-855 each pass
+all25 ordinary/lifetime/saved-light steps; source manifests/JARs stayed frozen.
+Implementation commit `0d4bfe0`, alpha.9-dev.2, shared14/native6.
+Both conditions use remote assistance, SAME dev2 JAR, batchingFALSE, MAIN first,
+weak E-server/view32/two clients on one stronger PC/warm1/three matched regions.
+This measures the additional client ingress switch, not assistance ON versus OFF.
+
+| Median of matched NETWORK/MAIN ratios | Forge | NeoForge |
+| --- | ---: | ---: |
+| FULL completion | -2.9218% (3/3 faster) | -0.1960% (2/3 faster) |
+| Client receipt | -3.6770% | -1.2628% |
+| Job RTT | -21.2801% | -17.2566% |
+| Server CPU | +9.9923% | -3.4267% |
+| Tick p95 | +3.1584% | -0.5808% |
+| Result application mean | +12.6503% | -8.7101% |
+
+Actual successful dispatches join server-issued job IDs for both owners in
+all three repeats and select the intended MAIN/NETWORK path. Each repeat10658
+tasks/3461 required receipts per owner/10082 feature and light bodies/peak2/
+zero footprint conflicts. Both native loaders pass original post-measurement
+End/Overworld callbacks, permanent old-session revocation and client reconnect.
+All8 saved players Health20/survival/onGround/nonflying/deaths0/damage0; original
+client-placed COBBLESTONE persists. Four own-light cases each compare50 interior/
+162 halo chunks/10649600 values, BLOCK/SKY differences0. No probe ships.
+
+RTT decreases consistently, but whole-generation gains are small and Forge CPU
+increases. No substantial/universal gain, opposite-order native reproducibility,
+server restart, continuous exploration or beta proof. Receipt excludes rendering;
+queue means have different starting points. Native batching/client ingress stay
+defaultFALSE, remote stays defaultOFF. All previous failed/UNRUN checkpoints
+retain their historical identities. Current release preparation may package
+this exact candidate as a new alpha; alpha.8/tag/assets remain immutable.
+
 Dev2 adds native CLIENT-only NativeClientRequestConnectionMixin263 observation
 at Connection.channelRead0 genericsFtw (only respawn suspend), channelInactive
 HEAD/setupInboundProtocol HEAD revoke, and NativeClientRespawnRequestMixin263
