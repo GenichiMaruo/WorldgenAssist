@@ -5,7 +5,16 @@ GitHubでリリースを公開すると、`Publish to CurseForge` が起動し�
 同じCurseForgeプロジェクトへ送ります。再ビルド・Minecraftの再テストは行わず、
 ソースJAR・テストログ・ワールドは送信対象外です。
 
-## 最新の公開確認（2026-10-08 JST）
+## 最新の公開確認（2026-10-09 JST）
+
+alpha.9公開で[自動デプロイ37846723769](https://github.com/GenichiMaruo/WorldgenAssist/actions/runs/37846723769)
+が起動し、成功しました。公開コミットは`ec0a7868e9eafc1abd7e0abe04b92d264ab9def1`。
+ログの`verified=3 uploaded=3`で、Fabric・Forge・NeoForgeの配布JAR照合と投稿受理を確認しました。
+GitHubの11添付物は公開前に再取得し、全ハッシュを照合済みです。
+公開後の再ビルド・ゲーム再実行・手動再投稿はありません。
+CurseForge側の審査完了や公開一覧は独立には確認していません。
+
+### alpha.8の公開確認（2026-10-08 JST）
 
 alpha.8の公開イベントで[自動デプロイ37641768372](https://github.com/GenichiMaruo/WorldgenAssist/actions/runs/37641768372)
 が起動し、成功しました。公開コミットは`1ace9f4a1b06c1e288625a64d4b04f1f1e1e9f53`、

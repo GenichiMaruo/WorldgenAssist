@@ -1,5 +1,18 @@
 # Test results — 26.3 port checkpoint and published 26.2 alpha.3
 
+## Alpha.9 publication confirmed (2026-10-09 JST)
+
+Published alpha9/ec0a786/shared14/native6 retains exact verified dev2 classes,
+Mixins/resources/source entries; only version metadata differs. Release batch
+99298 passes all3 sequential builds/archive comparisons,0newJUnit/games.
+ALL11 GitHub draft assets downloaded/SHA verified before06:25:52 publication;
+CF run37846723769 succeeds/verified3/uploaded3 at06:26:04. Upload acceptance,
+not independent moderation/listing proof. Exact hashes/retained scopes in
+[alpha.9 verification](releases/v0.1.0-alpha.9+mc26.3-verification.md).
+Native client ingress remains optional/defaultFALSE: RTT improves consistently,
+FULL gains modest/Forge CPU higher. No beta/substantial speed/default promotion.
+Prior alpha8/failed/UNRUN checkpoint identities remain; no old asset replacement.
+
 ## Dev2 native client ingress: completed affected batch (2026-10-09)
 
 `native-client-request-gate-20261009-050308-626/summary.json` succeeds:

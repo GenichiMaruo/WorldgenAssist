@@ -1,5 +1,22 @@
 # Repository agent instructions
 
+## Alpha.9 published; automatic CurseForge upload accepted (2026-10-09 JST)
+
+Release commit ec0a7868e9eafc1abd7e0abe04b92d264ab9def1 and result commit1476053
+are pushed without force to main/mc26.3/feature; new annotated tagalpha9.
+GitHub prerelease v0.1.0-alpha.9+mc26.3 published06:25:52 JST after ALL11
+draft assets were downloaded and SHA256 checked. Public tag/assets immutable.
+Automatic CF run37846723769 succeeds06:26:04,verified3/uploaded3. Upload
+acceptance confirmed; moderation/public listing not independently checked.
+Evidence release-alpha9-20261009/build-verification.json,uploaded-verification.json,
+publication.json,curseforge-run.json/log. No post-publication rebuild/game/reupload.
+Shared14/native6, both native switchesFALSE/remoteOFF, modest RTT gains/CPU cost
+and alpha limits remain as documented. Unrelated.vscode excluded.
+The user previously explicitly paused the performance goal; the new request
+authorizes this release, not restarting implementation/testing. Keep that goal
+paused until the user resumes it. No beta/full-goal completion. Older goalactive/
+UNRUN statements below are historical checkpoints.
+
 ## Alpha.9 packaging prepared; publication UNRUN
 
 Release package batch99298 now exits0/all3 builds/archive comparisons pass.
