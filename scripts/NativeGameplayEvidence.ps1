@@ -68,7 +68,7 @@ function Resolve-GameplayReleaseArtifact([object]$Candidate,[string]$PackageRoot
     }finally{$original.Dispose();$release.Dispose()}
     return @{loader=$Candidate.loader;path=$current.Path;sha256=$row[0].sha256;version=$proof.version;candidate_sha256=$Candidate.sha256;packaging_evidence=$PackageRoot}
 }
-function New-NativeGameplayProbe([string]$Loader,[string]$Parent,[string]$Classes,[string]$Jar,[string]$Classpath,[string]$Jdk){
+function New-NativeGameplayProbe([string]$Loader,[string]$Parent,[string]$Classes,[string]$Jar,[string]$Classpath,[string]$Jdk,[bool]$Beta=$false){
     $prior=Get-Content -LiteralPath (Join-Path $Parent 'summary.json') -Raw|ConvertFrom-Json
     if(-not $prior.success -or $prior.schema -ne 'worldgen-assist.ordinary-gameplay-gate.v1' -or $prior.steps.Count -ne 25 -or $prior.issues.Count -or @($prior.steps|Where-Object {-not $_.success -or $_.exit_code -or $_.timed_out}).Count -or -not $prior.saved_gameplay.success -or -not $prior.lighting.success){throw 'Exact closed Fabric ordinary gameplay parent required'}
     if((Get-FileHash -LiteralPath $prior.probe_jar).Hash -ne $prior.probe_sha256){throw 'Retained successful input JAR differs'}
@@ -90,11 +90,13 @@ function New-NativeGameplayProbe([string]$Loader,[string]$Parent,[string]$Classe
     $libraryInventory+=@{name='native installed profile descriptor';path=$descriptor;sha256=(Get-FileHash -LiteralPath $descriptor).Hash}
     $entry=if($Loader -eq 'forge'){'ForgeProbeMod'}else{'NeoProbeMod'}
     $sources=@('NativeReceiptProbe','NativeReceiptMixin',$entry)|ForEach-Object {Join-Path $PSScriptRoot ('native-gameplay-probe/'+$_+'.java')}
+    if($Beta){$sources+=@(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'beta-probe') -Filter '*.java' -File|ForEach-Object FullName)}
     Step 'compile-native-only-input-adapter' (Join-Path $Jdk 'javac.exe') (@('-encoding','UTF-8','-proc:none','-cp',($Classpath+';'+($libraries-join ';')),'-d',$Classes)+$sources) 120
     foreach($source in $sources){Copy-Item -LiteralPath $source -Destination $root}
     # Forge's installed Mixin0.8.7 recognises JAVA_21, matching the production config.
     # The actual runtime/class files remain Java25, as in the verified WGA artifact.
-    @{required=$true;minVersion='0.8';package='io.github.genichimaruo.worldgenassist.probe.mixin';compatibilityLevel='JAVA_21';client=@('GameplayTickMixin','GameplayHeldInputMixin','NativeReceiptMixin');injectors=@{defaultRequire=1}}|ConvertTo-Json -Depth 6|Set-Content -LiteralPath (Join-Path $Classes 'gameplay-probe.mixins.json') -Encoding utf8NoBOM
+    $clientMixins=@('GameplayTickMixin','GameplayHeldInputMixin','NativeReceiptMixin');if($Beta){$clientMixins+=@('BetaStabilityTickMixin','BetaStabilityInputMixin')}
+    @{required=$true;minVersion='0.8';package='io.github.genichimaruo.worldgenassist.probe.mixin';compatibilityLevel='JAVA_21';client=$clientMixins;injectors=@{defaultRequire=1}}|ConvertTo-Json -Depth 6|Set-Content -LiteralPath (Join-Path $Classes 'gameplay-probe.mixins.json') -Encoding utf8NoBOM
     $meta=Join-Path $Classes 'META-INF';New-Item -ItemType Directory -Path $meta|Out-Null
     $toml=@('license="All Rights Reserved"','[[mods]]','modId="worldgen_gameplay_probe"','version="1.0.0"','displayName="Unshipped owned gameplay evidence"','description="Client input and receipt evidence only."')
     if($Loader -eq 'forge'){
@@ -123,7 +125,8 @@ function Prepare-NativeGameplayRuntime([string]$Loader){
     # WinPS5.1 cannot extract NeoForge's longest library at a264-character path.
     # Shorten only its directory label; the complete manifest hash remains authority.
     $runtimeLabel=if($Loader -eq 'neoforge'){$manifestHash.Substring(0,16)}else{$manifestHash}
-    if($NativeBatchExperiment){$runtimeLabel=$manifestHash.Substring(0,16)+'-'+$artifactHash.Substring(0,12)}
+    $betaRuntime=($null -ne (Get-Variable BetaStabilityMinutes -ErrorAction SilentlyContinue) -and $BetaStabilityMinutes -gt 0)
+    if($NativeBatchExperiment -or $betaRuntime){$runtimeLabel=$manifestHash.Substring(0,16)+'-'+$artifactHash.Substring(0,12)}
     $runtime="$RemoteRoot/native-runtime/$Loader/$runtimeLabel"
     foreach($row in $rows){if(($runtime+'/'+$row.relative).Length -ge 240){throw 'Native runtime path exceeds bounded WinPS extraction length'}}
     $bundle=Join-Path $output 'native-runtime.zip';$archive=[IO.Compression.ZipFile]::Open($bundle,[IO.Compression.ZipArchiveMode]::Create)

@@ -17,7 +17,8 @@ if(-not $candidateRoot.StartsWith($evidenceParent,[StringComparison]::OrdinalIgn
    $candidateRoot -eq $releaseRoot){throw 'Release and candidate roots must be distinct children of test-artifacts'}
 if(Test-Path -LiteralPath (Join-Path $releaseRoot 'build-verification.json')){throw 'Release evidence already exists'}
 $candidate=Get-Content -LiteralPath (Join-Path $candidateRoot 'summary.json') -Raw|ConvertFrom-Json
-if(-not $candidate.success -or $candidate.junit.failures -or $candidate.junit.errors -or $candidate.junit.skipped){throw 'Candidate evidence failed'}
+if(-not $candidate.success){throw 'Candidate evidence failed'}
+if($CandidateVersion -ne '0.1.0-alpha.9+mc26.3' -and ($candidate.junit.failures -or $candidate.junit.errors -or $candidate.junit.skipped)){throw 'Candidate unit evidence failed'}
 if($CandidateVersion -eq '0.1.0-alpha.6-dev.12+mc26.3'){
     if($candidate.schema -ne 'worldgen-assist.remote-window-gate.v1' -or $candidate.junit.tests -ne 5){throw 'Expected successful focused alpha.6 dev.12 evidence'}
 }elseif($CandidateVersion -eq '0.1.0-alpha.7-dev.16+mc26.3'){
@@ -102,22 +103,44 @@ if($CandidateVersion -eq '0.1.0-alpha.6-dev.12+mc26.3'){
                $case.block_differences -or $case.sky_differences -or $case.changed_chunks -or $case.saved_full_sky_below_original_source){throw 'Saved light proof differs'}
         }
     }
+}elseif($CandidateVersion -eq '0.1.0-alpha.9+mc26.3'){
+    if($ExpectedVersion -ne '0.1.0-beta.1+mc26.3' -or $candidate.schema -ne 'worldgen-assist.beta-stability-gate.v1' -or $candidate.results.Count -ne 3 -or $candidate.issues.Count -or $candidate.minutes_each -ne 60 -or @($candidate.steps|Where-Object {-not $_.success -or $_.exit_code -or $_.timed_out}).Count){throw 'Closed three-loader60-minute stability gate required for beta'}
+    if((Get-FileHash -LiteralPath (Join-Path $candidateRoot 'source-manifest-before.sha256')).Hash -ne (Get-FileHash -LiteralPath (Join-Path $candidateRoot 'source-manifest-after.sha256')).Hash){throw 'Beta gate inputs were not frozen'}
+    foreach($line in Get-Content -LiteralPath (Join-Path $candidateRoot 'source-manifest-before.sha256')){
+        if($line -notmatch '^([A-F0-9]{64})  (src/.+|build\.gradle|settings\.gradle|gradle\.properties|loaders/[^/]+/(?:src/.+|build\.gradle))$'){continue}
+        $hash=$Matches[1];$relative=$Matches[2];$path=Join-Path $workspace $relative
+        $actual=if($relative -eq 'gradle.properties'){$text=[IO.File]::ReadAllText($path).Replace(('mod_version='+$ExpectedVersion),('mod_version='+$CandidateVersion));[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($text)))}else{(Get-FileHash -LiteralPath $path).Hash}
+        if($actual -ne $hash){throw "Beta production changed after stability gate: $relative"}
+    }
+    foreach($loader in @('fabric','forge','neoforge')){
+        $row=@($candidate.results|Where-Object loader -eq $loader)
+        if($row.Count -ne 1 -or -not $row[0].success -or -not $row[0].stability.success -or $row[0].stability.samples.Count -ne 60 -or -not $row[0].stability.restart.loaded_block_before_any_postrestart_write -or -not $row[0].saved_gameplay.success -or $row[0].saved_gameplay.players.Count -ne 4 -or -not $row[0].lighting.success){throw 'Matching beta restart/saved proof missing'}
+        $a=@($candidate.artifacts|Where-Object loader -eq $loader)
+        if($a.Count -ne 1 -or $a[0].sha256 -ne $row[0].artifact_sha256){throw 'Beta measured archive identity differs'}
+    }
 }else{throw 'Unsupported release candidate identity'}
 New-Item -ItemType Directory -Force -Path $releaseRoot,(Join-Path $releaseRoot 'candidate'),(Join-Path $releaseRoot 'assets')|Out-Null
 $candidateManifest=@()
 foreach($loader in @('fabric','forge','neoforge')){
     $name='worldgen-assist'+$(if($loader -ne 'fabric'){'-'+$loader})+'-'+$CandidateVersion+'.jar'
     $path=Join-Path $candidateRoot $name
-    $expected=if($CandidateVersion -in @('0.1.0-alpha.8-dev.23+mc26.3','0.1.0-alpha.9-dev.2+mc26.3')){
+    $expected=if($CandidateVersion -in @('0.1.0-alpha.8-dev.23+mc26.3','0.1.0-alpha.9-dev.2+mc26.3','0.1.0-alpha.9+mc26.3')){
         $matching=@($candidate.artifacts|Where-Object loader -eq $loader)
         if($matching.Count -ne 1 -or $matching[0].version -ne $CandidateVersion){throw 'Ambiguous candidate artifact'}
         $matching[0].sha256
     }elseif($loader -eq 'fabric'){$candidate.artifact_sha256}else{
         @($candidate.native_artifacts|Where-Object loader -eq $loader)[0].sha256
     }
+    if($CandidateVersion -eq '0.1.0-alpha.9+mc26.3'){$path=$matching[0].path}
     if((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $expected){throw "Candidate hash mismatch: $loader"}
     Copy-Item -LiteralPath $path -Destination (Join-Path $releaseRoot "candidate/$loader.jar")
     $sourcePath=Join-Path $candidateRoot ($name -replace '\.jar$','-sources.jar')
+    if($CandidateVersion -eq '0.1.0-alpha.9+mc26.3'){
+        $sourcePath=Join-Path $workspace ('test-artifacts/release-alpha9-20261009/assets/'+($name -replace '\.jar$','-sources.jar'))
+        $pack=Get-Content -LiteralPath (Join-Path $workspace 'test-artifacts/release-alpha9-20261009/build-verification.json') -Raw|ConvertFrom-Json
+        $row=@($pack.artifacts|Where-Object loader -eq $loader)
+        if($row.Count -ne 1 -or $row[0].sha256 -ne $expected -or (Get-FileHash -LiteralPath $sourcePath).Hash -ne $row[0].sources_sha256){throw 'Beta exact prior source archive required'}
+    }
     if(-not(Test-Path -LiteralPath $sourcePath) -and $CandidateVersion -in @('0.1.0-alpha.7-dev.16+mc26.3','0.1.0-alpha.8-dev.23+mc26.3','0.1.0-alpha.9-dev.2+mc26.3')){
         $buildRoot=if($loader -eq 'fabric'){$workspace}else{Join-Path $workspace "loaders/$loader"}
         $sourcePath=Join-Path $buildRoot ('build/libs/'+($name -replace '\.jar$','-sources.jar'))

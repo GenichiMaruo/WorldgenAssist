@@ -1,5 +1,28 @@
 # Repository agent instructions
 
+## Beta stability checkpoint (2026-11-10); public release pending
+
+Gate `test-artifacts/beta-stability-gate-20261009-162356-447` is closed
+and FAILED as a batch. Its Fabric result passed the full 60 minutes, restart,
+saved players/blocks and 10,649,600 saved light comparisons. Forge completed
+restart/rejoin and survival interactions, but one owned test client never
+started moving at the flight handoff; NeoForge was not reached. A continuation
+may use that specific Fabric result with verified provenance and must run both
+native loaders. Do not reclassify the failed batch. No shipped generation
+code changes. See BETA_STABILITY.md for the input diagnosis and evidence.
+
+## Beta stability work resumed (2026-10-09); original plan
+
+Latest user requests prioritized restart/continuous/multiplayer checks and beta
+publication after success, resuming earlier paused work. Finish all harness/docs
+edits before ONE sequential affected batch: three loaders60min each, exact public
+alpha9/unchanged production, no fresh MOD build/JUnit. See BETA_STABILITY.md.
+Creative exploration differs from survival before/after. Require same-world
+clean restart, loaded player/placed-block witnesses BEFORE writes, saved NBT/
+voxel/light. RemoteE-only100.103.102.109/view32/two local clients. DefaultsOFF;
+beta limited to verified trusted environments. No beta success/release yet.
+Preserve publicalpha tags and unrelated.vscode. Older pause/UNRUN text is history.
+
 ## Alpha.9 published; automatic CurseForge upload accepted (2026-10-09 JST)
 
 Release commit ec0a7868e9eafc1abd7e0abe04b92d264ab9def1 and result commit1476053

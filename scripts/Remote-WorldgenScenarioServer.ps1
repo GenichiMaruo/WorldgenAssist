@@ -40,7 +40,8 @@ param(
     [switch]$NativeBatchExperiment,
     [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$NativeArtifactSha256,
     [ValidateSet('true','false')][string]$NativeRequestBatching='true',
-    [switch]$NativeClientRequestExperiment
+    [switch]$NativeClientRequestExperiment,
+    [ValidateSet(0,60)][int]$BetaStabilityMinutes=0
 )
 
 # Remote half of the all-dimension trusted-raw scenario.  It owns only the
@@ -63,15 +64,19 @@ $gameplayRepeats=if($NativeBatchExperiment){3}else{1}
 $GameplayInteractionLocation=if($NativeBatchExperiment){2}else{$WarmupRuns+$MeasuredRepeats}
 if($GameplayNonce -and ($resolved -ne [IO.Path]::GetFullPath('E:/WorldgenAssist/port26.3') -or $Dimension -ne 'overworld' -or $Players -ne 2 -or $Purpose -ne 'performance' -or $ViewDistance -ne 32 -or -not $MeasureFullView -or $FeatureFixture -or $Seed -ne 8675309 -or $WarmupRuns -ne 1 -or $MeasuredRepeats -ne $gameplayRepeats -or $Movement -ne 'relocation')){throw 'Only bounded weak E-server ordinary gameplay probe allowed'}
 if($GameplayNonce){. (Join-Path $PSScriptRoot 'WorldgenGameplayServer.ps1')}
+if($BetaStabilityMinutes){
+    if(-not $GameplayNonce -or $Mode -ne 'assisted' -or $NativeBatchExperiment -or $NativeClientRequestExperiment -or $MeasuredRepeats -ne 1){throw 'Bounded single-condition beta profile required'}
+    . (Join-Path $PSScriptRoot 'BetaStabilityServer.ps1')
+}
 $runtimeWorkingRoot=$resolved
 if($Loader -ne 'fabric'){
     if(-not $GameplayNonce -or -not $NativeInstallSha256){throw 'Only bounded native ordinary gameplay runtime allowed'}
     $runtimeLabel=if($Loader -eq 'neoforge'){$NativeInstallSha256.Substring(0,16)}else{$NativeInstallSha256}
-    if($NativeBatchExperiment){$runtimeLabel=$NativeInstallSha256.Substring(0,16)+'-'+$NativeArtifactSha256.Substring(0,12)}
+    if($NativeBatchExperiment -or $BetaStabilityMinutes){$runtimeLabel=$NativeInstallSha256.Substring(0,16)+'-'+$NativeArtifactSha256.Substring(0,12)}
     $runtimeWorkingRoot=Join-Path $resolved ('native-runtime/'+$Loader+'/'+$runtimeLabel)
     $manifest=Join-Path $runtimeWorkingRoot 'runtime-manifest.json'
     if((Get-FileHash -LiteralPath $manifest).Hash -ne $NativeInstallSha256){throw 'Native runtime manifest changed'}
-    if($NativeBatchExperiment){$nativeMods=@(Get-ChildItem -LiteralPath (Join-Path $runtimeWorkingRoot 'mods') -File -Filter '*.jar');if($nativeMods.Count -ne 1 -or (Get-FileHash -LiteralPath $nativeMods[0].FullName).Hash -ne $NativeArtifactSha256){throw 'Exact isolated native candidate MOD required'}}
+    if($NativeBatchExperiment -or $BetaStabilityMinutes){$nativeMods=@(Get-ChildItem -LiteralPath (Join-Path $runtimeWorkingRoot 'mods') -File -Filter '*.jar');if($nativeMods.Count -ne 1 -or (Get-FileHash -LiteralPath $nativeMods[0].FullName).Hash -ne $NativeArtifactSha256){throw 'Exact isolated native candidate MOD required'}}
     $runtimeRows=Get-Content -LiteralPath $manifest -Raw|ConvertFrom-Json
     if($runtimeRows.Count -gt 512){throw 'Native runtime file bound'}
     foreach($row in $runtimeRows){
@@ -115,8 +120,9 @@ $measurementRadius=if($MeasureFullView){$ViewDistance}else{4}
 $measurementShape=if($MeasureFullView){'view'}else{'square'}
 $measurementOffsets=@(Get-WorldgenMeasurementOffsets $measurementRadius $measurementShape)
 
+ $betaFirstConsole=''
 function Log-Text {
-    return Read-WorldgenConsoleText $stdout
+    return $betaFirstConsole+(Read-WorldgenConsoleText $stdout)
 }
 function Wait-Log([string]$Pattern, [int]$Seconds, [int]$Offset = 0) {
     $deadline = [DateTime]::UtcNow.AddSeconds($Seconds)
@@ -625,6 +631,7 @@ try {
             }
         }
         Invoke-OrdinaryGameplay
+        if($BetaStabilityMinutes){Invoke-BetaStability}
     }
     # Generated 26.3 PlayerList.removeAll indexes a list that a synchronous
     # disconnect may shrink. Close these owned fixture clients individually
@@ -660,7 +667,7 @@ try {
     if($Loader -ne 'fabric'){
         if((Get-FileHash -LiteralPath $manifest).Hash -ne $NativeInstallSha256){throw 'Native manifest changed during runtime'}
         foreach($row in $runtimeRows){if((Get-FileHash -LiteralPath (Join-Path $runtimeWorkingRoot $row.relative)).Hash -ne $row.sha256){throw 'Native runtime changed during selected case'}}
-        if($NativeBatchExperiment){if((Get-FileHash -LiteralPath $nativeMods[0].FullName).Hash -ne $NativeArtifactSha256){throw 'Native candidate MOD changed during runtime'}}
+        if($NativeBatchExperiment -or $BetaStabilityMinutes){if((Get-FileHash -LiteralPath $nativeMods[0].FullName).Hash -ne $NativeArtifactSha256){throw 'Native candidate MOD changed during runtime'}}
         [ordered]@{loader=$Loader;root=$runtimeWorkingRoot;manifest_sha256=$NativeInstallSha256;files=$runtimeRows.Count;before_after_equal=$true}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $evidence 'native-runtime-identity.json')
     }
     $success=$true
@@ -671,6 +678,12 @@ try {
 } finally {
     $cleanupSafe=$true
     if($null -ne $process){if(-not $process.HasExited){try{$process.Kill();$process.WaitForExit(30000)}catch{$cleanupSafe=$false}};if(-not $process.HasExited){$cleanupSafe=$false};if($null -ne $stdout){Save-WorldgenConsoleEvidence $stdout $latest (Join-Path $evidence 'latest.log')};if($null -ne $stderr){$stderr.GetAwaiter().GetResult()|Set-Content -LiteralPath (Join-Path $evidence 'stderr.log')};$process.Dispose()}
+    if($BetaStabilityMinutes -and $betaFirstConsole){
+        Copy-Item -LiteralPath (Join-Path $evidence 'latest.log') -Destination (Join-Path $evidence 'restart-latest.log')
+        Copy-Item -LiteralPath (Join-Path $evidence 'minecraft-latest.log') -Destination (Join-Path $evidence 'restart-minecraft-latest.log')
+        [IO.File]::WriteAllText((Join-Path $evidence 'latest.log'),($betaFirstConsole+[IO.File]::ReadAllText((Join-Path $evidence 'restart-latest.log'))))
+        [IO.File]::WriteAllText((Join-Path $evidence 'minecraft-latest.log'),([IO.File]::ReadAllText((Join-Path $evidence 'beta-first-runtime/minecraft-latest.log'))+[IO.File]::ReadAllText((Join-Path $evidence 'restart-minecraft-latest.log'))))
+    }
     $listener=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 25585 -State Listen -ErrorAction SilentlyContinue).Count -eq 0
     $cleanupSafe=$cleanupSafe -and $listener
     [ordered]@{success=$success;cleanup_safe=$cleanupSafe;loopback_only=$true;case=$case;dimension=$Dimension;mode=$Mode;players=$Players;purpose=$Purpose;prediction=$predictionEnabled} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'remote-result.json')

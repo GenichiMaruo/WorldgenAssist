@@ -1,5 +1,21 @@
 # World Generation Pipeline Notes
 
+## Prepared beta stability gate (2026-10-09)
+
+Run-BetaStabilityGate.ps1 reuses exact publicalpha9 generation code and prior
+generation/peer/audit/lifecycle proofs. Only unshipped original-input exploration,
+process/receipt/health samples, same-world restart, loaded survival/block checks
+BEFORE new writes and saved NBT/voxel/light are added. See BETA_STABILITY.md.
+No new stage/authority bypass/default change/provisional rendering. Fabric
+completed 60 minutes, restart and the original saved-light comparison. Forge
+stopped at the unshipped flight handoff after restart; fresh native results
+and beta publication are pending. See BETA_STABILITY.md.
+
+Restart harness reference: primary26.2/exact26.3 server/dedicated/Settings.store
+59-61 writes Java Properties.store; DedicatedServerSettings.forceSave19-20 calls
+it. Timestamp comments change on startup. Preserve raw before/after properties,
+compare all noncomment setting lines/arguments and actual existing saved inputs.
+
 ## Dev2 native client ingress: completed affected batch (2026-10-09)
 
 `native-client-request-gate-20261009-050308-626/summary.json` succeeds:

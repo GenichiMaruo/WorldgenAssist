@@ -3,6 +3,9 @@ function Start-GameplayControl([string]$Phase,[object[]]$Clients,[string]$Nonce)
     if($Phase -notmatch '^(scan|ground|mine|place|reconnect)$' -or $Nonce -notmatch '^[a-f0-9]{32}$'){throw 'Owned gameplay control identity required'}
     foreach($client in $Clients){
         $directory=Join-Path $client.profile 'client/gameplay-probe'
+        # A repeated phase must never acknowledge a retained earlier result.
+        $result=Join-Path $directory ('result-'+$Phase+'.json')
+        if(Test-Path -LiteralPath $result){Remove-Item -LiteralPath $result}
         $temp=Join-Path $directory 'control.new.json';$target=Join-Path $directory 'control.json'
         Write-Utf8 $temp (@{phase=$Phase;nonce=$Nonce;owner=$client.name}|ConvertTo-Json -Compress)
         [IO.File]::Move($temp,$target,$true)

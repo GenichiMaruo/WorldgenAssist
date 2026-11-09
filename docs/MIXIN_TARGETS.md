@@ -1,5 +1,17 @@
 # Mixin Targets
 
+## Unshipped beta stability observations (updated 2026-11-10)
+
+BETA_STABILITY.md records primary26.2/exact26.3 source references. Test-only
+Minecraft.tick TAIL / LocalPlayer.aiStep HEAD each require1. Hold Options.keyUp
+before original input.tick; no physics cancellation or routing change. Original
+abilities packet enables creative flight. Original survival bytes unchanged;
+no production Mixin changes, no shipped probe. The first complete Fabric
+run passed. In generated 26.2 Minecraft.pauseIfInactive (1441) and exact
+26.3 (1454), an unfocused window can open a pause menu. Disable automatic
+pausing for the two owned test clients; native in-game key mappings depend
+on the active input context. See BETA_STABILITY.md for the Forge observation.
+
 ## Dev2 native client ingress: completed affected batch (2026-10-09)
 
 `native-client-request-gate-20261009-050308-626/summary.json` succeeds:

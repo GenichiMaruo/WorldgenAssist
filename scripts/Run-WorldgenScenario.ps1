@@ -42,6 +42,7 @@ param(
     [ValidateSet('true','false')][string]$NativeRequestBatching='true',
     [switch]$NativeClientRequestExperiment,
     [ValidateSet('true','false')][string]$NativeClientRequestIngress='false',
+    [ValidateSet(0,60)][int]$BetaStabilityMinutes=0,
     [string]$RemoteHost = 'gen1c@100.117.255.71',
     [string]$RemoteRoot = 'C:/Users/gen1c/AppData/Local/Temp/WorldgenAssist-20260909/port26.3'
 )
@@ -70,9 +71,11 @@ $predictionEnabled = [bool]::Parse($Prediction)
 . (Join-Path $PSScriptRoot 'FeatureFixtureEvidence.ps1')
 . (Join-Path $PSScriptRoot 'WorldgenGameplayClient.ps1')
 . (Join-Path $PSScriptRoot 'NativeGameplayEvidence.ps1')
+if($BetaStabilityMinutes){. (Join-Path $PSScriptRoot 'BetaStabilityClient.ps1')}
 $nativeRuntime=$null
 $gameplayEnabled=-not [string]::IsNullOrWhiteSpace($GameplayProbeJar)
 $gameplayNonce=if($gameplayEnabled){[Guid]::NewGuid().ToString('N')}else{$null}
+if($BetaStabilityMinutes -and (-not $gameplayEnabled -or $Mode -ne 'assisted' -or $NativeBatchExperiment -or $NativeClientRequestExperiment -or $MeasuredRepeats -ne 1)){throw 'Beta stability requires one assisted gameplay condition; no transport/performance comparison'}
 if($NativeClientRequestExperiment){
     if(-not $NativeBatchExperiment -or $NativeRequestBatching -ne 'false'){throw 'Client request comparison requires the explicit native three-repeat profile with server batching disabled'}
 }
@@ -111,6 +114,7 @@ function Get-Manifest {
     $files = @(Get-ChildItem -LiteralPath (Join-Path $workspace 'src') -File -Recurse)
     $files+=Get-Item -LiteralPath (Join-Path $PSScriptRoot 'WorldgenGameplayClient.ps1'),(Join-Path $PSScriptRoot 'WorldgenGameplayServer.ps1')
     $files+=Get-Item -LiteralPath (Join-Path $PSScriptRoot 'NativeGameplayEvidence.ps1')
+    if($BetaStabilityMinutes){$files+=Get-Item -LiteralPath (Join-Path $PSScriptRoot 'BetaStabilityClient.ps1'),(Join-Path $PSScriptRoot 'BetaStabilityServer.ps1')}
     if($Loader -ne 'fabric'){$files+=Get-Item -LiteralPath (Join-Path $PSScriptRoot 'New-InstalledNativeLoaderClient.ps1')}
     foreach($relative in @('build.gradle','settings.gradle','gradle.properties','scripts/Get-WorldgenArtifact.ps1','scripts/New-InstalledFixtureClient.ps1','scripts/New-TwoClientFixtureClient.ps1','scripts/Prepare-InstalledFixtureAssets.ps1','scripts/Run-WorldgenScenario.ps1','scripts/Remote-WorldgenScenarioServer.ps1','scripts/WorldgenMeasurementRegion.ps1','scripts/WorldgenScenarioConsole.ps1','scripts/FeatureFixtureEvidence.ps1')) { $files += Get-Item -LiteralPath (Join-Path $workspace $relative) }
     return @($files | Sort-Object FullName | ForEach-Object { $relative=$_.FullName.Substring($workspace.Length+1).Replace('\','/'); "$(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256 | Select-Object -ExpandProperty Hash)  $relative" })
@@ -152,6 +156,11 @@ function Start-Client([string]$Name,[string]$Uuid,[int]$Index,[string]$AssetsRoo
     Add-Content -LiteralPath (Join-Path $profile 'client/options.txt') -Value 'version:5023'
     $optionPath=Join-Path $profile 'client/options.txt'
     $optionLines=@(Get-Content -LiteralPath $optionPath | Where-Object {$_ -notmatch '^(renderDistance|graphicsPreset):'})
+    if($BetaStabilityMinutes){
+        # Two owned clients share a desktop. A pause menu on the unfocused
+        # window deactivates native in-game key mappings during the flight.
+        $optionLines=@($optionLines | Where-Object {$_ -notmatch '^pauseOnLostFocus:'})+@('pauseOnLostFocus:false')
+    }
     $optionLines += 'renderDistance:'+$ViewDistance
     # Options.processOptions reads the preset after individual settings; FANCY
     # reapplies distance 16 on load. CUSTOM preserves the requested distance.
@@ -237,6 +246,11 @@ try {
         if($LASTEXITCODE -ne 0){throw 'Gameplay helper transfer failed'}
         Invoke-Remote ('Copy-Item -LiteralPath "'+$RemoteRoot+'/scenario-staging/WorldgenGameplayServer.ps1" -Destination "'+$RemoteRoot+'/WorldgenGameplayServer.ps1" -Force')
     }
+    if($BetaStabilityMinutes){
+        & scp.exe -q (Join-Path $PSScriptRoot 'BetaStabilityServer.ps1') ($RemoteHost+':'+$RemoteRoot+'/scenario-staging/')
+        if($LASTEXITCODE -ne 0){throw 'Beta helper transfer failed'}
+        Invoke-Remote ('Copy-Item -LiteralPath "'+$RemoteRoot+'/scenario-staging/BetaStabilityServer.ps1" -Destination "'+$RemoteRoot+'/BetaStabilityServer.ps1" -Force')
+    }
     if($replay){
         Copy-Item -LiteralPath $replay.path -Destination (Join-Path $output 'feature-replay.json')
         & scp.exe -q $replay.path ($RemoteHost+':'+$RemoteRoot+'/scenario-staging/feature-replay.json')
@@ -263,6 +277,7 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
     if($Loader -ne 'fabric'){$remoteCommand+=' -Loader '+$Loader+' -NativeInstallSha256 '+$nativeRuntime.sha256}
     if($NativeBatchExperiment){$remoteCommand+=' -NativeBatchExperiment -NativeArtifactSha256 '+$artifactHash+' -NativeRequestBatching '+$NativeRequestBatching}
     if($NativeClientRequestExperiment){$remoteCommand+=' -NativeClientRequestExperiment'}
+    if($BetaStabilityMinutes){$remoteCommand+=' -BetaStabilityMinutes '+$BetaStabilityMinutes;if($Loader -ne 'fabric'){$remoteCommand+=' -NativeArtifactSha256 '+$artifactHash}}
     Invoke-Remote ('Copy-Item -LiteralPath "'+$RemoteRoot+'/scenario-staging/WorldgenMeasurementRegion.ps1" -Destination "'+$RemoteRoot+'/WorldgenMeasurementRegion.ps1" -Force')
     Invoke-Remote ('Copy-Item -LiteralPath "'+$RemoteRoot+'/scenario-staging/WorldgenScenarioConsole.ps1" -Destination "'+$RemoteRoot+'/WorldgenScenarioConsole.ps1" -Force')
     $remoteCommand += ' -ViewDistance '+$ViewDistance
@@ -306,10 +321,12 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
     $lineTask=$server.StandardOutput.ReadLineAsync()
     for($index=0;$index -lt $Players;$index++){$name=@('ScenarioOwnerA','ScenarioOwnerB')[$index];$uuid=if($index -eq 0){'000000000000000000000000000000a1'}else{'000000000000000000000000000000b2'};$clients += Start-Client $name $uuid $index $assets}
     $scenarioSeconds=if($MeasureFullView){3600}elseif($Purpose -eq 'performance'){900}else{420}
+    if($BetaStabilityMinutes){$scenarioSeconds+=60*$BetaStabilityMinutes+1200}
     $deadline=[DateTime]::UtcNow.AddSeconds($scenarioSeconds)
     $receiptPending=$null
     $gameplayPending=$null
     $nativeLifetimePending=$null
+    $betaPending=$null
     while(-not $server.HasExited){
         if($tunnel.HasExited){throw 'SSH tunnel exited during scenario'}
         foreach($client in $clients){if($client.process.HasExited){throw "Client exited during scenario: $($client.name) exit_code=$($client.process.ExitCode)"}}
@@ -330,6 +347,11 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
                 if($line -match '^SERVER_GAMEPLAY_WAIT (scan|ground|mine|place|reconnect)$'){
                     if(-not $gameplayEnabled -or $gameplayPending){throw 'Unexpected gameplay phase'}
                     $gameplayPending=$Matches[1];Start-GameplayControl $gameplayPending $clients $gameplayNonce
+                }
+                if($line -match '^SERVER_BETA_WAIT (arm|explore|stop|rejoin|sample-\d+)$'){
+                    if(-not $BetaStabilityMinutes -or $betaPending){throw 'Unexpected beta phase'}
+                    $betaPending=$Matches[1]
+                    if($betaPending -notmatch '^sample-'){Start-BetaControl $betaPending $clients $gameplayNonce}
                 }
                 $lineTask=$server.StandardOutput.ReadLineAsync()
             }
@@ -364,6 +386,16 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
             if($observed){
                 Invoke-Remote ('Set-Content -LiteralPath "'+$RemoteRoot+'/evidence/'+$case+'/native-end.ack" -Value "complete"')
                 $nativeLifetimePending=$null
+            }
+        }
+        if($betaPending){
+            $betaPhase=if($betaPending -match '^sample-'){'explore'}else{$betaPending}
+            $betaReport=Get-BetaReports $betaPhase $clients $gameplayNonce
+            if($null -ne $betaReport){
+                Write-Json (Join-Path $output ('beta-'+$betaPending+'.json')) $betaReport
+                $encodedReport=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($betaReport|ConvertTo-Json -Depth 10)))
+                Invoke-Remote ('[IO.File]::WriteAllBytes("'+$RemoteRoot+'/evidence/'+$case+'/beta-'+$betaPending+'.ack",[Convert]::FromBase64String("'+$encodedReport+'"))')
+                $betaPending=$null
             }
         }
         Start-Sleep -Milliseconds 1000
@@ -420,6 +452,11 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
     $result.client_peer_probe = [bool]$ClientPeerProbe
     $result.gameplay_probe=$gameplayEnabled;$result.gameplay_nonce=$gameplayNonce;$result.gameplay_probe_sha256=$GameplayProbeSha256
     $result.loader=$Loader;$result.native_runtime=$nativeRuntime
+    if($BetaStabilityMinutes){
+        $betaPath=Join-Path $output 'remote-evidence/beta-stability.json'
+        $result.beta_stability=if(Test-Path -LiteralPath $betaPath){Get-Content -LiteralPath $betaPath -Raw|ConvertFrom-Json}else{$null}
+        if($null -eq $result.beta_stability -or -not $result.beta_stability.success){$result.success=$false;if($null -eq $failure){$failure='Beta stability/restart proof incomplete';$result.failure=$failure}}
+    }
     $result.native_batch_experiment=[bool]$NativeBatchExperiment;$result.native_request_batching=$NativeRequestBatching
     $result.native_client_request_experiment=[bool]$NativeClientRequestExperiment;$result.native_client_request_ingress=$NativeClientRequestIngress
     $result.native_transport_experiment=if($NativeClientRequestExperiment){'client_request'}elseif($NativeBatchExperiment){'batching'}else{'none'}
