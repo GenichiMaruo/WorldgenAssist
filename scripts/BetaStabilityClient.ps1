@@ -1,24 +1,52 @@
 # Only the owned beta profiles use this controller; no probe ships in a release.
+$script:betaReportBarriers=@{}
+function Get-LatestBetaStateFile([string]$Directory,[long]$AfterSequence=0){
+    $latest=$null
+    foreach($path in [IO.Directory]::EnumerateFiles($Directory,'beta-state-*.json')){
+        $name=[IO.Path]::GetFileName($path)
+        if($name -cnotmatch '\Abeta-state-([0-9]{10})\.json\z'){continue}
+        $sequence=[long]$Matches[1]
+        if($sequence -le $AfterSequence -or $sequence -eq 0){continue}
+        if($null -eq $latest -or $sequence -gt $latest.sequence){
+            $latest=[pscustomobject]@{sequence=$sequence;path=$path}
+        }
+    }
+    return $latest
+}
+function Open-LatestBetaStateReport([string]$Directory,[long]$AfterSequence=0){
+    # Finished snapshots are never overwritten. The writer may prune an old
+    # snapshot between enumeration and open; retry only that specific race.
+    $share=[IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete
+    for($attempt=0;$attempt -lt 2;$attempt++){
+        $latest=Get-LatestBetaStateFile $Directory $AfterSequence
+        if($null -eq $latest){return $null}
+        try{$stream=[IO.File]::Open($latest.path,[IO.FileMode]::Open,[IO.FileAccess]::Read,$share)}
+        catch [IO.FileNotFoundException]{continue}
+        return [pscustomobject]@{sequence=$latest.sequence;path=$latest.path;stream=$stream}
+    }
+    return $null
+}
 function Start-BetaControl([string]$Phase,[object[]]$Clients,[string]$Nonce){
     foreach($client in $Clients){
         $directory=Join-Path $client.profile 'client/gameplay-probe'
-        $state=Join-Path $directory 'beta-state.json';if(Test-Path -LiteralPath $state){Remove-Item -LiteralPath $state}
+        # The next command requires a new publication. Minute samples use
+        # the existing explore command and continue enforcing live heartbeats.
+        $latest=Get-LatestBetaStateFile $directory
+        $floor=if($null -eq $latest){0L}else{$latest.sequence}
         Write-Utf8 (Join-Path $directory 'beta-control.new.json') (@{phase=$Phase;owner=$client.name;nonce=$Nonce}|ConvertTo-Json -Compress)
         [IO.File]::Move((Join-Path $directory 'beta-control.new.json'),(Join-Path $directory 'beta-control.json'),$true)
+        $script:betaReportBarriers[$directory]=@{phase=$Phase;nonce=$Nonce;owner=$client.name;after_sequence=$floor}
     }
-}
-function Open-BetaStateReport([string]$Path){
-    # Java publishes by renaming the completed file. On Windows our read
-    # handle must allow that rename while we finish reading the old file.
-    $share=[IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete
-    return [IO.File]::Open($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,$share)
 }
 function Get-BetaReports([string]$Phase,[object[]]$Clients,[string]$Nonce){
     $rows=@()
     foreach($client in $Clients){
-        $file=Join-Path $client.profile 'client/gameplay-probe/beta-state.json'
-        try{$report=Open-BetaStateReport $file}
-        catch [IO.FileNotFoundException]{return $null}
+        $directory=Join-Path $client.profile 'client/gameplay-probe'
+        $barrier=$script:betaReportBarriers[$directory]
+        if($null -eq $barrier -or $barrier.phase -cne $Phase -or $barrier.nonce -cne $Nonce -or $barrier.owner -cne $client.name){throw 'Beta command/report binding differs'}
+        $snapshot=Open-LatestBetaStateReport $directory $barrier.after_sequence
+        if($null -eq $snapshot){return $null}
+        $report=$snapshot.stream
         try{
             $length=$report.Length
             if($length -lt 1 -or $length -gt 8192){throw 'Beta report bound'}
@@ -27,8 +55,9 @@ function Get-BetaReports([string]$Phase,[object[]]$Clients,[string]$Nonce){
             if($report.ReadByte() -ne -1){throw 'Beta report changed in place'}
         }finally{$report.Dispose()}
         $row=[Text.UTF8Encoding]::new($false,$true).GetString($bytes)|ConvertFrom-Json
-        if($row.phase -ne $Phase){return $null}
-        if($row.nonce -ne $Nonce -or $row.owner -ne $client.name -or -not $row.success){throw "Beta input failure $($client.name): $($row.error)"}
+        if(($row.sequence -isnot [long] -and $row.sequence -isnot [int]) -or $row.sequence -ne $snapshot.sequence){throw 'Beta report sequence differs from filename'}
+        if($row.nonce -cne $Nonce -or $row.owner -cne $client.name -or -not $row.success){throw "Beta input failure $($client.name): $($row.error)"}
+        if($row.phase -cne $Phase){return $null}
         if($row.health -ne 20 -or $row.position.Count -ne 3 -or [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()-$row.client_epoch_ms -gt 15000){throw 'Beta live health/heartbeat missing'}
         if($Phase -eq 'arm' -and (-not $row.arm_ready -or $row.on_ground -or -not $row.flying -or -not $row.loaded_current_chunk -or $row.screen -ne '' -or [Math]::Abs([double]$row.vertical_velocity) -ge 0.05)){throw 'Original creative takeoff and settled hover required'}
         if($Phase -eq 'rejoin' -and (-not $row.on_ground -or $row.flying -or -not $row.loaded_current_chunk)){throw 'Reloaded survival state required'}

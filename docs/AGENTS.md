@@ -2,8 +2,9 @@
 
 Run 024010-200 failed at the eighth Forge sample after a Windows heartbeat
 file replacement was denied. The retained temporary JSON records the exception.
-The new batch verifies replacement with the real reader still open before
-game startup. The continuous-flight requirements stay in BETA_STABILITY.md.
+The replacement preflight failed in 030200-244. The new batch verifies
+publication to a distinct sequence while the previous report is still open.
+The continuous-flight requirements stay in BETA_STABILITY.md.
 
 The 2026-11-10 Forge continuation 014119-334 completed the restart and 43
 minutes of flight before both clients entered the pause menu. It remains

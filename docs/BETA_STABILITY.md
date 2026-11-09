@@ -124,10 +124,15 @@ heartbeat. The unpublished client report contained a Windows AccessDeniedExcepti
 while atomically replacing beta-state.json at the time the controller read it.
 The recorded player was healthy, flying and in a loaded chunk. The client then
 stopped producing reports; the server and the other client continued until
-cleanup. This run failed. The controller now permits Windows to replace a file
-while its previous snapshot is open. A sharing violation retries only the
-atomic move of the same timestamped bytes. The batch exercises that exact
-overlap before launching Minecraft.
+cleanup. This run failed. In 030200-244 a deterministic preflight reproduced
+the denial even when the reader explicitly allowed deletion. Minecraft did
+not start in that attempt.
+
+The driver now atomically publishes each completed report to a new sequence
+number and prunes older reports. Readers can finish reading the previous
+snapshot while a new one appears. The preflight holds the actual reader open,
+publishes the next sequence, and checks that the prior and new bytes remain
+distinct and a staged file is never observed.
 
 ## Verified unshipped input targets
 

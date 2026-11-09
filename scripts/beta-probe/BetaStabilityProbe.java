@@ -1,8 +1,11 @@
 package io.github.genichimaruo.worldgenassist.probe;
 
 import java.net.InetSocketAddress;
+import java.io.IOException;
 import java.nio.file.*;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
 import net.minecraft.client.Minecraft;
@@ -19,6 +22,10 @@ import net.minecraft.world.level.GameType;
 public final class BetaStabilityProbe {
     private static final String NONCE=System.getenv("WORLDGEN_GAMEPLAY_PROBE_NONCE"), OWNER=System.getenv("WORLDGEN_GAMEPLAY_PROBE_OWNER");
     private static Path root;
+    private static boolean writerClaimed;
+    private static long publishedSequence;
+    private static final int KEEP_LATEST=3, MAX_OLD=16;
+    private static final ArrayList<Path> oldSnapshots=new ArrayList<>();
     private static String phase="";
     private static int ticks, stable, reversals, pauseDismissals;
     private static boolean done, moving, ascending, connecting, armed, forward=true;
@@ -33,8 +40,9 @@ public final class BetaStabilityProbe {
         try {
             if(root==null) {
                 String configured=System.getenv("WORLDGEN_GAMEPLAY_PROBE_ROOT");if(configured==null)return;
-                root=Path.of(configured).toRealPath();
-                if(!root.startsWith(c.gameDirectory.toPath().toRealPath()) || !root.getFileName().toString().equals("gameplay-probe"))throw new IllegalStateException("owned root");
+                Path candidate=Path.of(configured).toRealPath();
+                if(!candidate.startsWith(c.gameDirectory.toPath().toRealPath()) || !candidate.getFileName().toString().equals("gameplay-probe"))throw new IllegalStateException("owned root");
+                root=candidate;
             }
             if(++ticks%5!=0)return;
             Path file=root.resolve("beta-control.json");if(!Files.exists(file))return;
@@ -120,20 +128,41 @@ public final class BetaStabilityProbe {
         }}
     }
     private static void write(Minecraft c,boolean success,String error)throws Exception {
+        if(root==null)throw new IllegalStateException("no owned report root");
+        if(!writerClaimed){
+            Files.writeString(root.resolve("beta-state.writer"),NONCE+" "+OWNER,StandardOpenOption.CREATE_NEW,StandardOpenOption.WRITE);
+            writerClaimed=true;
+        }
+        long next=publishedSequence+1;
+        if(next>9_999_999_999L)throw new IOException("beta report sequence exhausted");
         var row=new LinkedHashMap<String,Object>();row.put("nonce",NONCE);row.put("owner",OWNER);row.put("phase",phase);row.put("success",success);row.put("error",error);row.put("elapsed_ms",(System.nanoTime()-started)/1_000_000);row.put("travel_blocks",travel);row.put("reversals",reversals);row.put("client_epoch_ms",System.currentTimeMillis());
+        row.put("sequence",next);
         if(c.player!=null){row.put("health",c.player.getHealth());row.put("position",new double[]{c.player.getX(),c.player.getY(),c.player.getZ()});row.put("on_ground",c.player.onGround());row.put("flying",c.player.getAbilities().flying);row.put("vertical_velocity",c.player.getDeltaMovement().y);}
         var screen=c.gui.screen();row.put("screen",screen==null?"":screen.getClass().getName());row.put("arm_ready",armed);row.put("pause_dismissals",pauseDismissals);
         row.put("loaded_current_chunk",c.player!=null && c.level!=null && c.level.hasChunk(((int)Math.floor(c.player.getX()))>>4,((int)Math.floor(c.player.getZ()))>>4));
-        Path tmp=root.resolve("beta-state.new.json"),target=root.resolve("beta-state.json");
-        Files.writeString(tmp,new GsonBuilder().create().toJson(row));
-        // A Windows reader can briefly deny replacement. Retry only the move of these
-        // already captured bytes; the observation timestamp and failure/success never change.
-        for(int attempt=0;;attempt++){
-            try{Files.move(tmp,target,StandardCopyOption.REPLACE_EXISTING,StandardCopyOption.ATOMIC_MOVE);return;}
-            catch(AccessDeniedException denied){
-                if(attempt==3)throw new java.io.IOException("Atomic beta report replacement denied after four attempts: "+denied.getMessage(),denied);
-                try{Thread.sleep(2L << attempt);}catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw interrupted;}
-            }
+        // Leave one slot for the failure report if many older files stay locked.
+        int limit=success?MAX_OLD-1:MAX_OLD;
+        if(oldSnapshots.size()>=limit){
+            pruneOldSnapshots();
+            if(oldSnapshots.size()>=limit)throw new IOException("beta report retention blocked: "+oldSnapshots.size()+" old snapshots");
+        }
+        Path target=snapshotPath(next);
+        if(Files.exists(target,LinkOption.NOFOLLOW_LINKS))throw new FileAlreadyExistsException(target.toString());
+        Path staging=root.resolve("beta-state.pending.tmp");
+        Files.writeString(staging,new GsonBuilder().create().toJson(row));
+        Files.move(staging,target,StandardCopyOption.ATOMIC_MOVE);
+        publishedSequence=next;
+        if(next>KEEP_LATEST)oldSnapshots.add(snapshotPath(next-KEEP_LATEST));
+        pruneOldSnapshots();
+    }
+    private static Path snapshotPath(long sequence){
+        return root.resolve(String.format(Locale.ROOT,"beta-state-%010d.json",sequence));
+    }
+    private static void pruneOldSnapshots(){
+        for(var it=oldSnapshots.iterator();it.hasNext();){
+            Path old=it.next();
+            try{Files.deleteIfExists(old);it.remove();}
+            catch(IOException deferred){/* A reader may still hold it. Revisit on the next publication. */}
         }
     }
 }
