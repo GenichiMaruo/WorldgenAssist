@@ -162,6 +162,16 @@ queries the FULL chunk with loadOrGenerate=false and checks the stored
 coordinates. Run `scripts/Run-BetaStabilityGate.ps1 -Execute` on all three
 loaders. Old runs keep their actual movement, save and receipt evidence.
 
+In 054337-052 both NeoForge players had 60/60 resident current-chunk samples.
+Both also observed the correct original floor, target and clearance at the
+return site. The controller failed to deliver that evidence to the server.
+The 2,759-byte JSON expanded to a 10,478-character remote command. The
+server timed out waiting for the acknowledgement and the run ended before
+survival descent and a final clean save. Beta acknowledgements now travel as
+files under the owned E-drive evidence directory. The receiver verifies the
+file before atomically making it visible. A 32 KiB transfer using the same
+route is checked before starting any of the three loaders.
+
 ## Verified unshipped input targets
 
 Primary generated26.2 LocalPlayer.aiStep729 calls input.tick748; creative flight

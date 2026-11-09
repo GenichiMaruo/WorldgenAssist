@@ -136,6 +136,20 @@ try {
     $tokens=$null;$errors=$null;$ast=[Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'Run-FeaturePipelineGate.ps1'),[ref]$tokens,[ref]$errors)
     $definition=@($ast.FindAll({param($node)$node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Check-Physical'},$true));if($errors.Count -or $definition.Count -ne 1){throw 'Original physical checker missing'};. ([scriptblock]::Create($definition[0].Extent.Text))
     Remote 'physical-preflight' 'if(-not(Test-Path -LiteralPath "E:/WorldgenAssist/java25/bin/java.exe") -or (Get-CimInstance Win32_LogicalDisk -Filter "DeviceID=''E:''").FreeSpace -lt 30GB){throw "E-drive runtime/free-space prerequisite"};if(@(Get-CimInstance Win32_Process -Filter "Name=''java.exe''"|Where-Object {$_.CommandLine -and $_.CommandLine.Replace(''\'',''/'') -match ''E:/WorldgenAssist/port26.3/(fabric-server-launch\.jar|native-runtime/(forge|neoforge)/)''}).Count){throw "Owned server already live"};Get-CimInstance Win32_Processor|Select-Object Name,NumberOfCores,NumberOfLogicalProcessors|ConvertTo-Json'
+    # Exercise the same SSH/SCP route and maximum allowed record before spending
+    # an hour in Minecraft. The preflight has its own evidence directory.
+    $preflightName='beta-ack-preflight-'+[guid]::NewGuid().ToString('N')
+    $remoteCheck='E:/WorldgenAssist/port26.3/evidence/'+$preflightName
+    Remote 'prepare-ack-preflight' ('New-Item -ItemType Directory -Path "'+$remoteCheck+'" | Out-Null')
+    $localCheck=Join-Path $gate 'ack-preflight'
+    [void][IO.Directory]::CreateDirectory($localCheck)
+    $ackFile=Join-Path $localCheck 'beta-landing.json'
+    $empty='{"phase":"landing","padding":""}'
+    $large=$empty.Replace('""',('"'+('x'*(32768-$empty.Length))+'"'))
+    [IO.File]::WriteAllText($ackFile,$large,[Text.UTF8Encoding]::new($false))
+    Send-BetaAcknowledgement -LocalFile $ackFile -CaseName $preflightName -Phase landing
+    $ackHash=(Get-FileHash -LiteralPath $ackFile).Hash
+    Remote 'verify-ack-preflight' ('$ack="'+$remoteCheck+'/beta-landing.ack";if((Get-Item -LiteralPath $ack).Length -ne 32768 -or (Get-FileHash -LiteralPath $ack).Hash -ne "'+$ackHash+'"){throw "Transferred heartbeat differs"}')
     foreach($loader in $freshLoaders){
         $root=Join-Path $gate $loader;New-Item -ItemType Directory -Path $root|Out-Null
         $artifacts=@($artifacts|Sort-Object @{Expression={if($_.loader -eq $loader){0}else{1}}},loader)

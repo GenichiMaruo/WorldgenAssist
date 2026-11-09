@@ -393,9 +393,9 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
             $betaPhase=if($betaPending -match '^sample-'){'explore'}else{$betaPending}
             $betaReport=Get-BetaReports $betaPhase $clients $gameplayNonce
             if($null -ne $betaReport){
-                Write-Json (Join-Path $output ('beta-'+$betaPending+'.json')) $betaReport
-                $encodedReport=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($betaReport|ConvertTo-Json -Depth 10)))
-                Invoke-Remote ('[IO.File]::WriteAllBytes("'+$RemoteRoot+'/evidence/'+$case+'/beta-'+$betaPending+'.ack",[Convert]::FromBase64String("'+$encodedReport+'"))')
+                $reportFile=Join-Path $output ('beta-'+$betaPending+'.json')
+                Write-Json $reportFile $betaReport
+                Send-BetaAcknowledgement -LocalFile $reportFile -CaseName $case -Phase $betaPending
                 $betaPending=$null
             }
         }

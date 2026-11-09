@@ -1,5 +1,57 @@
 # Only the owned beta profiles use this controller; no probe ships in a release.
 $script:betaReportBarriers=@{}
+function Send-BetaAcknowledgement {
+    param(
+        [Parameter(Mandatory)][string]$LocalFile,
+        [Parameter(Mandatory)][string]$CaseName,
+        [Parameter(Mandatory)][string]$Phase
+    )
+    if($CaseName -cnotmatch '\A(?:scenario-overworld-assisted-p2-performance-[0-9]{8}-[0-9]{6}-[0-9]{3}|beta-ack-preflight-[0-9a-f]{32})\z' -or
+       $Phase -cnotmatch '\A(?:arm|rejoin|explore|landing|stop|sample-(?:[1-9]|[1-5][0-9]|60))\z'){throw 'Unknown beta acknowledgement destination'}
+
+    $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../test-artifacts'))
+    $file=(Get-Item -LiteralPath $LocalFile -Force -ErrorAction Stop).FullName
+    if(-not $file.StartsWith($root+'\',[StringComparison]::OrdinalIgnoreCase) -or
+       [IO.Path]::GetFileName($file) -cne ('beta-'+$Phase+'.json')){throw 'Expected the completed phase report in test-artifacts'}
+    for($entry=$file;;$entry=[IO.Path]::GetDirectoryName($entry)){
+        if((Get-Item -LiteralPath $entry -Force -ErrorAction Stop).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Beta report path must not be a reparse point'}
+        if($entry -eq $root){break}
+    }
+
+    $remote='gen1c@100.103.102.109'
+    $directory='E:/WorldgenAssist/port26.3/evidence/'+$CaseName
+    $stage='.beta-'+$Phase+'-'+[Guid]::NewGuid().ToString('N')+'.part'
+    $target='beta-'+$Phase+'.ack'
+    $options=@('-o','BatchMode=yes','-o','ConnectTimeout=15','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=2')
+    # Keep the completed local file immutable while scp opens its own reader.
+    $stream=[IO.File]::Open($file,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+    try{
+        $bytes=$stream.Length
+        if($bytes -lt 1 -or $bytes -gt 32768){throw 'Beta acknowledgement must be 1..32768 bytes'}
+        $hash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream))
+        & scp.exe -q @options $file ($remote+':'+$directory+'/'+$stage)
+        if($LASTEXITCODE -ne 0){throw "Beta acknowledgement upload failed for $Phase"}
+    }finally{$stream.Dispose()}
+
+    # Only validated path tokens, length and digest cross the command line.
+    # The server waits for the final name; it never sees an incomplete JSON.
+    $code=@'
+$ErrorActionPreference='Stop'
+$ProgressPreference='SilentlyContinue'
+$env:TEMP='E:/WorldgenAssist/temp';$env:TMP=$env:TEMP
+$dir='@DIRECTORY@'
+$stage=Join-Path $dir '@STAGE@'
+$target=Join-Path $dir '@FINAL@'
+if(Test-Path -LiteralPath $target){throw 'Beta acknowledgement already exists'}
+$f=Get-Item -LiteralPath $stage -Force
+if($f.PSIsContainer -or ($f.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $f.Length -ne @BYTES@ -or (Get-FileHash -LiteralPath $stage -Algorithm SHA256).Hash -cne '@SHA@'){throw 'Staged beta acknowledgement identity differs'}
+[IO.File]::Move($stage,$target)
+'@
+    $code=$code.Replace('@DIRECTORY@',$directory).Replace('@STAGE@',$stage).Replace('@FINAL@',$target).Replace('@BYTES@',[string]$bytes).Replace('@SHA@',$hash)
+    $encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($code))
+    & ssh.exe @options $remote ('powershell -NoProfile -NonInteractive -EncodedCommand '+$encoded)
+    if($LASTEXITCODE -ne 0){throw "Beta acknowledgement verification/publication failed for $Phase"}
+}
 function Get-LatestBetaStateFile([string]$Directory,[long]$AfterSequence=0){
     $latest=$null
     foreach($path in [IO.Directory]::EnumerateFiles($Directory,'beta-state-*.json')){
