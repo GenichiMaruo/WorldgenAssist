@@ -7,12 +7,26 @@ function Start-BetaControl([string]$Phase,[object[]]$Clients,[string]$Nonce){
         [IO.File]::Move((Join-Path $directory 'beta-control.new.json'),(Join-Path $directory 'beta-control.json'),$true)
     }
 }
+function Open-BetaStateReport([string]$Path){
+    # Java publishes by renaming the completed file. On Windows our read
+    # handle must allow that rename while we finish reading the old file.
+    $share=[IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete
+    return [IO.File]::Open($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,$share)
+}
 function Get-BetaReports([string]$Phase,[object[]]$Clients,[string]$Nonce){
     $rows=@()
     foreach($client in $Clients){
-        $file=Join-Path $client.profile 'client/gameplay-probe/beta-state.json';if(-not(Test-Path -LiteralPath $file)){return $null}
-        if((Get-Item -LiteralPath $file).Length -gt 8192){throw 'Beta report bound'}
-        $row=Get-Content -LiteralPath $file -Raw|ConvertFrom-Json
+        $file=Join-Path $client.profile 'client/gameplay-probe/beta-state.json'
+        try{$report=Open-BetaStateReport $file}
+        catch [IO.FileNotFoundException]{return $null}
+        try{
+            $length=$report.Length
+            if($length -lt 1 -or $length -gt 8192){throw 'Beta report bound'}
+            $bytes=[byte[]]::new([int]$length)
+            $report.ReadExactly($bytes,0,$bytes.Length)
+            if($report.ReadByte() -ne -1){throw 'Beta report changed in place'}
+        }finally{$report.Dispose()}
+        $row=[Text.UTF8Encoding]::new($false,$true).GetString($bytes)|ConvertFrom-Json
         if($row.phase -ne $Phase){return $null}
         if($row.nonce -ne $Nonce -or $row.owner -ne $client.name -or -not $row.success){throw "Beta input failure $($client.name): $($row.error)"}
         if($row.health -ne 20 -or $row.position.Count -ne 3 -or [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()-$row.client_epoch_ms -gt 15000){throw 'Beta live health/heartbeat missing'}

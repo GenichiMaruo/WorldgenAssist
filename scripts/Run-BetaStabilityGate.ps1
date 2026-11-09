@@ -88,6 +88,18 @@ try {
     $before=Manifest;[IO.File]::WriteAllLines((Join-Path $gate 'source-manifest-before.sha256'),$before)
     $syntaxCode='$bad=@();foreach($file in @("Run-BetaStabilityGate.ps1","Run-WorldgenScenario.ps1","Remote-WorldgenScenarioServer.ps1","BetaStabilityClient.ps1","BetaStabilityServer.ps1","NativeGameplayEvidence.ps1","WorldgenGameplayClient.ps1","Build-ReleasePackage.ps1")){$t=$null;$e=$null;[void][Management.Automation.Language.Parser]::ParseFile((Join-Path "scripts" $file),[ref]$t,[ref]$e);$bad+=@($e)};if($bad.Count){$bad|ForEach-Object {Write-Error $_.ToString()};exit 1};Write-Output "Affected harness syntax passed"'
     Step 'affected-harness-syntax' (Get-Command pwsh.exe).Source @('-NoProfile','-NonInteractive','-Command',$syntaxCode)
+    # An open reader must see its own snapshot while the writer publishes the next one.
+    . (Join-Path $PSScriptRoot 'BetaStabilityClient.ps1')
+    $first=Join-Path $gate 'sharing-check.json'
+    $next=Join-Path $gate 'sharing-check.new.json'
+    [IO.File]::WriteAllText($first,'1')
+    [IO.File]::WriteAllText($next,'2')
+    $reader=Open-BetaStateReport $first
+    try {
+        [IO.File]::Move($next,$first,$true)
+        if($reader.ReadByte() -ne 49 -or [IO.File]::ReadAllText($first) -cne '2'){throw 'Atomic heartbeat replacement did not preserve both snapshots'}
+    }finally{$reader.Dispose()}
+    $steps.Add(@{name='heartbeat-replacement-with-live-reader';root=$gate;success=$true;exit_code=0;timed_out=$false})
     # All shipped production/build inputs must still match the closed dev2 proof.
     $parent=Join-Path $base 'native-client-request-gate-20261009-050308-626'
     $candidate=Get-Content -LiteralPath (Join-Path $parent 'summary.json') -Raw|ConvertFrom-Json

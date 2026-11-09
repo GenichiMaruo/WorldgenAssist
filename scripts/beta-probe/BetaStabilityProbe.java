@@ -115,13 +115,25 @@ public final class BetaStabilityProbe {
                 if(!c.level.hasChunk(target[0]>>4,target[2]>>4) || !BuiltInRegistries.BLOCK.getKey(c.level.getBlockState(new BlockPos(target[0],target[1],target[2])).getBlock()).toString().equals("minecraft:cobblestone")){stable=0;return;}
                 if(++stable>=20){done=true;write(c,true,"");}
             }
-        }catch(Exception e){moving=false;ascending=false;armed=false;c.options.keyUp.setDown(false);c.options.keyJump.setDown(false);done=true;try{write(c,false,e.toString());}catch(Exception ignored){}}
+        }catch(Exception e){moving=false;ascending=false;armed=false;c.options.keyUp.setDown(false);c.options.keyJump.setDown(false);done=true;try{write(c,false,e.toString());}catch(Exception reportError){
+            System.err.println("Beta probe failure for "+OWNER+" ("+phase+"): "+e+"; failure report could not be published: "+reportError);
+        }}
     }
     private static void write(Minecraft c,boolean success,String error)throws Exception {
         var row=new LinkedHashMap<String,Object>();row.put("nonce",NONCE);row.put("owner",OWNER);row.put("phase",phase);row.put("success",success);row.put("error",error);row.put("elapsed_ms",(System.nanoTime()-started)/1_000_000);row.put("travel_blocks",travel);row.put("reversals",reversals);row.put("client_epoch_ms",System.currentTimeMillis());
         if(c.player!=null){row.put("health",c.player.getHealth());row.put("position",new double[]{c.player.getX(),c.player.getY(),c.player.getZ()});row.put("on_ground",c.player.onGround());row.put("flying",c.player.getAbilities().flying);row.put("vertical_velocity",c.player.getDeltaMovement().y);}
         var screen=c.gui.screen();row.put("screen",screen==null?"":screen.getClass().getName());row.put("arm_ready",armed);row.put("pause_dismissals",pauseDismissals);
         row.put("loaded_current_chunk",c.player!=null && c.level!=null && c.level.hasChunk(((int)Math.floor(c.player.getX()))>>4,((int)Math.floor(c.player.getZ()))>>4));
-        Path tmp=root.resolve("beta-state.new.json");Files.writeString(tmp,new GsonBuilder().create().toJson(row));Files.move(tmp,root.resolve("beta-state.json"),StandardCopyOption.REPLACE_EXISTING,StandardCopyOption.ATOMIC_MOVE);
+        Path tmp=root.resolve("beta-state.new.json"),target=root.resolve("beta-state.json");
+        Files.writeString(tmp,new GsonBuilder().create().toJson(row));
+        // A Windows reader can briefly deny replacement. Retry only the move of these
+        // already captured bytes; the observation timestamp and failure/success never change.
+        for(int attempt=0;;attempt++){
+            try{Files.move(tmp,target,StandardCopyOption.REPLACE_EXISTING,StandardCopyOption.ATOMIC_MOVE);return;}
+            catch(AccessDeniedException denied){
+                if(attempt==3)throw new java.io.IOException("Atomic beta report replacement denied after four attempts: "+denied.getMessage(),denied);
+                try{Thread.sleep(2L << attempt);}catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw interrupted;}
+            }
+        }
     }
 }

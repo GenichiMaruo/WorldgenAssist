@@ -119,6 +119,16 @@ It records each dismissal, limits repeat dismissals and keeps the original
 movement and elapsed-time checks. Both new test profiles start with the
 Minecraft music volume set to zero.
 
+Run 024010-200 completed seven Forge samples. Its eighth sample found an old
+heartbeat. The unpublished client report contained a Windows AccessDeniedException
+while atomically replacing beta-state.json at the time the controller read it.
+The recorded player was healthy, flying and in a loaded chunk. The client then
+stopped producing reports; the server and the other client continued until
+cleanup. This run failed. The controller now permits Windows to replace a file
+while its previous snapshot is open. A sharing violation retries only the
+atomic move of the same timestamped bytes. The batch exercises that exact
+overlap before launching Minecraft.
+
 ## Verified unshipped input targets
 
 Primary generated26.2 LocalPlayer.aiStep729 calls input.tick748; creative flight
