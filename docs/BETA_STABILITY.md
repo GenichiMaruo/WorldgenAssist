@@ -106,6 +106,19 @@ the original 72 hashes. The second compiled the offline readers and verified
 the retained Fabric evidence, then found a wrong screen accessor in the input
 driver. Exact 26.3 Minecraft uses `gui.screen()` (e.g. Minecraft.tick, 1895).
 
+In run 014119-334, Forge completed the restart, survival interactions and 43
+minutes of exploration. At sample 43 the players had traveled 28,025 and
+28,020 blocks. Before sample 44 both probes recorded the vanilla PauseScreen,
+health 20, flight at Y=330 and a loaded chunk. The run ended there. The source
+manifest also changed during cleanup after the runtime failure. The partial
+run supplies no 60-minute pass.
+
+The client-only driver now closes an incidental vanilla pause menu through
+the original Screen.onClose (26.2:202, 26.3:208) during owned creative flight.
+It records each dismissal, limits repeat dismissals and keeps the original
+movement and elapsed-time checks. Both new test profiles start with the
+Minecraft music volume set to zero.
+
 ## Verified unshipped input targets
 
 Primary generated26.2 LocalPlayer.aiStep729 calls input.tick748; creative flight

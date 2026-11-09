@@ -11,6 +11,11 @@ completed 60 minutes, restart and the original saved-light comparison. Forge
 stopped at the unshipped flight handoff after restart; fresh native results
 and beta publication are pending. See BETA_STABILITY.md.
 
+Forge run 014119-334 completed 43 one-minute samples before a pause menu
+interrupted the client input driver. The next driver handles an incidental
+pause in the owned flight with the original screen close action and records
+it in the client report. The 60-minute window still runs continuously.
+
 Restart harness reference: primary26.2/exact26.3 server/dedicated/Settings.store
 59-61 writes Java Properties.store; DedicatedServerSettings.forceSave19-20 calls
 it. Timestamp comments change on startup. Preserve raw before/after properties,

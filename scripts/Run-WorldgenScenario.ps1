@@ -159,7 +159,8 @@ function Start-Client([string]$Name,[string]$Uuid,[int]$Index,[string]$AssetsRoo
     if($BetaStabilityMinutes){
         # Two owned clients share a desktop. A pause menu on the unfocused
         # window deactivates native in-game key mappings during the flight.
-        $optionLines=@($optionLines | Where-Object {$_ -notmatch '^pauseOnLostFocus:'})+@('pauseOnLostFocus:false')
+        $optionLines=@($optionLines | Where-Object {$_ -notmatch '^(pauseOnLostFocus|soundCategory_music):'})
+        $optionLines+=@('pauseOnLostFocus:false','soundCategory_music:0.0')
     }
     $optionLines += 'renderDistance:'+$ViewDistance
     # Options.processOptions reads the preset after individual settings; FANCY

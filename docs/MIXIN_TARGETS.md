@@ -2,6 +2,11 @@
 
 ## Unshipped beta stability observations (updated 2026-11-10)
 
+Both test clients recorded vanilla PauseScreen during Forge flight at minute
+44 in run 014119-334. The test driver uses the original Screen.onClose on this
+screen (generated 26.2 line 202, exact 26.3 line 208). These methods call
+Minecraft.gui.setScreen(null). No new injection target is required.
+
 BETA_STABILITY.md records primary26.2/exact26.3 source references. Test-only
 Minecraft.tick TAIL / LocalPlayer.aiStep HEAD each require1. Hold Options.keyUp
 before original input.tick; no physics cancellation or routing change. Original

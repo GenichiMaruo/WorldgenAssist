@@ -1,5 +1,11 @@
 # Repository agent instructions
 
+The 2026-11-10 Forge continuation 014119-334 completed the restart and 43
+minutes of flight before both clients entered the pause menu. It remains
+failed. The next run uses the bounded test-client menu dismissal and muted
+music described in BETA_STABILITY.md. Beta promotion requires a completed
+native run and the verified Fabric record.
+
 ## Beta stability checkpoint (2026-11-10); public release pending
 
 Gate `test-artifacts/beta-stability-gate-20261009-162356-447` is closed
