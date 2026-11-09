@@ -2,8 +2,8 @@
 
 The user resumed work on 2026-10-09: prioritize restart, continuous exploration
 and multiplayer stability, then publish beta. Earlier paused checkpoints are
-historical. Fabric has completed the gate; native stability and beta
-publication are still pending as of 2026-11-10.
+historical. At the 030617-533 checkpoint, corrected live chunk-residency
+checks are pending on all three loaders.
 
 `scripts/Run-BetaStabilityGate.ps1 -Execute` runs one sequential affected batch:
 Fabric0.19.5, Forge66.0.3, NeoForge26.3.0.13-beta / Minecraft26.3 / Java25.
@@ -97,8 +97,8 @@ controller waits for each client to hover above the ground with a clear input
 screen, and for the server to confirm both players are airborne, flying and
 healthy, before positioning them at the start of the flight. That preparation
 time does not count towards the 60 minutes. The simulation, movement, health, and
-one-hour requirements stay in force. Only the two missing loaders need
-fresh runs: `scripts/Run-BetaStabilityGate.ps1 -Execute -ReuseVerifiedFabric`.
+one-hour requirements stay in force. The November continuation initially
+retained the completed Fabric row and ran the two native loaders.
 
 November preparation attempts 013709 and 014019 did not start a game. The
 first found missing local Gradle cache entries; the restored classpath matches
@@ -133,6 +133,34 @@ number and prunes older reports. Readers can finish reading the previous
 snapshot while a new one appears. The preflight holds the actual reader open,
 publishes the next sequence, and checks that the prior and new bytes remain
 distinct and a staged file is never observed.
+
+In batch 030617-533, Forge passed the entire 60-minute flight, restart,
+survival interactions, four saved-player observations and 10,649,600 saved
+lighting comparisons. No exploration job timed out. NeoForge also completed
+the flight. On return, player A entered survival 401 ms before the stand and
+target chunk receipts. Its first grounded report recorded Y=70 instead of 71,
+with correct X/Z and full health. The initial and final saved sections both
+contain grass at Y=70, air at Y=71..73 and the placed cobblestone in the adjacent
+chunk. The ground discrepancy is real; no saved block loss was observed.
+The original run failed the landing check and has no successful final save.
+
+The return now places the still-flying clients above the original stand.
+Both clients must receive the stand and target chunks and confirm the natural
+floor, clearance and placed block. The server verifies those witnesses before
+switching the players to survival and allowing the original landing. The
+coordinate, health, mining, placement, reconnect and saved-state checks still
+apply. This handoff covers a controlled return from creative flight. The
+original out-of-view survival teleport produced a one-block discrepancy;
+the beta makes no general change to teleports.
+
+Reviewing that failure exposed a separate measurement error. Original
+26.2/26.3 ClientLevel.hasChunk returns true for any coordinates. For the old
+Fabric and Forge runs, the packet logs establish an earlier receipt for all
+240 sampled owner/coordinates, but contain no corresponding eviction history.
+The final gate uses ClientChunkCache via getChunkSource().hasChunk, which
+queries the FULL chunk with loadOrGenerate=false and checks the stored
+coordinates. Run `scripts/Run-BetaStabilityGate.ps1 -Execute` on all three
+loaders. Old runs keep their actual movement, save and receipt evidence.
 
 ## Verified unshipped input targets
 

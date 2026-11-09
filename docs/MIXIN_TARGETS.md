@@ -2,6 +2,17 @@
 
 ## Unshipped beta stability observations (updated 2026-11-10)
 
+During the failed NeoForge return in 030617-533, the original client chunk
+packet handler's completion markers placed both critical chunk receipts
+401 ms after the player's survival mode message. The stand and target lie on
+opposite sides of a chunk boundary. The unshipped probe can check each using
+the existing client tick hook before ending creative flight.
+
+ClientLevel.hasChunk itself always returns true in generated 26.2 and exact
+26.3. Query the client chunk source instead: ChunkSource.hasChunk dispatches
+getChunk(FULL,false), and ClientChunkCache returns null for an absent or
+mismatched chunk. Only the corrected cache query measures live residency.
+
 Both test clients recorded vanilla PauseScreen during Forge flight at minute
 44 in run 014119-334. The test driver uses the original Screen.onClose on this
 screen (generated 26.2 line 202, exact 26.3 line 208). These methods call

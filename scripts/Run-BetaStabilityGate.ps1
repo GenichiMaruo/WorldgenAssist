@@ -4,8 +4,9 @@ param([switch]$Execute,[ValidateSet(60)][int]$Minutes=60,[switch]$ReuseVerifiedF
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $workspace=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'));$base=Join-Path $workspace 'test-artifacts'
-$freshLoaders=if($ReuseVerifiedFabric){@('forge','neoforge')}else{@('fabric','forge','neoforge')}
-if(-not $Execute){@{loaders=@('fabric','forge','neoforge');fresh_loaders=$freshLoaders;reuse_verified_fabric=[bool]$ReuseVerifiedFabric;minutes_each=$Minutes;players=2;view=32;remote='gen1c@100.103.102.109';root='E:/WorldgenAssist/port26.3';mod_builds=0;junit=0;scope='Original input exploration, same-world restart, loaded block/player witnesses, second survival interaction, saved NBT/light.'}|ConvertTo-Json;exit 0}
+$freshLoaders=@('neoforge','forge','fabric')
+if($Execute -and $ReuseVerifiedFabric){throw 'Historical probes did not measure live cache residency; run the fresh three-loader gate without -ReuseVerifiedFabric'}
+if(-not $Execute){@{loaders=$freshLoaders;fresh_loaders=$freshLoaders;reuse_verified_fabric=$false;minutes_each=$Minutes;players=2;view=32;remote='gen1c@100.103.102.109';root='E:/WorldgenAssist/port26.3';mod_builds=0;junit=0;scope='Fresh client-cache observations, same-world restart, original survival and landing witnesses, final saved NBT/light for each loader.'}|ConvertTo-Json;exit 0}
 $gate=Join-Path $base ('beta-stability-gate-'+(Get-Date -Format 'yyyyMMdd-HHmmss-fff'));New-Item -ItemType Directory -Path $gate|Out-Null
 $root=$gate;$steps=[Collections.Generic.List[object]]::new();$issues=[Collections.Generic.List[string]]::new();$results=@();$artifacts=@();$lock=$null;$before=@()
 $jdk='C:/Program Files/Java/jdk-25.0.4/bin';$NativeBatchExperiment=$false
@@ -18,55 +19,54 @@ function Manifest {
     foreach($name in @('gradle.properties','build.gradle','settings.gradle','loaders/forge/build.gradle','loaders/neoforge/build.gradle','README.md','README.ja.md')){$files+=Get-Item -LiteralPath (Join-Path $workspace $name)}
     @($files|Sort-Object FullName|ForEach-Object {(Get-FileHash -LiteralPath $_.FullName).Hash+'  '+$_.FullName.Substring($workspace.Length+1).Replace('\','/')})
 }
-function Get-FabricProofDigest([string]$Directory){
-    # The complete 400-file loader directory is sealed, including raw logs,
-    # minute samples, both saved inventories, inspector outputs and probe JAR.
-    $lines=[string[]]@(Get-ChildItem -LiteralPath $Directory -File -Recurse -Force|ForEach-Object {
-        $_.FullName.Substring($Directory.Length+1).Replace('\','/')+'  '+(Get-FileHash -LiteralPath $_.FullName).Hash
-    })
-    [Array]::Sort($lines,[StringComparer]::Ordinal)
-    $hash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes(($lines -join [char]10))))
-    if($lines.Count -ne 400 -or $hash -cne '7E0E812D944F9269BCFF88772BF2A0DB2F7365DA447BF145C20D61E337A78152'){throw 'Original Fabric evidence files changed or are missing'}
-    return $hash
-}
-function Import-VerifiedFabric([object]$Artifact,[string[]]$CurrentManifest){
-    $original=Join-Path $base 'beta-stability-gate-20261009-162356-447'
-    $directory=Join-Path $original 'fabric'
-    $summaryPath=Join-Path $original 'summary.json'
-    $manifestPath=Join-Path $original 'source-manifest-before.sha256'
-    $summaryHash=(Get-FileHash -LiteralPath $summaryPath).Hash
-    $manifestHash=(Get-FileHash -LiteralPath $manifestPath).Hash
-    if($summaryHash -cne '75550FF96B2580930E438DAE6560BF30A403C7FB991DA1B20439670409342BC3' -or
-        $manifestHash -cne '6B290D27107BB7E4A9F0BB885D1301938BB02F7B7DEDDEB28E72AFCEC3336AE4' -or
-        (Get-FileHash -LiteralPath (Join-Path $original 'source-manifest-after.sha256')).Hash -cne $manifestHash){throw 'Original Fabric parent or frozen source manifest differs'}
-    $old=Get-Content -LiteralPath $summaryPath -Raw|ConvertFrom-Json
-    $failed=@($old.steps|Where-Object {-not $_.success -or $_.timed_out -or $_.exit_code})
-    if($old.success -or $old.schema -ne 'worldgen-assist.beta-stability-gate.v1' -or $old.results.Count -ne 1 -or $failed.Count -ne 1 -or
-        $failed[0].root -ne (Join-Path $original 'forge') -or $failed[0].name -ne 'runtime-assistance-stability-restart'){throw 'Only the completed Fabric row from the closed Forge failure can be reused'}
-    $row=$old.results[0]
-    if($row.loader -cne 'fabric' -or $row.root -ne $directory -or $row.scenario -ne (Join-Path (Join-Path $directory 'assisted') 'scenario-result.json') -or
-        -not $row.success -or -not $row.stability.success -or $row.stability.minutes -ne 60 -or $row.stability.samples.Count -ne 60 -or
-        -not $row.stability.restart.loaded_block_before_any_postrestart_write -or $row.stability.restart.first_pid -eq $row.stability.restart.second_pid -or
-        -not $row.saved_gameplay.success -or $row.saved_gameplay.players.Count -ne 4 -or -not $row.lighting.success -or $row.lighting.cases.Count -ne 1 -or
-        $row.lighting.cases[0].compared_values -ne 10649600 -or $row.lighting.cases[0].block_differences -or $row.lighting.cases[0].sky_differences){throw 'Completed original Fabric restart/saved evidence required'}
-    if($Artifact.loader -cne 'fabric' -or $Artifact.sha256 -cne $row.artifact_sha256 -or
-        (Get-FileHash -LiteralPath $Artifact.path).Hash -cne $row.artifact_sha256 -or
-        (Get-FileHash -LiteralPath (Join-Path $directory 'worldgen-gameplay-probe.jar')).Hash -cne $row.probe_sha256){throw 'Measured Fabric distribution or input driver differs'}
-    # The imported run proves its original controller and input driver. Only
-    # the listed test controls, packaging and documentation may have evolved.
-    $allowed=@('scripts/Run-BetaStabilityGate.ps1','scripts/Run-WorldgenScenario.ps1','scripts/BetaStabilityClient.ps1','scripts/BetaStabilityServer.ps1','scripts/beta-probe/BetaStabilityProbe.java','scripts/Build-ReleasePackage.ps1')
-    $changes=@(Compare-Object ([IO.File]::ReadAllLines($manifestPath)) $CurrentManifest -CaseSensitive)
-    foreach($delta in $changes){
-        $relative=$delta.InputObject.Substring(66)
-        if(-not $relative.StartsWith('docs/',[StringComparison]::Ordinal) -and $relative -cnotin $allowed){throw "Input outside the permitted evidence-reuse scope changed: $relative"}
+function Assert-CacheKey($State){
+    if($State.position.Count -ne 3 -or $State.current_chunk_cache_key.Count -ne 2 -or $State.loaded_current_chunk -isnot [bool]){
+        throw 'Missing real client cache key or resident flag'
     }
-    $digest=Get-FabricProofDigest $directory
-    $row|Add-Member -NotePropertyName provenance -NotePropertyValue ([ordered]@{
-        kind='retained_fabric';original_parent=$original;original_parent_success=$false;parent_summary_sha256=$summaryHash;original_source_manifest_sha256=$manifestHash
-        original_evidence_directory=$directory;original_evidence_files=400;original_evidence_sha256=$digest
-        manifest_delta=@($changes|Select-Object InputObject,SideIndicator);fresh_runtime=$false
-    })
-    return $row
+    foreach($axis in 0,1){
+        $coord=$State.current_chunk_cache_key[$axis]
+        if(($coord -isnot [long] -and $coord -isnot [int]) -or $coord -ne [Math]::Floor([double]$State.position[2*$axis]/16.0)){
+            throw 'Client cache observation is not for the sampled player chunk'
+        }
+    }
+}
+function Get-ExplorationCacheEvidence($Stability,[string]$Log){
+    $owners=@('ScenarioOwnerA','ScenarioOwnerB')
+    $counts=@{ScenarioOwnerA=0;ScenarioOwnerB=0};$missing=@{ScenarioOwnerA=0;ScenarioOwnerB=0};$peakMissing=@{ScenarioOwnerA=0;ScenarioOwnerB=0}
+    $sequence=@{ScenarioOwnerA=0;ScenarioOwnerB=0}
+    for($i=0;$i -lt 60;$i++){
+        $sample=$Stability.samples[$i]
+        if($sample.minute -ne ($i+1) -or $sample.clients.Count -ne 2){throw 'Missing or unordered exploration samples'}
+        foreach($owner in $owners){
+            $rows=@($sample.clients|Where-Object {$_.state.owner -ceq $owner})
+            if($rows.Count -ne 1){throw 'Distinct cache sample for each participant required'}
+            $state=$rows[0].state
+            if($state.nonce -cne $Stability.nonce -or $state.phase -cne 'explore' -or -not $state.success -or
+                $state.health -ne 20 -or -not $state.flying -or $state.sequence -le $sequence[$owner]){throw 'Invalid exploration sample identity or state'}
+            $sequence[$owner]=$state.sequence
+            Assert-CacheKey $state
+            if($state.loaded_current_chunk){$counts[$owner]++;$missing[$owner]=0}else{$missing[$owner]++}
+            $peakMissing[$owner]=[Math]::Max([int]$peakMissing[$owner],[int]$missing[$owner])
+            if($missing[$owner] -ge 3){throw 'Current chunk was absent from the client cache for three consecutive samples'}
+        }
+    }
+    if($Stability.landing_ready.Count -ne 2){throw 'Missing two verified hover-to-survival transitions'}
+    foreach($owner in $owners){
+        if($counts[$owner] -lt 10){throw 'Fewer than ten resident current-chunk samples'}
+        $landing=@($Stability.landing_ready|Where-Object {$_.state.owner -ceq $owner})
+        if($landing.Count -ne 1){throw 'Missing separate landing evidence for participant'}
+        $state=$landing[0].state;$site=$state.landing
+        Assert-CacheKey $state
+        if($state.nonce -cne $Stability.nonce -or $state.phase -cne 'landing' -or -not $state.success -or $state.sequence -le $sequence[$owner] -or
+            $state.health -ne 20 -or $state.on_ground -or -not $state.flying -or -not $state.loaded_current_chunk -or $state.screen -cne '' -or
+            -not $site.hover_at_site -or -not $site.stand_chunk_loaded -or -not $site.target_chunk_loaded -or $site.floor -cne $site.expected_floor -or
+            -not $site.floor_solid_dry -or -not $site.clear_dry_column -or $site.placed -cne 'minecraft:cobblestone' -or $site.stable_observations -lt 4){
+            throw "Original landing site was not witnessed by $owner before descent"
+        }
+        $marker='CAWG_BETA_LANDING_'+$Stability.nonce+'_'+$owner
+        if($Log.IndexOf(('[Server] '+$marker),[StringComparison]::Ordinal) -lt 0){throw "Missing authoritative pre-descent witness for $owner"}
+    }
+    return @{observations_per_owner=60;resident_samples=$counts;longest_consecutive_absence=$peakMissing;lookup='client_chunk_cache_full_no_create'}
 }
 function Step([string]$Name,[string]$Executable,[string[]]$Arguments,[int]$Seconds=120){
     $info=[Diagnostics.ProcessStartInfo]::new();$info.FileName=$Executable;$info.WorkingDirectory=$workspace;$info.UseShellExecute=$false;$info.CreateNoWindow=$true;$info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true
@@ -128,13 +128,6 @@ try {
     $confirm=Join-Path $base 'authoritative-biome-confirmation-20261007-003107-976'
     $inventory=@(Get-Content -LiteralPath (Join-Path $confirm 'performance/assisted/clients/owner-0/installed-client-classpath.json') -Raw|ConvertFrom-Json)
     foreach($entry in $inventory){if((Get-FileHash -LiteralPath $entry.path).Hash -ne $entry.sha256){throw 'Installed compile/runtime input changed'}}
-    if($ReuseVerifiedFabric){
-        $retained=Import-VerifiedFabric $artifacts[0] $before
-        $results+=@($retained)
-        $steps.Add(@{name='verify-retained-fabric-evidence';root=$gate;success=$true;exit_code=0;timed_out=$false})
-        ConvertTo-Json -InputObject $results -Depth 25|Set-Content -LiteralPath (Join-Path $gate 'progress.json')
-        Write-Host "BETA_LOADER_REUSED loader=fabric original=$($retained.root)"
-    }
     $classpath=(@($inventory.path)+@($artifacts[0].path))-join ';'
     $offline=Join-Path $gate 'offline-classes';New-Item -ItemType Directory -Path $offline|Out-Null
     $readerSources=@((Join-Path $PSScriptRoot 'SavedGameplayInspector263.java'),(Join-Path $workspace 'src/portTest/java/io/github/genichimaruo/worldgenassist/server/SavedLightView263.java'),(Join-Path $workspace 'src/portTest/java/io/github/genichimaruo/worldgenassist/server/SavedLightingInspector263.java'))
@@ -166,6 +159,7 @@ try {
         if($log -match 'OutOfMemoryError|Exception in server tick loop|fixture.player_paused' -or $log -notmatch 'job.peer_terrain_applied' -or $log -notmatch 'job.authoritative_biomes_applied'){throw 'Runtime failure or actual assistance missing'}
         $explore=[regex]::Match($log,'(?s)CAWG_BETA_EXPLORE_BEGIN_'+$stability.nonce+'\b(?<body>.*?)CAWG_BETA_EXPLORE_END_'+$stability.nonce+'\b')
         if(-not $explore.Success -or $explore.Groups['body'].Value -notmatch 'stage.complete stage=noise' -or $explore.Groups['body'].Value -notmatch 'job.peer_terrain_applied'){throw 'Actual new generation and accepted assistance during exploration missing'}
+        $cacheEvidence=Get-ExplorationCacheEvidence $stability $log
         $timeouts=[regex]::Matches($explore.Groups['body'].Value,'job.timeout\b').Count
         $players=@();$centers=@();$final=@($physical.gameplay_journal.phases|Where-Object phase -eq 'reconnect')[0].clients
         $remote=Get-Content -LiteralPath (Join-Path $case 'remote-evidence/remote-result.json') -Raw|ConvertFrom-Json
@@ -188,18 +182,15 @@ try {
         Step 'saved-lighting-after-restart' (Join-Path $jdk 'java.exe') @('-Xmx2g','-cp',($offline+';'+$classpath),'io.github.genichimaruo.worldgenassist.server.SavedLightingInspector263',$lightDescriptor) 300
         $saved=Get-Content -LiteralPath (Join-Path $root 'saved-gameplay.json') -Raw|ConvertFrom-Json;$light=Get-Content -LiteralPath (Join-Path $root 'saved-lighting.json') -Raw|ConvertFrom-Json
         if(-not $saved.success -or $saved.players.Count -ne 4 -or -not $light.success -or $light.cases.Count -ne 1 -or $light.cases[0].compared_values -ne 10649600){throw 'Saved original player/voxel/light proof failed'}
-        $results+=@{loader=$loader;success=$true;root=$root;scenario=(Join-Path $case 'scenario-result.json');artifact_sha256=@($artifacts|Where-Object loader -eq $loader)[0].sha256;probe_sha256=$probeHash;stability=$stability;exploration_timeouts=$timeouts;saved_gameplay=$saved;lighting=$light;final_inventory=$savedInventory}
+        $results+=@{loader=$loader;success=$true;fresh_runtime=$true;chunk_cache_evidence=$cacheEvidence;root=$root;scenario=(Join-Path $case 'scenario-result.json');artifact_sha256=@($artifacts|Where-Object loader -eq $loader)[0].sha256;probe_sha256=$probeHash;stability=$stability;exploration_timeouts=$timeouts;saved_gameplay=$saved;lighting=$light;final_inventory=$savedInventory}
         $results|ConvertTo-Json -Depth 20|Set-Content -LiteralPath (Join-Path $gate 'progress.json')
         Write-Host "BETA_LOADER_COMPLETE loader=$loader"
     }
 }catch{$issues.Add($_.Exception.ToString());$_.ScriptStackTrace|Set-Content -LiteralPath (Join-Path $gate 'failure-stack.txt')}
 finally {
-    if($ReuseVerifiedFabric -and $results.Count -eq 3){
-        try{$null=Import-VerifiedFabric (@($artifacts|Where-Object loader -eq 'fabric')[0]) $before}catch{$issues.Add($_.Exception.ToString())}
-    }
     try{$after=Manifest;[IO.File]::WriteAllLines((Join-Path $gate 'source-manifest-after.sha256'),$after);if($before.Count -and ($before-join "`n") -cne ($after-join "`n")){$issues.Add('Inputs changed during batch')};foreach($a in $artifacts){if((Get-FileHash -LiteralPath $a.path).Hash -ne $a.sha256){$issues.Add('Runtime artifact changed')}}}catch{$issues.Add($_.Exception.ToString())}
     if($lock){$lock.Dispose()}
-    @{schema='worldgen-assist.beta-stability-gate.v1';root=$gate;success=($issues.Count -eq 0 -and $results.Count -eq 3);minutes_each=$Minutes;requested_fresh_loaders=$freshLoaders;reuse_verified_fabric=[bool]$ReuseVerifiedFabric;artifacts=$artifacts;results=$results;steps=@($steps);issues=@($issues);new_junit=0;mod_builds=0;beta_claim=$false;scope='Bounded trusted two-client60-minute creative exploration; original survival before/after, same-world restart and saved player/voxel/light. Not indefinite uptime, adversarial peers, other MODs or stock absent-MOD speed.'}|ConvertTo-Json -Depth 25|Set-Content -LiteralPath (Join-Path $gate 'summary.json')
+    @{schema='worldgen-assist.beta-stability-gate.v1';root=$gate;success=($issues.Count -eq 0 -and $results.Count -eq 3);minutes_each=$Minutes;requested_fresh_loaders=$freshLoaders;reuse_verified_fabric=$false;artifacts=$artifacts;results=$results;steps=@($steps);issues=@($issues);new_junit=0;mod_builds=0;beta_claim=$false;scope='Bounded trusted two-client60-minute creative exploration; original survival before/after, same-world restart and saved player/voxel/light. Not indefinite uptime, adversarial peers, other MODs or stock absent-MOD speed.'}|ConvertTo-Json -Depth 25|Set-Content -LiteralPath (Join-Path $gate 'summary.json')
     Write-Host "BETA_GATE_COMPLETE success=$($issues.Count -eq 0 -and $results.Count -eq 3) evidence=$gate"
 }
 if($issues.Count -or $results.Count -ne 3){exit 1}

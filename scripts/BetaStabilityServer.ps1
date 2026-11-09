@@ -53,7 +53,22 @@ function Invoke-BetaExploration([object[]]$saved,[object]$report) {
         $stop=Wait-BetaAck 'stop'
         Send-Command ('say CAWG_BETA_EXPLORE_END_'+$GameplayNonce)
         foreach($item in $stop.players){if($item.state.travel_blocks -lt 6000 -or $item.state.reversals -lt 3 -or $loaded[$item.state.owner] -lt 10){throw 'Actual repeated movement/chunk receipt proof missing'}}
-        foreach($row in $saved){Send-Command ('gamemode survival '+$row.owner);Send-Command ('tp '+$row.owner+' '+($row.stand[0]+0.5)+' '+($row.stand[1]+1.5)+' '+($row.stand[2]+0.5))}
+        foreach($row in $saved){Send-Command ('tp '+$row.owner+' '+($row.stand[0]+0.5)+' '+($row.stand[1]+1.5)+' '+($row.stand[2]+0.5))}
+        $landing=Wait-BetaAck 'landing'
+        foreach($row in $saved){
+            $state=@($landing.players|Where-Object {$_.state.owner -eq $row.owner})[0].state
+            $site=$state.landing
+            $x=$row.stand[0]+0.5;$y=$row.stand[1]+1.5;$z=$row.stand[2]+0.5
+            if($state.phase -cne 'landing' -or $state.on_ground -or -not $state.flying -or [Math]::Abs($state.position[0]-$x) -gt 0.05 -or [Math]::Abs($state.position[1]-$y) -gt 0.05 -or [Math]::Abs($state.position[2]-$z) -gt 0.05 -or -not $site.hover_at_site -or $site.stable_observations -lt 4 -or -not $site.stand_chunk_loaded -or -not $site.target_chunk_loaded -or $site.floor -cne $row.stand_block -or -not $site.floor_solid_dry -or -not $site.clear_dry_column -or $site.placed -cne 'minecraft:cobblestone'){throw 'Landing witness differed from saved natural patch'}
+            if($row.stand_block -cnotmatch '^minecraft:[a-z0-9_]{1,80}$'){throw 'Invalid recorded floor ID'}
+            $floor=@($row.stand[0],($row.stand[1]-1),$row.stand[2])-join ' ';$placed=$row.target-join ' '
+            $marker='CAWG_BETA_LANDING_'+$GameplayNonce+'_'+$row.owner;$offset=(Log-Text).Length
+            $check='execute positioned '+$x+' '+$y+' '+$z+' if entity @a[name='+$row.owner+',distance=..0.1,gamemode=creative,nbt={Health:20.0f,DeathTime:0s,OnGround:0b,abilities:{flying:1b}}] if loaded '+$floor+' if loaded '+$placed+' if block '+$floor+' '+$row.stand_block+' if block '+$placed+' minecraft:cobblestone'
+            foreach($h in 0..3){$space=@($row.stand[0],($row.stand[1]+$h),$row.stand[2])-join ' ';$check+=' if block '+$space+' minecraft:air'}
+            Send-Command ($check+' run say '+$marker);Wait-Log ([regex]::Escape($marker)) 30 $offset|Out-Null
+        }
+        $report['landing_ready']=$landing.players
+        foreach($row in $saved){Send-Command ('gamemode survival '+$row.owner)}
         $groundPath=Join-Path $evidence 'gameplay-ground.ack';Remove-Item -LiteralPath $groundPath
         $ground=Wait-GameplayAcknowledgement 'ground'
         foreach($row in $ground.players){Assert-GameplayPlayer $row.owner 'after_exploration';Assert-GameplayBlock $row 'minecraft:cobblestone' 'after_exploration'}

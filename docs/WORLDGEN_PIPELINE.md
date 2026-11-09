@@ -2,6 +2,17 @@
 
 ## Prepared beta stability gate (2026-10-09)
 
+The Forge row of 030617-533 completed all checks. For NeoForge, both players
+completed 60 minutes; one touched down a block too low after switching to
+survival before the return chunks arrived. The pre-restart and final saved
+stand floor, clearance and neighboring placed block matched. The revised
+test verifies the client and server landing patch before enabling gravity.
+
+Prior stand-chunk receipt and actual residency are distinct. ClientLevel's
+hasChunk predicate is unconditional on these client versions. Direct
+ClientChunkCache checks now accompany every minute sample. All three
+loaders need new stability runs to verify that part of the evidence.
+
 Run-BetaStabilityGate.ps1 reuses exact publicalpha9 generation code and prior
 generation/peer/audit/lifecycle proofs. Only unshipped original-input exploration,
 process/receipt/health samples, same-world restart, loaded survival/block checks

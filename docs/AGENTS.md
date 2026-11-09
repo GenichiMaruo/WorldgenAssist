@@ -1,5 +1,13 @@
 # Repository agent instructions
 
+The old Fabric and Forge runs completed exploration, restart and saved checks,
+but their minute samples used ClientLevel.hasChunk, which always returns true.
+Logs prove prior receipt for 240/240 sampled coordinates across the two runs,
+not residency at the sample. Use a fresh three-loader beta gate with the real
+client chunk cache. In 030617-533 NeoForge completed 60 minutes but failed
+return to survival. The saved floor and neighboring placed block matched.
+See BETA_STABILITY.md for the revised landing handoff and evidence scope.
+
 Run 024010-200 failed at the eighth Forge sample after a Windows heartbeat
 file replacement was denied. The retained temporary JSON records the exception.
 The replacement preflight failed in 030200-244. The new batch verifies

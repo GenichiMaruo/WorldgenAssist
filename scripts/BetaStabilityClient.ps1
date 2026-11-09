@@ -60,6 +60,10 @@ function Get-BetaReports([string]$Phase,[object[]]$Clients,[string]$Nonce){
         if($row.phase -cne $Phase){return $null}
         if($row.health -ne 20 -or $row.position.Count -ne 3 -or [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()-$row.client_epoch_ms -gt 15000){throw 'Beta live health/heartbeat missing'}
         if($Phase -eq 'arm' -and (-not $row.arm_ready -or $row.on_ground -or -not $row.flying -or -not $row.loaded_current_chunk -or $row.screen -ne '' -or [Math]::Abs([double]$row.vertical_velocity) -ge 0.05)){throw 'Original creative takeoff and settled hover required'}
+        if($Phase -eq 'landing'){
+            $site=$row.landing
+            if($row.on_ground -or -not $row.flying -or -not $row.loaded_current_chunk -or $row.screen -ne '' -or -not $site.hover_at_site -or -not $site.stand_chunk_loaded -or -not $site.target_chunk_loaded -or $site.floor -cne $site.expected_floor -or -not $site.floor_solid_dry -or -not $site.clear_dry_column -or $site.placed -cne 'minecraft:cobblestone' -or $site.stable_observations -lt 4){throw 'Stationary creative client and complete original landing terrain required'}
+        }
         if($Phase -eq 'rejoin' -and (-not $row.on_ground -or $row.flying -or -not $row.loaded_current_chunk)){throw 'Reloaded survival state required'}
         $client.process.Refresh()
         $rows+=@{state=$row;java_pid=$client.process.Id;private_bytes=$client.process.PrivateMemorySize64;working_set_bytes=$client.process.WorkingSet64}

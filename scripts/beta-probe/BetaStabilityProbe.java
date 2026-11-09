@@ -10,6 +10,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ConnectScreen;
+import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.multiplayer.ServerData;
@@ -28,10 +29,12 @@ public final class BetaStabilityProbe {
     private static final ArrayList<Path> oldSnapshots=new ArrayList<>();
     private static String phase="";
     private static int ticks, stable, reversals, pauseDismissals;
-    private static boolean done, moving, ascending, connecting, armed, forward=true;
+    private static boolean done, moving, ascending, connecting, armed, flightStopped, landingPublished, forward=true;
     private static long started, lastReport, lastPauseDismissal;
     private static double centerX,centerZ,lastX,lastZ,travel;
     private static int[] stand,target;
+    private static String expectedFloor;
+    private static LinkedHashMap<String,Object> landingEvidence;
     public static void holdInput(Minecraft c) {
         if((phase.equals("arm") || phase.equals("explore")) && !done){c.options.keyUp.setDown(moving);c.options.keyJump.setDown(ascending);}
     }
@@ -50,12 +53,18 @@ public final class BetaStabilityProbe {
             var control=JsonParser.parseString(Files.readString(file)).getAsJsonObject();
             if(!NONCE.equals(control.get("nonce").getAsString()) || !OWNER.equals(control.get("owner").getAsString()))throw new IllegalStateException("control identity");
             String requested=control.get("phase").getAsString();
-            if(!requested.matches("arm|explore|stop|rejoin"))throw new IllegalStateException("phase domain");
+            if(!requested.matches("arm|explore|stop|landing|rejoin"))throw new IllegalStateException("phase domain");
             if(!requested.equals(phase)) {
+                boolean completedStop=phase.equals("stop") && done && flightStopped;
                 moving=false;ascending=false;c.options.keyUp.setDown(false);c.options.keyJump.setDown(false);phase=requested;done=false;stable=0;connecting=false;started=System.nanoTime();
+                if(phase.equals("landing")){
+                    if(!completedStop)throw new IllegalStateException("landing requires completed flight stop");
+                    flightStopped=false;landingPublished=false;landingEvidence=null;
+                }
                 var saved=JsonParser.parseString(Files.readString(root.resolve("result-scan.json"))).getAsJsonObject();
                 stand=new int[3];target=new int[3];for(int i=0;i<3;i++){stand[i]=saved.getAsJsonArray("stand").get(i).getAsInt();target[i]=saved.getAsJsonArray("target").get(i).getAsInt();}
                 centerX=stand[0]+0.5;centerZ=stand[2]+0.5;
+                expectedFloor=saved.get("stand_block").getAsString();
                 if(phase.equals("arm"))armed=false;
                 if(phase.equals("explore")){
                     if(!armed)throw new IllegalStateException("missing airborne handshake");
@@ -100,7 +109,7 @@ public final class BetaStabilityProbe {
                 // Let the original jump lift the player first: aiStep clears flight on ground.
                 if(!c.player.onGround() && !c.player.getAbilities().flying){c.player.getAbilities().flying=true;c.player.onUpdateAbilities();}
                 if(lift>=2 && !c.player.onGround() && c.player.getAbilities().flying && !ascending && Math.abs(c.player.getDeltaMovement().y)<0.05 &&
-                   c.level.hasChunk(stand[0]>>4,stand[2]>>4))stable++;else stable=0;
+                   c.level.getChunkSource().hasChunk(stand[0]>>4,stand[2]>>4))stable++;else stable=0;
                 if(stable>=4){armed=true;done=true;write(c,true,"");}
             } else if(phase.equals("explore")) {
                 if(c.gameMode.getPlayerMode()!=GameType.CREATIVE || !c.player.getAbilities().mayfly){return;}
@@ -118,9 +127,42 @@ public final class BetaStabilityProbe {
                 if(System.nanoTime()-lastReport>5_000_000_000L){write(c,true,"");lastReport=System.nanoTime();}
             } else {
                 moving=false;ascending=false;c.options.keyUp.setDown(false);c.options.keyJump.setDown(false);
-                if(phase.equals("stop")){done=true;write(c,true,"");return;}
+                if(phase.equals("stop")){
+                    if(c.gameMode.getPlayerMode()!=GameType.CREATIVE || !c.player.getAbilities().flying)throw new IllegalStateException("flight lost at stop");
+                    // Let the original flight decelerate before the return teleport.
+                    if(c.player.getDeltaMovement().lengthSqr()>1.0e-6){stable=0;return;}
+                    if(++stable<3)return;
+                    flightStopped=true;done=true;write(c,true,"");return;
+                }
+                if(phase.equals("landing")){
+                    if(landingPublished && c.gameMode.getPlayerMode()==GameType.SURVIVAL){done=true;return;}
+                    if(c.gui.screen() instanceof LevelLoadingScreen){stable=0;return;}
+                    if(c.gameMode.getPlayerMode()!=GameType.CREATIVE || !c.player.getAbilities().flying || c.player.onGround() || c.gui.screen()!=null)throw new IllegalStateException("stationary creative flight required before descent");
+                    // The server teleports a stopped, still-flying player once. Do not descend
+                    // until both the standing chunk and the possibly distinct target chunk exist.
+                    boolean atSite=Math.abs(c.player.getX()-centerX)<=0.05 && Math.abs(c.player.getZ()-centerZ)<=0.05 && Math.abs(c.player.getY()-(stand[1]+1.5))<=0.05 && c.player.getDeltaMovement().lengthSqr()<0.0025;
+                    boolean standLoaded=c.level.getChunkSource().hasChunk(stand[0]>>4,stand[2]>>4), targetLoaded=c.level.getChunkSource().hasChunk(target[0]>>4,target[2]>>4);
+                    landingEvidence=new LinkedHashMap<>();
+                    landingEvidence.put("hover_at_site",atSite);landingEvidence.put("stand_chunk_loaded",standLoaded);landingEvidence.put("target_chunk_loaded",targetLoaded);
+                    if(!atSite || !standLoaded || !targetLoaded){
+                        if(landingPublished)throw new IllegalStateException("lost witnessed landing site");
+                        stable=0;return;
+                    }
+                    BlockPos feet=new BlockPos(stand[0],stand[1],stand[2]),floor=feet.below(),placed=new BlockPos(target[0],target[1],target[2]);
+                    var floorState=c.level.getBlockState(floor);
+                    String floorId=BuiltInRegistries.BLOCK.getKey(floorState.getBlock()).toString(),placedId=BuiltInRegistries.BLOCK.getKey(c.level.getBlockState(placed).getBlock()).toString();
+                    boolean solidDry=floorState.isCollisionShapeFullBlock(c.level,floor) && floorState.getFluidState().isEmpty();
+                    boolean clear=true;
+                    for(int h=0;h<=3;h++){var space=c.level.getBlockState(feet.above(h));clear &= space.isAir() && space.getFluidState().isEmpty();}
+                    landingEvidence.put("floor",floorId);landingEvidence.put("expected_floor",expectedFloor);landingEvidence.put("floor_solid_dry",solidDry);landingEvidence.put("clear_dry_column",clear);landingEvidence.put("placed",placedId);
+                    if(!floorId.equals(expectedFloor) || !solidDry || !clear || !placedId.equals("minecraft:cobblestone"))throw new IllegalStateException("loaded landing terrain differs from saved patch");
+                    if(++stable>=4 && (!landingPublished || System.nanoTime()-lastReport>2_000_000_000L)){
+                        landingEvidence.put("stable_observations",stable);landingPublished=true;write(c,true,"");lastReport=System.nanoTime();
+                    }
+                    return;
+                }
                 if(c.gameMode.getPlayerMode()!=GameType.SURVIVAL || c.player.getAbilities().flying || !c.player.onGround() || Math.abs(c.player.getX()-centerX)>0.05 || Math.abs(c.player.getY()-stand[1])>0.05 || Math.abs(c.player.getZ()-centerZ)>0.05){stable=0;return;}
-                if(!c.level.hasChunk(target[0]>>4,target[2]>>4) || !BuiltInRegistries.BLOCK.getKey(c.level.getBlockState(new BlockPos(target[0],target[1],target[2])).getBlock()).toString().equals("minecraft:cobblestone")){stable=0;return;}
+                if(!c.level.getChunkSource().hasChunk(target[0]>>4,target[2]>>4) || !BuiltInRegistries.BLOCK.getKey(c.level.getBlockState(new BlockPos(target[0],target[1],target[2])).getBlock()).toString().equals("minecraft:cobblestone")){stable=0;return;}
                 if(++stable>=20){done=true;write(c,true,"");}
             }
         }catch(Exception e){moving=false;ascending=false;armed=false;c.options.keyUp.setDown(false);c.options.keyJump.setDown(false);done=true;try{write(c,false,e.toString());}catch(Exception reportError){
@@ -139,7 +181,15 @@ public final class BetaStabilityProbe {
         row.put("sequence",next);
         if(c.player!=null){row.put("health",c.player.getHealth());row.put("position",new double[]{c.player.getX(),c.player.getY(),c.player.getZ()});row.put("on_ground",c.player.onGround());row.put("flying",c.player.getAbilities().flying);row.put("vertical_velocity",c.player.getDeltaMovement().y);}
         var screen=c.gui.screen();row.put("screen",screen==null?"":screen.getClass().getName());row.put("arm_ready",armed);row.put("pause_dismissals",pauseDismissals);
-        row.put("loaded_current_chunk",c.player!=null && c.level!=null && c.level.hasChunk(((int)Math.floor(c.player.getX()))>>4,((int)Math.floor(c.player.getZ()))>>4));
+        if(phase.equals("landing"))row.put("landing",landingEvidence);
+        if(c.player!=null && c.level!=null){
+            int chunkX=((int)Math.floor(c.player.getX()))>>4;
+            int chunkZ=((int)Math.floor(c.player.getZ()))>>4;
+            row.put("current_chunk_cache_key",new int[]{chunkX,chunkZ});
+            row.put("loaded_current_chunk",c.level.getChunkSource().hasChunk(chunkX,chunkZ));
+        }else{
+            row.put("loaded_current_chunk",false);
+        }
         // Leave one slot for the failure report if many older files stay locked.
         int limit=success?MAX_OLD-1:MAX_OLD;
         if(oldSnapshots.size()>=limit){

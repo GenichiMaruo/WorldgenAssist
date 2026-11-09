@@ -349,7 +349,7 @@ Invoke-Remote ('$root="'+$RemoteRoot+'";$expected="'+$artifactHash+'";$launcherH
                     if(-not $gameplayEnabled -or $gameplayPending){throw 'Unexpected gameplay phase'}
                     $gameplayPending=$Matches[1];Start-GameplayControl $gameplayPending $clients $gameplayNonce
                 }
-                if($line -match '^SERVER_BETA_WAIT (arm|explore|stop|rejoin|sample-\d+)$'){
+                if($line -match '^SERVER_BETA_WAIT (arm|explore|stop|landing|rejoin|sample-\d+)$'){
                     if(-not $BetaStabilityMinutes -or $betaPending){throw 'Unexpected beta phase'}
                     $betaPending=$Matches[1]
                     if($betaPending -notmatch '^sample-'){Start-BetaControl $betaPending $clients $gameplayNonce}

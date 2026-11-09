@@ -105,6 +105,7 @@ if($CandidateVersion -eq '0.1.0-alpha.6-dev.12+mc26.3'){
     }
 }elseif($CandidateVersion -eq '0.1.0-alpha.9+mc26.3'){
     if($ExpectedVersion -ne '0.1.0-beta.1+mc26.3' -or $candidate.schema -ne 'worldgen-assist.beta-stability-gate.v1' -or $candidate.results.Count -ne 3 -or $candidate.issues.Count -or $candidate.minutes_each -ne 60 -or @($candidate.steps|Where-Object {-not $_.success -or $_.exit_code -or $_.timed_out}).Count){throw 'Closed three-loader60-minute stability gate required for beta'}
+    if((@($candidate.requested_fresh_loaders | Sort-Object) -join ',') -cne 'fabric,forge,neoforge'){throw 'Beta requires fresh direct cache observations on all three loaders'}
     if((Get-FileHash -LiteralPath (Join-Path $candidateRoot 'source-manifest-before.sha256')).Hash -ne (Get-FileHash -LiteralPath (Join-Path $candidateRoot 'source-manifest-after.sha256')).Hash){throw 'Beta gate inputs were not frozen'}
     foreach($line in Get-Content -LiteralPath (Join-Path $candidateRoot 'source-manifest-before.sha256')){
         if($line -notmatch '^([A-F0-9]{64})  (src/.+|build\.gradle|settings\.gradle|gradle\.properties|loaders/[^/]+/(?:src/.+|build\.gradle))$'){continue}
@@ -115,6 +116,14 @@ if($CandidateVersion -eq '0.1.0-alpha.6-dev.12+mc26.3'){
     foreach($loader in @('fabric','forge','neoforge')){
         $row=@($candidate.results|Where-Object loader -eq $loader)
         if($row.Count -ne 1 -or -not $row[0].success -or -not $row[0].stability.success -or $row[0].stability.samples.Count -ne 60 -or -not $row[0].stability.restart.loaded_block_before_any_postrestart_write -or -not $row[0].saved_gameplay.success -or $row[0].saved_gameplay.players.Count -ne 4 -or -not $row[0].lighting.success){throw 'Matching beta restart/saved proof missing'}
+        if(@($row[0].stability.landing_ready).Count -ne 2){throw "Missing pre-descent terrain confirmation for $loader"}
+        foreach($sample in $row[0].stability.samples){
+            if($sample.clients.Count -ne 2){throw "Missing client cache sample for $loader"}
+            foreach($client in $sample.clients){
+                $key=$client.state.current_chunk_cache_key
+                if($key.Count -ne 2 -or $key[0] -ne [Math]::Floor($client.state.position[0]/16) -or $key[1] -ne [Math]::Floor($client.state.position[2]/16)){throw "Incorrect client cache sample coordinates for $loader"}
+            }
+        }
         $a=@($candidate.artifacts|Where-Object loader -eq $loader)
         if($a.Count -ne 1 -or $a[0].sha256 -ne $row[0].artifact_sha256){throw 'Beta measured archive identity differs'}
     }
