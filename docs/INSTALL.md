@@ -2,25 +2,27 @@
 
 [English](INSTALL.md) | [日本語](INSTALL.ja.md) · [Overview](../README.md)
 
-## Minecraft 26.3 alpha.9
+## Minecraft 26.3 beta.1
 
 Use Minecraft **26.3**, Java **25** (tested 25.0.4), and Fabric **0.19.5**
 with Fabric API **0.161.0+26.3**, Forge **66.0.3**, or NeoForge **26.3.0.13-beta**.
-Download your loader's JAR from [alpha.9](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.9%2Bmc26.3).
+Download your loader's JAR from [beta.1](https://github.com/GenichiMaruo/WorldgenAssist/releases).
 Replace older WorldgenAssist JARs on the server and all participating clients.
 **Protocol14/native channel6 requires updating both sides together.**
 
 | Loader | Install this JAR |
 | --- | --- |
-| Fabric | `worldgen-assist-0.1.0-alpha.9+mc26.3.jar` |
-| Forge | `worldgen-assist-forge-0.1.0-alpha.9+mc26.3.jar` |
-| NeoForge | `worldgen-assist-neoforge-0.1.0-alpha.9+mc26.3.jar` |
+| Fabric | `worldgen-assist-0.1.0-beta.1+mc26.3.jar` |
+| Forge | `worldgen-assist-forge-0.1.0-beta.1+mc26.3.jar` |
+| NeoForge | `worldgen-assist-neoforge-0.1.0-beta.1+mc26.3.jar` |
 
 Source JARs are for developers. Remote assistance remains off by default.
 Use trusted participants and a backed-up test world. Raw-seed disclosure is
 explicit; seed secrecy and protection against colluding clients are unresolved.
 Complete terrain targets eligible vanilla Overworld contexts; arbitrary
-generators are unsupported. Read the [release verification](releases/v0.1.0-alpha.9+mc26.3-verification.md).
+generators are unsupported. The beta record covers two-player creative exploration,
+survival interactions, same-world restart and saved-world checks for each loader.
+[Release notes](releases/v0.1.0-beta.1+mc26.3.md) · [Beta verification](releases/v0.1.0-beta.1+mc26.3-verification.md).
 
 ### Experimental profile inherited from alpha.8 (original measurements)
 
@@ -61,19 +63,23 @@ Reconnect after changing participation. Saved operator server policy applies on
 restart; JVM overrides take priority. Remove experimental overrides to restore
 ordinary defaults.
 
-Two clients sharing a stronger PC assisted a separate weaker server with no
-CPU/JVM processor restrictions. Both comparison conditions used identical
-cooperative NOISE and parallel FEATURES. Across both execution orders/six paired
-ratios reusing three coordinates: FULL **20.93% shorter**, receipt **21.20%
-shorter**, CPU **19.63% lower**, all six improve; tick p95 **8.95% higher**.
-Receipt is not rendered completion. These are this profile's results, not an
-alpha.7 comparison or a general guarantee.
+In the earlier Fabric benchmark, two clients on one stronger PC assisted a
+separate weaker server with no CPU restrictions. With the mod installed in
+both conditions, the comparison toggled assistance and kept cooperative NOISE
+and parallel FEATURES enabled. Three regions were measured in both orders,
+for six matched pairs. Median time to FULL fell **20.93%**, client receipt time
+fell **21.20%**, and server CPU time fell **19.63%**. Time to FULL improved in
+all six pairs. Server tick p95 rose **8.95%**. Receipt ends before rendering.
 
 Generation/decoration/saved structures/light match across all three loaders'
 bounded fixtures. The Fabric speed measurements above retain their original
-dev.23 JAR identity. Dev.2 also verifies basic native survival, dimension changes,
-reconnect, stopped saves and own-block lighting. Server restart, continuous
-exploration/combat/hazards and long sessions remain unverified; this remains alpha. First two full server audits and later
+dev.23 JAR identity. The alpha.9 dev.2 tests also cover basic native survival,
+dimension changes, reconnect, stopped saves and lighting. The beta stability
+record covers 60 minutes of creative flight per loader with survival interactions
+before and after. Long-term uptime, combat and hazards fall outside this scope.
+[Earlier native test results](releases/v0.1.0-alpha.9+mc26.3-verification.md).
+
+The first two full server audits and later
 private1/8 (server) or1/64 with eligible independent peer/full agreement remain.
 Final domain/owner/epochs/current biome/shaping checks retain server authority.
 Pending demand waits are asynchronous100ms/adaptive max200ms; task deadline30s.
@@ -290,7 +296,7 @@ guaranteed.
 Compare the SHA-256 with the matching filename in the release's `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash -Algorithm SHA256 -LiteralPath '.\worldgen-assist-0.1.0-alpha.6+mc26.3.jar'
+Get-FileHash -Algorithm SHA256 -LiteralPath '.\worldgen-assist-0.1.0-beta.1+mc26.3.jar'
 ```
 
 The checksums detect mismatched files; they are not a separate publisher signature.

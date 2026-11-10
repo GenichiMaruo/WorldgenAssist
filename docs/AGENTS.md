@@ -1,5 +1,12 @@
 # Repository agent instructions
 
+## Beta.1 archive and stability evidence
+
+The completed gate is beta-stability-gate-20261110-065705-357 (F589086BCD9164C1D07A2FE8E3B8AE42A12B819ABF8E23B8EF0CDDBBB3345C1D). All three loader rows come from the final run using the corrected client chunk-cache check and the verified approach to the landing area. All three used the measured
+alpha.9 runtime with two clients at distance 32 on the weak E-drive server.
+Beta.1 packages that runtime with updated version metadata. The release archive
+record is release-beta1-20261110-065705-357 (09D486DEFC7BE22C7222DAADADAA0A6BFEF77ECE63699CE4AF8333FFB6CE289C). [Beta.1 verification](releases/v0.1.0-beta.1+mc26.3-verification.md).
+
 The old Fabric and Forge runs completed exploration, restart and saved checks,
 but their minute samples used ClientLevel.hasChunk, which always returns true.
 Logs prove prior receipt for 240/240 sampled coordinates across the two runs,

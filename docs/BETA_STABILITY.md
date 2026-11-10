@@ -1,5 +1,14 @@
 # Beta stability gate
 
+## Completed beta.1 evidence
+
+All three loader rows come from the final run using the corrected client chunk-cache check and the verified approach to the landing area. The final gate is beta-stability-gate-20261110-065705-357. All three met the 60-minute two-player exploration, same-world
+restart, survival interaction and stopped-world checks. Each loader produced
+four player snapshots and 10,649,600 lighting comparisons. Both earlier
+overall batches remain failed. Abrupt distant survival teleports before chunk
+receipt remain unverified. Beta.1 matches the tested runtime
+except for loader version metadata. [Beta.1 verification](releases/v0.1.0-beta.1+mc26.3-verification.md).
+
 The user resumed work on 2026-10-09: prioritize restart, continuous exploration
 and multiplayer stability, then publish beta. Earlier paused checkpoints are
 historical. At the 030617-533 checkpoint, corrected live chunk-residency

@@ -2,24 +2,26 @@
 
 [English](INSTALL.md) | [日本語](INSTALL.ja.md) · [MOD の概要](../README.ja.md)
 
-## Minecraft 26.3 alpha.9
+## Minecraft 26.3 beta.1
 
 Minecraft **26.3**、Java **25**（検証25.0.4）と、Fabric **0.19.5** +
 Fabric API **0.161.0+26.3**、Forge **66.0.3**、NeoForge **26.3.0.13-beta** の
-いずれかを使います。[alpha.9](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-alpha.9%2Bmc26.3)
+いずれかを使います。[beta.1](https://github.com/GenichiMaruo/WorldgenAssist/releases)
 から対応JARを取得し、サーバーと参加クライアントの旧MODを同時に置き換えます。
 **プロトコル14／ネイティブ通信6**のため、両側を同じ版に揃えてください。
 
 | ローダー | 導入するJAR |
 | --- | --- |
-| Fabric | `worldgen-assist-0.1.0-alpha.9+mc26.3.jar` |
-| Forge | `worldgen-assist-forge-0.1.0-alpha.9+mc26.3.jar` |
-| NeoForge | `worldgen-assist-neoforge-0.1.0-alpha.9+mc26.3.jar` |
+| Fabric | `worldgen-assist-0.1.0-beta.1+mc26.3.jar` |
+| Forge | `worldgen-assist-forge-0.1.0-beta.1+mc26.3.jar` |
+| NeoForge | `worldgen-assist-neoforge-0.1.0-beta.1+mc26.3.jar` |
 
 ソースJARは開発者向けです。支援は既定で無効です。バックアップした試用ワールドと
 信頼できる参加者で利用してください。シード開示は明示設定で、秘匿や照合相手の共謀への
 対策は未解決です。完全地形モードは対象条件を満たすvanilla Overworld向けで、任意の
-独自生成器には対応しません。[検証記録](releases/v0.1.0-alpha.9+mc26.3-verification.md)を確認してください。
+独自生成器には対応しません。β版の記録には、2人のクリエイティブ探索、サバイバル操作、
+同じワールドでの再起動、保存データの検証結果をローダー別に記載しています。
+[変更内容](releases/v0.1.0-beta.1+mc26.3.md)・[β版の検証記録](releases/v0.1.0-beta.1+mc26.3-verification.md)
 
 ### alpha.8から引き継ぐ実験設定（元の測定記録）
 
@@ -59,17 +61,21 @@ $env:WORLDGEN_ASSIST_REMOTE_ALLOW_REMOTE_BIOMES='false'
 を設定します。参加設定は再接続後、保存した管理者のサーバー方針は再起動後に反映されます。
 Java引数による上書きが優先されます。実験用の上書きを外すと通常の既定値に戻ります。
 
-弱い別PCのサーバー（CPU/JVM制限なし）と強いPC上の2クライアントで測定しました。
-両条件とも同じcooperative NOISE／parallel FEATURESです。順序を逆にした比較を含む
-6組の比率の中央値で、完成 **20.93%短縮**・受信 **21.20%短縮**・CPU **19.63%減少**、
-全6組で改善。tick p95は **8.95%増加**しました。6組は同じ3座標を再利用しており、
-alpha.7との直接比較や一般的な保証ではありません。受信には描画完了を含みません。
+過去のFabric測定では、弱い専用サーバー（CPU制限なし）と別の強いPC上の2クライアントを使いました。
+両条件に同じMODを導入し、cooperative NOISEとparallel FEATURESを有効にしたまま支援の有無を
+切り替えています。同じ3領域を順序を逆にして計6組比較した結果、中央値で生成完了は
+**20.93%短縮**、受信は **21.20%短縮**、サーバーCPU時間は **19.63%減少**しました。
+6組すべてで生成完了が早まり、遅い側のサーバーtick時間（95パーセンタイル）は **8.95%増加**しました。
+受信の計測は描画前に終了します。
 
 3ローダーの限定フィクスチャで地形・装飾・保存構造物・照明の一致を確認しました。
 このFabric速度測定はalpha.8候補dev.23の元のJARによる記録です。
 alpha.9候補dev.2では両ネイティブ版の基本サバイバル・移動・再接続・保存と照明も
-確認しています。サーバー再起動、継続探索・戦闘・危険な環境・長時間運用は未検証のため、
-アルファを継続します。最初の2件の全計算確認、
+確認しています。β版の継続探索は各ローダー60分のクリエイティブ飛行で、その前後に
+サバイバル操作を行います。長期連続稼働・戦闘・危険な環境は検証範囲外です。
+[alpha.9の検証記録](releases/v0.1.0-alpha.9+mc26.3-verification.md)
+
+最初の2件の全計算確認、
 標準1/8／適格な別クライアントの全体照合がある場合1/64の秘密抽選は維持しています。
 結果の範囲・所有者・世代・現在のバイオームと構造物情報は最終反映時にも確認します。
 必要な結果の待機は非同期100ms／適応最大200ms、依頼全体の期限は30秒です。
@@ -273,7 +279,7 @@ alpha.3 に揃え、他の版と混在させないでください。
 値を照合してください。
 
 ```powershell
-Get-FileHash -Algorithm SHA256 -LiteralPath '.\worldgen-assist-0.1.0-alpha.6+mc26.3.jar'
+Get-FileHash -Algorithm SHA256 -LiteralPath '.\worldgen-assist-0.1.0-beta.1+mc26.3.jar'
 ```
 
 チェックサムはファイルの相違を検出するもので、独立した発行者署名ではありません。

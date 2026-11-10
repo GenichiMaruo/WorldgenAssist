@@ -1,5 +1,13 @@
 # World Generation Pipeline Notes
 
+## Beta.1 exploration and saved world
+
+The completed gate recorded new NOISE generation and accepted peer terrain during
+the 60-minute flight on each loader. After restart, both returning players and
+the blocks they had placed were checked before new writes. The final lighting
+read compared 10,649,600 values per loader with zero block or sky differences.
+[Beta.1 verification](releases/v0.1.0-beta.1+mc26.3-verification.md).
+
 ## Prepared beta stability gate (2026-10-09)
 
 The Forge row of 030617-533 completed all checks. For NeoForge, both players

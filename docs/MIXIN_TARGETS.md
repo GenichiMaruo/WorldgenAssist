@@ -1,5 +1,13 @@
 # Mixin Targets
 
+## Beta.1 two-client stability observations
+
+The two unshipped client input hooks were used for the exploratory flight.
+For each loader, the saved evidence covers 60 one-minute samples, same-world
+restart and the subsequent saved-block and lighting reads. Beta.1's class and
+Mixin entries matched the tested alpha.9 distribution on all three loaders.
+[Beta.1 verification](releases/v0.1.0-beta.1+mc26.3-verification.md).
+
 ## Unshipped beta stability observations (updated 2026-11-10)
 
 During the failed NeoForge return in 030617-533, the original client chunk

@@ -6,9 +6,8 @@
 
 Worldgen Assist is a Fabric, Forge, and NeoForge mod that lets a player's PC help the server calculate
 new terrain. Its goal is to reduce server world-generation work while keeping
-the server in control of the world. It is currently an experimental alpha;
-selected measurements show modest gains with explicit experimental settings,
-but stable or general performance improvements have not been established.
+the server in control of the world. The beta targets dedicated servers with
+trusted players who opt in to assistance.
 
 When Minecraft needs a new eligible Overworld, Nether or End chunk, the mod can ask that same
 player's client to calculate the terrain density field. The server receives the
@@ -16,24 +15,33 @@ result, checks it, and continues normal vanilla generation itself. Ores,
 structures, fluids, block placement, saving, and all gameplay-relevant world
 state remain server-authoritative.
 
-## Alpha status
+## Current beta
 
-Current release **0.1.0-alpha.9+mc26.3**, Minecraft26.3/Java25, Fabric/Forge/NeoForge.
-Update server and participating clients together: **protocol14/native channel6**.
-Alpha.9 adds optional native client request admission through bounded workers,
-with connection/respawn revocation, and bounded native request batching.
-Both switches and remote assistance stay off by default. At view32 on a weaker
-server/two clients sharing a stronger PC, the new client switch reduced job RTT
-**21.28% on Forge / 17.26% on NeoForge**. FULL completion changed **-2.92% /
--0.20%**; Forge server CPU increased **9.99%**. These are three matched regions
-in one execution order, not a general or substantial speed guarantee.
-Both native loaders pass basic survival interactions, dimension transitions,
-client reconnect, stopped saved state and own-block lighting. Fabric retains
-its earlier evidence; unchanged generation retains prior three-loader882 proofs.
-Server restart, continuous exploration and long-session safety remain unverified.
-This remains **alpha**. See [installation](docs/INSTALL.md),
-[release notes](docs/releases/v0.1.0-alpha.9+mc26.3.md) and
-[exact verification scope](docs/releases/v0.1.0-alpha.9+mc26.3-verification.md).
+**0.1.0-beta.1+mc26.3** targets Minecraft 26.3 and Java 25. Install the JAR for
+your loader on the server and on each participating client. Shared protocol 14
+and native channel 6 apply. Remote assistance and both experimental native
+transport options are off by default. Complete terrain delegation requires an
+eligible vanilla Overworld and discloses the seed to participating clients.
+
+In the earlier Fabric benchmark, a weak dedicated server (i7-7700K) served two
+clients on one stronger PC (i7-12700K) at view distance 32. With the same mod
+and generation settings, enabling assistance **shortened time to FULL by a
+median 20.93%** across six paired runs using three regions in both execution
+orders. Required chunks reached clients 21.20% sooner, server CPU time fell
+19.63%, and 95th-percentile server tick time rose 8.95%. Receipt ends before
+rendering. This benchmark compared assistance off and on within Fabric.
+
+Beta verification covers same-world restart, two players exploring in creative
+flight for 60 minutes, survival interactions before and after, and saved player,
+block and lighting data. The verification record lists each loader's evidence.
+[Installation](docs/INSTALL.md) · [Beta release notes](docs/releases/v0.1.0-beta.1+mc26.3.md) ·
+[Beta verification](docs/releases/v0.1.0-beta.1+mc26.3-verification.md).
+
+In the separate alpha.9 comparison, the optional client request path shortened
+job round trips by 21.28% on Forge and 17.26% on NeoForge with assistance
+enabled in both conditions. FULL times fell 2.92% and 0.20%, respectively.
+Forge server CPU time rose 9.99%. [Alpha.9 release notes](docs/releases/v0.1.0-alpha.9+mc26.3.md) ·
+[Alpha.9 verification](docs/releases/v0.1.0-alpha.9+mc26.3-verification.md).
 
 ### Historical alpha.6
 
@@ -75,7 +83,7 @@ and adapts up to four within the advertised client capacity; client computation
 defaults to two threads. See
 [multiplayer development and verification](docs/MULTIPLAYER_SUPPORT.md).
 
-This alpha is for controlled trials, not everyday use on public servers.
+Those alpha releases were intended for controlled trials with trusted players.
 Remote assistance is disabled by default, and no speedup is promised. The
 implemented remote paths are limited to explicitly trusted participants,
 fresh vanilla-compatible Overworld, Nether and End worlds, and eligible new terrain.
@@ -160,13 +168,14 @@ promise complete documentation translation or in-game localization.
 
 ## FAQ
 
-**Will this make my server faster?** Maybe not. A selected experimental profile
-showed a small distance32 gain, with one of three repeats slower. Ordinary
-defaults and other environments do not have an established speed benefit.
+**Will this make my server faster?** At view distance 32, all six matched
+Fabric runs on the weak test server completed generation sooner with assistance.
+The result depends on your hardware, network and configuration. Use the settings
+in the [installation guide](docs/INSTALL.md) to reproduce that comparison.
 
-**Can I use it on a private survival world?** Not for remote assistance. The
-trusted raw-seed route reveals the seed to the worker, and the public fixture is
-only for seed `8675309`.
+**Can I keep a survival world's seed private?** Leave assistance off if the
+seed must stay private. The 26.3 assistance profile sends it to participating
+clients. The older 26.2 public fixture covers only seed `8675309`.
 
 **Does a client control terrain or features?** Clients return intermediate
 calculations; the server applies results and completes generation. Sampled
