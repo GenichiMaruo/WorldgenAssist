@@ -2,6 +2,13 @@
 
 ## Beta.1 archive and stability evidence
 
+The Minecraft 26.3 beta.1 prerelease was published at 10:40 JST on 2026-11-10
+from commit `c551cf9c3b2a7c1285a088f8a6c99709aefcf0c7`. All eleven
+downloaded draft assets matched their local copies. The release-triggered
+CurseForge job verified and uploaded all three distributions.
+[GitHub release](https://github.com/GenichiMaruo/WorldgenAssist/releases/tag/v0.1.0-beta.1%2Bmc26.3)
+and [CurseForge upload record](https://github.com/GenichiMaruo/WorldgenAssist/actions/runs/42737443901).
+
 The completed gate is beta-stability-gate-20261110-065705-357 (F589086BCD9164C1D07A2FE8E3B8AE42A12B819ABF8E23B8EF0CDDBBB3345C1D). All three loader rows come from the final run using the corrected client chunk-cache check and the verified approach to the landing area. All three used the measured
 alpha.9 runtime with two clients at distance 32 on the weak E-drive server.
 Beta.1 packages that runtime with updated version metadata. The release archive
